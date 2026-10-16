@@ -250,19 +250,30 @@ def wait_for_port(port: int, timeout: int = 60):
             time.sleep(0.5)
     raise TimeoutError(f"ComfyUI never became ready on port {port}")
     
-# SaveGLB writes directly to R2 when its file handle closes.
-r2_mount = modal.CloudBucketMount(
-    bucket_name="modal-studio-assets",
-    bucket_endpoint_url=os.getenv(
-        "R2_ENDPOINT", "https://f863e42ff2096d089d4d4129197abd17.r2.cloudflarestorage.com"
-    ),
+# Previous R2 mount; uncomment to roll back.
+# r2_mount = modal.CloudBucketMount(
+#     bucket_name="modal-studio-assets",
+#     bucket_endpoint_url=os.getenv(
+#         "R2_ENDPOINT", "https://f863e42ff2096d089d4d4129197abd17.r2.cloudflarestorage.com"
+#     ),
+#     key_prefix=f"comfyui/{WORKFLOW}/3d/",
+#     secret=modal.Secret.from_name(
+#         "cloudflare-r2",
+#         required_keys=["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"],
+#     ),
+# )
+
+# Hugging Face Storage Bucket (requires HF_BUCKET, HF_NAMESPACE and huggingface-s3 Secret).
+hf_mount = modal.CloudBucketMount(
+    bucket_name=os.environ["HF_BUCKET"],
+    bucket_endpoint_url=f'https://s3.hf.co/{os.environ["HF_NAMESPACE"]}',
     key_prefix=f"comfyui/{WORKFLOW}/3d/",
     secret=modal.Secret.from_name(
-        "cloudflare-r2",
+        "huggingface-s3",
         required_keys=["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"],
     ),
+    force_path_style=True,
 )
-
 app = modal.App(name="modal-comfyui", image=image)
 
 
@@ -271,7 +282,7 @@ app = modal.App(name="modal-comfyui", image=image)
     gpu=GPU_TYPE,
     volumes={
         "/cache": vol,
-        "/root/comfy/ComfyUI/output/3d": r2_mount,
+        "/root/comfy/ComfyUI/output/3d": hf_mount,
     },
     scaledown_window=60,  # idle 1 minutes to shutdown
     enable_memory_snapshot=True,
