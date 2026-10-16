@@ -26,6 +26,8 @@ if not "%WORKFLOW_JSON_COUNT%"=="1" (
     echo ERROR: Expected exactly one workflow JSON, found %WORKFLOW_JSON_COUNT%.
     exit /b 1
 )
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0setup-secrets.ps1"
+if errorlevel 1 exit /b 1
 echo Deploying Modal ComfyUI using workflow: %WORKFLOW%
 echo GPU comes from workflows\%WORKFLOW%\models.json unless MODAL_GPU overrides it.
 uv run modal deploy comfyui.py

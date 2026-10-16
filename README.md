@@ -101,3 +101,17 @@ filesystem operations, and a real GLB write must be verified after deployment.
 
 Please feel free to contribute to make this project better.
 Performance improvements/optimizations are very welcome.
+
+## Automatic Modal Secret setup
+
+`deploy-modal.bat` runs `setup-secrets.ps1` before deployment. Existing secrets are reused and never overwritten.
+
+Create an R2 Object Read & Write API token scoped to `modal-studio-assets`, then on the deployment PC:
+
+```powershell
+Copy-Item .secrets/cloudflare-r2.env.example .secrets/cloudflare-r2.env
+# Fill AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY in .secrets/cloudflare-r2.env
+.\deploy-modal.bat community-pixal3d-trellis2-tuning
+```
+
+Optional first-time files: `.secrets/huggingface-secret.env` containing `HF_TOKEN=...`; `.secrets/github.env` containing `GITHUB_TOKEN=...`. Their existing Modal Secrets are preserved. GitHub credentials are stored but not injected into ComfyUI unless explicitly needed. Actual `.env` credential files are ignored by Git. To rotate an existing secret, update it in the Modal dashboard.

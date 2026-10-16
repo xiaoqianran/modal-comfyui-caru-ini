@@ -13,3 +13,6 @@ wheels/
 /models.py
 /plugins.py
 /workflow_api.json
+
+# Local credentials (never commit)
+/.secrets/*.env
