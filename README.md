@@ -102,21 +102,25 @@ filesystem operations, and a real GLB write must be verified after deployment.
 Please feel free to contribute to make this project better.
 Performance improvements/optimizations are very welcome.
 
-## Automatic Modal Secret setup
+## Separate Modal Secret setup
 
-Use one local `.env` file for all three credentials. It is excluded from Git.
+Keep all three credentials in one local `.env` file (ignored by Git). Configure
+Secrets explicitly, **not** during deployment:
 
 ```powershell
 Copy-Item .env.example .env
-# Fill AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, HF_TOKEN and GITHUB_TOKEN
+# Fill the R2, HF and GitHub credentials in .env
+powershell -NoProfile -ExecutionPolicy Bypass -File .\setup-secrets.ps1
+```
+
+`setup-secrets.ps1` creates missing Modal Secrets: `cloudflare-r2` (required),
+`huggingface-secret` and `github` (optional). Existing Secrets are reused,
+never overwritten. To rotate an existing Secret, update it in Modal Dashboard.
+
+Deploy separately:
+
+```powershell
 .\deploy-modal.bat community-pixal3d-trellis2-tuning
 ```
 
-The deployment script creates missing Modal Secrets from their respective keys:
-`cloudflare-r2` (required), `huggingface-secret` (optional), and
-`github` (optional). It reuses existing Modal Secrets without overwriting
-them, and deletes its temporary per-secret files. To rotate a previously
-created secret, update it in the Modal dashboard. The GitHub token is not
-injected into ComfyUI unless a workflow explicitly needs it.
-
-If any credentials have been exposed, revoke and regenerate them before use.
+Deployment does not read `.env` or change any Secret.
