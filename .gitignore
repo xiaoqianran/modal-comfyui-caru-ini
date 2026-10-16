@@ -9,9 +9,7 @@ wheels/
 # Virtual environments
 .venv
 
-# Models and Custom nodes
-models.py
-plugins.py
-
-# Workflow
-workflow_api.json
+# Legacy root configuration
+/models.py
+/plugins.py
+/workflow_api.json

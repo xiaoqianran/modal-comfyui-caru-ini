@@ -8,19 +8,24 @@ from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 import modal
 
-from models import models, models_ext
-from plugins import comfy_plugins
-
-try:
-    from plugins import comfy_plugins_ext
-except ImportError:
-    comfy_plugins_ext = []
+import json
 
 root_dir = Path(__file__).parent
+WORKFLOW = os.getenv("WORKFLOW", "pixal3d")
+WORKFLOW_DIR = root_dir / "workflows" / WORKFLOW
+if WORKFLOW not in {p.name for p in (root_dir / "workflows").iterdir() if p.is_dir()}:
+    raise ValueError(f"Unknown workflow: {WORKFLOW}")
+
+model_config = json.loads((WORKFLOW_DIR / "models.json").read_text(encoding="utf-8"))
+plugin_config = json.loads((WORKFLOW_DIR / "plugins.json").read_text(encoding="utf-8"))
+models = model_config["models"]
+models_ext = model_config.get("models_ext", [])
+comfy_plugins = plugin_config.get("comfy_plugins", [])
+comfy_plugins_ext = plugin_config.get("comfy_plugins_ext", [])
 
 COMFY_MODELS_ROOT = Path("/root/comfy/ComfyUI/models")
 
-GPU_TYPE = os.getenv("MODAL_GPU", "L4")
+GPU_TYPE = os.getenv("MODAL_GPU") or model_config.get("gpu", "L40S")
 COMFY_VER = os.getenv("COMFY_VER")
 
 def resolve_model_dir(model_dir: str) -> Path:
@@ -127,11 +132,11 @@ vol = modal.Volume.from_name("hf-hub-cache", create_if_missing=True)
 VERSION = f"--version {COMFY_VER}" if COMFY_VER else ""
 image = (
     modal.Image.debian_slim(python_version="3.11")
-    .add_local_python_source("models", "plugins", copy=True)
     .apt_install("git", "git-lfs", "libgl1-mesa-dev", "libglib2.0-0", "axel")
     .pip_install_from_requirements(str(root_dir / "requirements_comfy.txt"))
     .run_commands(f"comfy --skip-prompt install --nvidia {VERSION}")
     .run_commands("git lfs install")
+    .add_local_dir(root_dir / "workflows", "/root/workflows", copy=True)
 )
 
 def _hf_secrets() -> list[modal.Secret]:
@@ -154,12 +159,12 @@ def _hf_secrets() -> list[modal.Secret]:
 
 # download models
 image = image.env(
-    {"HF_HUB_ENABLE_HF_TRANSFER": "1", "HF_XET_HIGH_PERFORMANCE": "1"}
+    {"HF_HUB_ENABLE_HF_TRANSFER": "1", "HF_XET_HIGH_PERFORMANCE": "1", "WORKFLOW": WORKFLOW}
 ).run_function(download_all, volumes={"/cache": vol}, secrets=_hf_secrets())
 
 
 # setup custom nodes
-workflow_file_path = Path(__file__).parent / "workflow_api.json"
+workflow_file_path = WORKFLOW_DIR / "workflow.json"
 if workflow_file_path.exists():
     image = image.add_local_file(
         workflow_file_path, "/root/workflow_api.json", copy=True
@@ -227,6 +232,9 @@ image = image.add_local_dir(
     "/root/comfy/ComfyUI/custom_nodes/reverse_proxy_fix",
     copy=True,
 )
+
+# Runtime-only code: changing r2.py does not invalidate Image build layers.
+image = image.add_local_file(root_dir / "r2.py", "/root/r2.py")
 
 
 def wait_for_port(port: int, timeout: int = 60):

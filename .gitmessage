@@ -1,0 +1,28 @@
+# <type>(<scope>): <subject>
+#
+# 阿里风格提交规范：主题使用中文，动词开头，简明说明改动（建议不超过 50 字）。
+# type（必填）：
+# feat     新功能                 例：feat(workflow): 支持按目录选择工作流及 GPU
+# fix      缺陷修复               例：fix(modal): 修复镜像构建阶段找不到工作流
+# docs     文档                   例：docs(workflow): 增加工作流命名规范
+# style    格式修改（不改逻辑）   例：style(modal): 统一代码格式
+# refactor 重构（不改变行为）   例：refactor(config): 拆分模型和插件配置
+# perf     性能优化               例：perf(cache): 减少重复下载模型
+# test     测试                   例：test(workflow): 补充配置校验测试
+# build    构建及依赖             例：build(deps): 更新 Modal 和 boto3 依赖
+# chore    其他维护               例：chore(repo): 配置提交信息模板
+# revert   回滚                   例：revert: 回滚工作流配置变更
+#
+# scope（建议）：workflow / modal / r2 / deps / repo / docs
+# 禁止笼统主题：update、修复问题、修改代码。
+#
+# <body>（可选）：解释为什么修改，以及影响；每行尽量不超过 72 字。
+#
+# <footer>（可选）：关联 Issue，例如 Closes #123。
+#
+# 实际提交示例（删除注释后输入）：
+# feat(workflow): 支持多工作流配置和独立 GPU
+#
+# - 按目录读取 workflow、models 和 plugins JSON
+# - 添加部署、停止和删除脚本
+# - 增加 R2 上传函数（尚未接入生成后自动上传）
