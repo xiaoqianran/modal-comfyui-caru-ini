@@ -11,7 +11,7 @@ import modal
 import json
 
 root_dir = Path(__file__).parent
-WORKFLOW = os.getenv("WORKFLOW", "pixal3d")
+WORKFLOW = os.getenv("WORKFLOW", "comfyui-pixal3d-trellis2")
 WORKFLOW_DIR = root_dir / "workflows" / WORKFLOW
 if WORKFLOW not in {p.name for p in (root_dir / "workflows").iterdir() if p.is_dir()}:
     raise ValueError(f"Unknown workflow: {WORKFLOW}")
@@ -164,15 +164,16 @@ image = image.env(
 
 
 # setup custom nodes
-workflow_file_path = WORKFLOW_DIR / "workflow.json"
-if workflow_file_path.exists():
-    image = image.add_local_file(
-        workflow_file_path, "/root/workflow_api.json", copy=True
-    ).run_commands("comfy node install-deps --workflow=/root/workflow_api.json")
-else:
-    print(
-        f"Warning: {workflow_file_path} not found. API endpoint might not work without a workflow."
-    )
+workflow_files = sorted(
+    p for p in WORKFLOW_DIR.glob("*.json")
+    if p.name.lower() not in {"model.json", "models.json", "plugins.json"}
+)
+if len(workflow_files) != 1:
+    raise ValueError(f"Expected exactly one workflow JSON in {WORKFLOW_DIR}, found: {[p.name for p in workflow_files]}")
+workflow_file_path = workflow_files[0]
+image = image.add_local_file(
+    workflow_file_path, "/root/workflow_api.json", copy=True
+).run_commands("comfy node install-deps --workflow=/root/workflow_api.json")
 
 if comfy_plugins:
     image = image.run_commands("comfy node install " + " ".join(comfy_plugins))

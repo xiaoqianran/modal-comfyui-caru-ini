@@ -21,15 +21,19 @@
 
 即使只使用 ComfyUI 原生节点，也不能据此判断工作流来自 ComfyUI 官方。
 
-## 固定文件结构
+## 配置与工作流文件
 
 ```text
 workflows/
   comfyui-pixal3d-trellis2/
-    workflow.json
+    native_pixal3d_trellis2.json  # 保留原始文件名
     models.json
     plugins.json
 ```
+
+每个目录必须有 `models.json` 和 `plugins.json`。其余顶层 `.json` 文件中**必须恰好有一个**工作流文件；名称可任意，自动识别（同时排除旧写法 `model.json`）。若有多个候选则报错，避免误用。
+
+工作流 JSON 应为 ComfyUI API 格式；只改文件名不会自动转换格式。
 
 ## 输出映射
 
@@ -43,6 +47,6 @@ R2: comfyui/comfyui-pixal3d-trellis2/<unique-filename>.glb
 
 输出文件名必须唯一，避免覆盖历史结果。R2 路径首段 `comfyui/` 是项目命名空间；第二段的 `comfyui-` 是来源前缀。
 
-## 当前迁移状态
+## 实现状态
 
-当前目录仍为 `workflows/pixal3d/`。本规范仅定义后续命名；尚未重命名目录，也不表示 R2 自动上传已经接通。
+文件识别规则已接入部署代码；R2 自动上传尚未接通。
