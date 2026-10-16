@@ -110,10 +110,10 @@ Secrets explicitly, **not** during deployment:
 ```powershell
 Copy-Item .env.example .env
 # Fill the R2, HF and GitHub credentials in .env
-powershell -NoProfile -ExecutionPolicy Bypass -File .\setup-secrets.ps1
+.\setup-secrets.bat
 ```
 
-`setup-secrets.ps1` creates missing Modal Secrets: `cloudflare-r2` (required),
+`setup-secrets.bat` creates missing Modal Secrets: `cloudflare-r2` (required),
 `huggingface-secret` and `github` (optional). Existing Secrets are reused,
 never overwritten. To rotate an existing Secret, update it in Modal Dashboard.
 
