@@ -41,12 +41,12 @@ workflows/
 
 ```text
 workflows/comfyui-pixal3d-trellis2/
-ComfyUI/output/comfyui-pixal3d-trellis2/
-R2: comfyui/comfyui-pixal3d-trellis2/<unique-filename>.glb
+ComfyUI/output/3d/<filename>.glb
+R2: comfyui/comfyui-pixal3d-trellis2/3d/<filename>.glb
 ```
 
 输出文件名必须唯一，避免覆盖历史结果。R2 路径首段 `comfyui/` 是项目命名空间；第二段的 `comfyui-` 是来源前缀。
 
 ## 实现状态
 
-文件识别规则已接入部署代码；R2 自动上传尚未接通。
+文件识别规则已接入部署代码；`ComfyUI/output/3d` 通过 Modal CloudBucketMount 直连 R2。需要先配置 `cloudflare-r2` Modal Secret，实际远端写入仍需部署验证。

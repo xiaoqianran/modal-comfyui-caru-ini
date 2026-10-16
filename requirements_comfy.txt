@@ -1,3 +1,2 @@
 comfy-cli
 huggingface_hub
-boto3

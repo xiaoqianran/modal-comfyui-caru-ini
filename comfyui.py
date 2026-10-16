@@ -234,8 +234,6 @@ image = image.add_local_dir(
     copy=True,
 )
 
-# Runtime-only code: changing r2.py does not invalidate Image build layers.
-image = image.add_local_file(root_dir / "r2.py", "/root/r2.py")
 
 
 def wait_for_port(port: int, timeout: int = 60):
@@ -252,13 +250,29 @@ def wait_for_port(port: int, timeout: int = 60):
             time.sleep(0.5)
     raise TimeoutError(f"ComfyUI never became ready on port {port}")
     
+# SaveGLB writes directly to R2 when its file handle closes.
+r2_mount = modal.CloudBucketMount(
+    bucket_name="modal-studio-assets",
+    bucket_endpoint_url=os.getenv(
+        "R2_ENDPOINT", "https://f863e42ff2096d089d4d4129197abd17.r2.cloudflarestorage.com"
+    ),
+    key_prefix=f"comfyui/{WORKFLOW}/3d/",
+    secret=modal.Secret.from_name(
+        "cloudflare-r2",
+        required_keys=["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"],
+    ),
+)
+
 app = modal.App(name="modal-comfyui", image=image)
 
 
 @app.cls(
     max_containers=1,
     gpu=GPU_TYPE,
-    volumes={"/cache": vol},
+    volumes={
+        "/cache": vol,
+        "/root/comfy/ComfyUI/output/3d": r2_mount,
+    },
     scaledown_window=60,  # idle 1 minutes to shutdown
     enable_memory_snapshot=True,
     experimental_options={"enable_gpu_snapshot": True},

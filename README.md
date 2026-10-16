@@ -77,6 +77,26 @@ modal deploy comfyui.py
 - **Model Caching**: Uses Modal Volumes to cache models across runs.
 - **Custom Node Management**: Integrated with `comfy-cli` for easy plugin installation.
 
+## Cloudflare R2 GLB storage
+
+GLB files saved under `ComfyUI/output/3d/` are written directly to Cloudflare R2
+through `modal.CloudBucketMount` (no background upload process).
+
+- Bucket: `modal-studio-assets` (verified in Cloudflare).
+- Object key: `comfyui/<workflow>/3d/<filename>.glb`.
+- In **Modal Dashboard → Secrets**, create `cloudflare-r2` containing
+  `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` from an R2 Object Read & Write
+  API token scoped to this bucket. No access keys belong in this Git repository.
+- The R2 endpoint defaults to the configured Cloudflare account; override via
+  the local `R2_ENDPOINT` environment variable before deployment if necessary.
+- Deploy with `./deploy-modal.bat <workflow>` on Windows.
+- Download persisted GLB files using R2 Dashboard, a configured public custom
+  domain, or presigned URLs; ComfyUI's built-in download still uses its UI.
+
+Only `output/3d/` is persisted to R2; other ComfyUI outputs remain ephemeral.
+File writes need to complete normally. Modal/S3 mounts do not support all POSIX
+filesystem operations, and a real GLB write must be verified after deployment.
+
 ## Contributing
 
 Please feel free to contribute to make this project better.
