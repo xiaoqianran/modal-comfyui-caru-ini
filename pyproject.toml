@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "modal[api-proxy-support]",
+    "python-dotenv>=1.2.4",
 ]
 
 [[tool.uv.index]]
