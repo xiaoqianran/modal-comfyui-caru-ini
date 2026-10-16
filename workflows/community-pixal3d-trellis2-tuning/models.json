@@ -1,0 +1,41 @@
+{
+  "models": [
+    {
+      "repo_id": "Comfy-Org/Pixal3D",
+      "filename": "vae/trellis_2_texture_vae_bf16.safetensors",
+      "model_dir": "vae"
+    },
+    {
+      "repo_id": "Comfy-Org/Pixal3D",
+      "filename": "clip_vision/dino_v3_L_naf_fp32.safetensors",
+      "model_dir": "clip_vision"
+    },
+    {
+      "repo_id": "Comfy-Org/Pixal3D",
+      "filename": "vae/trellis_2_shape_vae_bf16.safetensors",
+      "model_dir": "vae"
+    },
+    {
+      "repo_id": "Comfy-Org/MoGe",
+      "filename": "geometry_estimation/moge_2_vitl_normal_fp16.safetensors",
+      "model_dir": "geometry_estimation"
+    },
+    {
+      "repo_id": "Comfy-Org/BiRefNet",
+      "filename": "background_removal/birefnet.safetensors",
+      "model_dir": "background_removal"
+    },
+    {
+      "repo_id": "Comfy-Org/TRELLIS.2",
+      "filename": "diffusion_models/trellis_2_int8_convrot.safetensors",
+      "model_dir": "diffusion_models"
+    },
+    {
+      "repo_id": "Comfy-Org/Pixal3D",
+      "filename": "diffusion_models/pixal3d_int8_convrot.safetensors",
+      "model_dir": "diffusion_models"
+    }
+  ],
+  "models_ext": [],
+  "gpu": "RTX-PRO-6000"
+}

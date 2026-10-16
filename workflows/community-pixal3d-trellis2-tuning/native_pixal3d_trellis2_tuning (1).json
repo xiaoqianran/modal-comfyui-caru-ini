@@ -1,0 +1,1800 @@
+{
+  "3": {
+    "inputs": {
+      "seed": [
+        "363",
+        0
+      ],
+      "steps": [
+        "352",
+        0
+      ],
+      "cfg": [
+        "341",
+        0
+      ],
+      "sampler_name": "euler",
+      "scheduler": "normal",
+      "denoise": 1,
+      "model": [
+        "108",
+        0
+      ],
+      "positive": [
+        "314",
+        0
+      ],
+      "negative": [
+        "315",
+        0
+      ],
+      "latent_image": [
+        "87",
+        0
+      ]
+    },
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "K采样器",
+      "cnr_id": "comfy-core",
+      "ver": "0.17.0"
+    }
+  },
+  "4": {
+    "inputs": {
+      "algorithm": "basic",
+      "threshold": 0.6,
+      "voxel": [
+        "119",
+        0
+      ]
+    },
+    "class_type": "VoxelToMesh",
+    "_meta": {
+      "title": "体素到网格",
+      "cnr_id": "comfy-core",
+      "ver": "0.17.0"
+    }
+  },
+  "12": {
+    "inputs": {
+      "seed": [
+        "365",
+        0
+      ],
+      "steps": [
+        "361",
+        0
+      ],
+      "cfg": [
+        "362",
+        0
+      ],
+      "sampler_name": "euler",
+      "scheduler": "normal",
+      "denoise": 1,
+      "model": [
+        "318",
+        0
+      ],
+      "positive": [
+        "98",
+        0
+      ],
+      "negative": [
+        "98",
+        1
+      ],
+      "latent_image": [
+        "98",
+        2
+      ]
+    },
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "K采样器",
+      "cnr_id": "comfy-core",
+      "ver": "0.17.0"
+    }
+  },
+  "15": {
+    "inputs": {
+      "clip_name": "dino_v3_L_naf_fp32.safetensors"
+    },
+    "class_type": "CLIPVisionLoader",
+    "_meta": {
+      "title": "加载CLIP视觉",
+      "cnr_id": "comfy-core",
+      "ver": "0.21.1"
+    }
+  },
+  "18": {
+    "inputs": {
+      "seed": [
+        "364",
+        0
+      ],
+      "steps": [
+        "357",
+        0
+      ],
+      "cfg": [
+        "356",
+        0
+      ],
+      "sampler_name": "euler",
+      "scheduler": "normal",
+      "denoise": 1,
+      "model": [
+        "126",
+        0
+      ],
+      "positive": [
+        "91",
+        0
+      ],
+      "negative": [
+        "91",
+        1
+      ],
+      "latent_image": [
+        "91",
+        2
+      ]
+    },
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "K采样器",
+      "cnr_id": "comfy-core",
+      "ver": "0.17.0"
+    }
+  },
+  "23": {
+    "inputs": {
+      "seed": [
+        "364",
+        0
+      ],
+      "steps": [
+        "360",
+        0
+      ],
+      "cfg": [
+        "359",
+        0
+      ],
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "denoise": 1,
+      "model": [
+        "126",
+        0
+      ],
+      "positive": [
+        "94",
+        0
+      ],
+      "negative": [
+        "94",
+        1
+      ],
+      "latent_image": [
+        "94",
+        2
+      ]
+    },
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "K采样器",
+      "cnr_id": "comfy-core",
+      "ver": "0.17.0"
+    }
+  },
+  "40": {
+    "inputs": {
+      "unet_name": "trellis_2_int8_convrot.safetensors",
+      "weight_dtype": "default"
+    },
+    "class_type": "UNETLoader",
+    "_meta": {
+      "title": "UNet加载器",
+      "cnr_id": "comfy-core",
+      "ver": "0.33.0"
+    }
+  },
+  "55": {
+    "inputs": {
+      "model_name": "moge_2_vitl_normal_fp16.safetensors"
+    },
+    "class_type": "LoadMoGeModel",
+    "_meta": {
+      "title": "加载 MoGe 模型",
+      "cnr_id": "comfy-core",
+      "ver": "0.33.0"
+    }
+  },
+  "56": {
+    "inputs": {
+      "resolution_level": 9,
+      "fov_x_degrees": 0,
+      "batch_size": 4,
+      "force_projection": true,
+      "apply_mask": true,
+      "refine_steps": 3,
+      "moge_model": [
+        "55",
+        0
+      ],
+      "image": [
+        "302",
+        0
+      ]
+    },
+    "class_type": "MoGeInference",
+    "_meta": {
+      "title": "MoGe 推理",
+      "cnr_id": "comfy-core",
+      "ver": "0.33.0"
+    }
+  },
+  "87": {
+    "inputs": {
+      "batch_size": 1
+    },
+    "class_type": "EmptyTrellis2LatentStructure",
+    "_meta": {
+      "title": "空 Trellis2 潜空间结构",
+      "cnr_id": "comfy-core",
+      "ver": "0.21.1"
+    }
+  },
+  "91": {
+    "inputs": {
+      "positive": [
+        "314",
+        0
+      ],
+      "negative": [
+        "315",
+        0
+      ],
+      "voxel": [
+        "119",
+        0
+      ]
+    },
+    "class_type": "Trellis2ShapeStage",
+    "_meta": {
+      "title": "Trellis2 形状阶段",
+      "cnr_id": "comfy-core",
+      "ver": "0.33.0"
+    }
+  },
+  "92": {
+    "inputs": {
+      "samples": [
+        "366",
+        0
+      ],
+      "vae": [
+        "117",
+        0
+      ]
+    },
+    "class_type": "VaeDecodeShapeTrellis",
+    "_meta": {
+      "title": "Trellis2 VAE 解码形状",
+      "cnr_id": "comfy-core",
+      "ver": "0.17.0"
+    }
+  },
+  "93": {
+    "inputs": {
+      "samples": [
+        "12",
+        0
+      ],
+      "vae": [
+        "118",
+        0
+      ],
+      "shape_subdivides": [
+        "92",
+        1
+      ]
+    },
+    "class_type": "VaeDecodeTextureTrellis",
+    "_meta": {
+      "title": "Trellis2 VAE 解码纹理",
+      "cnr_id": "comfy-core",
+      "ver": "0.21.1"
+    }
+  },
+  "94": {
+    "inputs": {
+      "target_resolution": "1536",
+      "positive": [
+        "91",
+        0
+      ],
+      "negative": [
+        "91",
+        1
+      ],
+      "shape_latent": [
+        "18",
+        0
+      ],
+      "vae": [
+        "117",
+        0
+      ]
+    },
+    "class_type": "Trellis2UpsampleStage",
+    "_meta": {
+      "title": "Trellis2 上采样阶段",
+      "cnr_id": "comfy-core",
+      "ver": "0.33.0"
+    }
+  },
+  "98": {
+    "inputs": {
+      "positive": [
+        "94",
+        0
+      ],
+      "negative": [
+        "94",
+        1
+      ],
+      "shape_latent": [
+        "366",
+        0
+      ]
+    },
+    "class_type": "Trellis2TextureStage",
+    "_meta": {
+      "title": "Trellis2 纹理阶段",
+      "cnr_id": "comfy-core",
+      "ver": "0.33.0"
+    }
+  },
+  "108": {
+    "inputs": {
+      "shift": 5,
+      "model": [
+        "125",
+        0
+      ]
+    },
+    "class_type": "ModelSamplingSD3",
+    "_meta": {
+      "title": "采样算法（SD3）",
+      "cnr_id": "comfy-core",
+      "ver": "0.33.0"
+    }
+  },
+  "117": {
+    "inputs": {
+      "vae_name": "trellis_2_shape_vae_bf16.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "加载VAE",
+      "cnr_id": "comfy-core",
+      "ver": "0.33.0"
+    }
+  },
+  "118": {
+    "inputs": {
+      "vae_name": "trellis_2_texture_vae_bf16.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "加载VAE",
+      "cnr_id": "comfy-core",
+      "ver": "0.33.0"
+    }
+  },
+  "119": {
+    "inputs": {
+      "resolution": "32",
+      "samples": [
+        "3",
+        0
+      ],
+      "vae": [
+        "117",
+        0
+      ]
+    },
+    "class_type": "VaeDecodeStructureTrellis2",
+    "_meta": {
+      "title": "Trellis2 VAE 解码结构",
+      "cnr_id": "comfy-core",
+      "ver": "0.17.0"
+    }
+  },
+  "122": {
+    "inputs": {
+      "image": "th_kyonshi_none_focus_ass_3189118004_001.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "加载图像",
+      "cnr_id": "comfy-core",
+      "ver": "0.33.0"
+    }
+  },
+  "125": {
+    "inputs": {
+      "multiplier": 0.7,
+      "model": [
+        "199",
+        0
+      ]
+    },
+    "class_type": "RescaleCFG",
+    "_meta": {
+      "title": "缩放CFG",
+      "cnr_id": "comfy-core",
+      "ver": "0.33.0"
+    }
+  },
+  "126": {
+    "inputs": {
+      "multiplier": 0.5,
+      "model": [
+        "279",
+        0
+      ]
+    },
+    "class_type": "RescaleCFG",
+    "_meta": {
+      "title": "缩放CFG",
+      "cnr_id": "comfy-core",
+      "ver": "0.33.0"
+    }
+  },
+  "147": {
+    "inputs": {
+      "texture_size": [
+        "288",
+        0
+      ],
+      "mesh": [
+        "196",
+        0
+      ],
+      "voxel_colors": [
+        "93",
+        0
+      ],
+      "reference_mesh": [
+        "92",
+        0
+      ]
+    },
+    "class_type": "BakeTextureFromVoxel",
+    "_meta": {
+      "title": "从体素烘焙纹理",
+      "cnr_id": "comfy-core",
+      "ver": "0.33.0"
+    }
+  },
+  "164": {
+    "inputs": {
+      "images": [
+        "147",
+        0
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "Base Color",
+      "cnr_id": "comfy-core",
+      "ver": "0.33.0"
+    }
+  },
+  "186": {
+    "inputs": {
+      "target_face_count": [
+        "374",
+        0
+      ],
+      "placement_mode": "midpoint",
+      "mesh": [
+        "241",
+        0
+      ]
+    },
+    "class_type": "DecimateMesh",
+    "_meta": {
+      "title": "网格简化",
+      "cnr_id": "comfy-core",
+      "ver": "0.33.0"
+    }
+  },
+  "192": {
+    "inputs": {
+      "bg_removal_model": [
+        "193",
+        0
+      ],
+      "image": [
+        "122",
+        0
+      ]
+    },
+    "class_type": "RemoveBackground",
+    "_meta": {
+      "title": "移除背景",
+      "cnr_id": "comfy-core",
+      "ver": "0.33.0"
+    }
+  },
+  "193": {
+    "inputs": {
+      "bg_removal_name": "birefnet.safetensors"
+    },
+    "class_type": "LoadBackgroundRemovalModel",
+    "_meta": {
+      "title": "加载背景移除模型",
+      "cnr_id": "comfy-core",
+      "ver": "0.33.0"
+    }
+  },
+  "196": {
+    "inputs": {
+      "segmenter": "pec",
+      "resolution": [
+        "288",
+        0
+      ],
+      "padding": 1,
+      "weld_distance": 0.0002,
+      "mesh": [
+        "238",
+        0
+      ]
+    },
+    "class_type": "UnwrapMesh",
+    "_meta": {
+      "title": "展开网格 UV",
+      "cnr_id": "comfy-core",
+      "ver": "0.33.0"
+    }
+  },
+  "199": {
+    "inputs": {
+      "cfg": 1,
+      "start_percent": 0.667,
+      "end_percent": 1,
+      "model": [
+        "318",
+        0
+      ]
+    },
+    "class_type": "CFGOverride",
+    "_meta": {
+      "title": "CFG 覆盖",
+      "cnr_id": "comfy-core",
+      "ver": "0.33.0"
+    }
+  },
+  "202": {
+    "inputs": {
+      "mesh": [
+        "92",
+        0
+      ]
+    },
+    "class_type": "GetMeshInfo",
+    "_meta": {
+      "title": "获取网格信息",
+      "cnr_id": "comfy-core",
+      "ver": "0.33.0"
+    }
+  },
+  "207": {
+    "inputs": {
+      "images": [
+        "147",
+        1
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "Metallic",
+      "cnr_id": "comfy-core",
+      "ver": "0.33.0"
+    }
+  },
+  "208": {
+    "inputs": {
+      "images": [
+        "147",
+        2
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "Roughness",
+      "cnr_id": "comfy-core",
+      "ver": "0.33.0"
+    }
+  },
+  "210": {
+    "inputs": {
+      "mesh": [
+        "196",
+        0
+      ],
+      "base_color": [
+        "164",
+        0
+      ],
+      "metallic": [
+        "207",
+        0
+      ],
+      "roughness": [
+        "208",
+        0
+      ],
+      "occlusion": [
+        "235",
+        0
+      ],
+      "normal_map": [
+        "226",
+        0
+      ]
+    },
+    "class_type": "ApplyTextureToMesh",
+    "_meta": {
+      "title": "将纹理应用到网格",
+      "cnr_id": "comfy-core",
+      "ver": "0.33.0"
+    }
+  },
+  "224": {
+    "inputs": {
+      "resolution": 2048,
+      "cage_distance": [
+        "378",
+        0
+      ],
+      "ignore_backfaces": true,
+      "low_poly": [
+        "196",
+        0
+      ],
+      "high_poly": [
+        "241",
+        0
+      ]
+    },
+    "class_type": "BakeNormalMapFromMesh",
+    "_meta": {
+      "title": "从网格烘焙法线贴图",
+      "cnr_id": "comfy-core",
+      "ver": "0.33.0"
+    }
+  },
+  "226": {
+    "inputs": {
+      "images": [
+        "224",
+        0
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "Normal",
+      "cnr_id": "comfy-core",
+      "ver": "0.33.0"
+    }
+  },
+  "233": {
+    "inputs": {
+      "resolution": 1024,
+      "samples": 64,
+      "max_distance": 0.71,
+      "strength": 1,
+      "bias": 0.01,
+      "low_poly": [
+        "196",
+        0
+      ],
+      "high_poly": [
+        "241",
+        0
+      ]
+    },
+    "class_type": "BakeAmbientOcclusion",
+    "_meta": {
+      "title": "烘焙环境光遮蔽",
+      "cnr_id": "comfy-core",
+      "ver": "0.33.0"
+    }
+  },
+  "235": {
+    "inputs": {
+      "images": [
+        "233",
+        0
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "Ambiant Occlusion",
+      "cnr_id": "comfy-core",
+      "ver": "0.33.0"
+    }
+  },
+  "238": {
+    "inputs": {
+      "crease_angle": 180,
+      "mesh": [
+        "186",
+        0
+      ]
+    },
+    "class_type": "MeshSmoothNormals",
+    "_meta": {
+      "title": "平滑网格法线",
+      "cnr_id": "comfy-core",
+      "ver": "0.33.0"
+    }
+  },
+  "241": {
+    "inputs": {
+      "resolution": 768,
+      "sign_mode": "udf",
+      "sign_mode.qef": false,
+      "sign_mode.drop_inverted_components": false,
+      "sign_mode.drop_enclosed_components": false,
+      "band": 1,
+      "project_back": [
+        "371",
+        0
+      ],
+      "fix_poles": false,
+      "smooth_iters": [
+        "370",
+        0
+      ],
+      "drop_small_components": 0.01,
+      "precluster_max_verts": 20000000,
+      "mesh": [
+        "202",
+        0
+      ]
+    },
+    "class_type": "RemeshMesh",
+    "_meta": {
+      "title": "重新网格化网格（窄带 DC）",
+      "cnr_id": "comfy-core",
+      "ver": "0.33.0"
+    }
+  },
+  "242": {
+    "inputs": {
+      "axis": "horizontal",
+      "unit": "degrees",
+      "moge_geometry": [
+        "56",
+        0
+      ]
+    },
+    "class_type": "MoGeGeometryToFOV",
+    "_meta": {
+      "title": "从 MoGe 几何数据获取视场",
+      "cnr_id": "comfy-core",
+      "ver": "0.33.0"
+    }
+  },
+  "248": {
+    "inputs": {
+      "switch": true,
+      "on_false": [
+        "122",
+        1
+      ],
+      "on_true": [
+        "192",
+        0
+      ]
+    },
+    "class_type": "ComfySwitchNode",
+    "_meta": {
+      "title": "Switch: Remove background",
+      "cnr_id": "comfy-core",
+      "ver": "0.33.0"
+    }
+  },
+  "252": {
+    "inputs": {
+      "mesh": [
+        "238",
+        0
+      ],
+      "voxel_colors": [
+        "93",
+        0
+      ]
+    },
+    "class_type": "PaintMesh",
+    "_meta": {
+      "title": "为网格着色",
+      "cnr_id": "comfy-core",
+      "ver": "0.33.0"
+    }
+  },
+  "260": {
+    "inputs": {
+      "crease_angle": 180,
+      "mesh": [
+        "210",
+        0
+      ]
+    },
+    "class_type": "MeshSmoothNormals",
+    "_meta": {
+      "title": "平滑网格法线",
+      "cnr_id": "comfy-core",
+      "ver": "0.33.0"
+    }
+  },
+  "261": {
+    "inputs": {
+      "resolution": 1024,
+      "mesh": [
+        "196",
+        0
+      ]
+    },
+    "class_type": "RenderUVAtlas",
+    "_meta": {
+      "title": "渲染 UV 图集",
+      "cnr_id": "comfy-core",
+      "ver": "0.33.0"
+    }
+  },
+  "262": {
+    "inputs": {
+      "images": [
+        "261",
+        0
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "预览图像",
+      "cnr_id": "comfy-core",
+      "ver": "0.33.0"
+    }
+  },
+  "279": {
+    "inputs": {
+      "cfg": 1,
+      "start_percent": 0.769,
+      "end_percent": 1,
+      "model": [
+        "318",
+        0
+      ]
+    },
+    "class_type": "CFGOverride",
+    "_meta": {
+      "title": "CFG 覆盖",
+      "cnr_id": "comfy-core",
+      "ver": "0.33.0"
+    }
+  },
+  "285": {
+    "inputs": {
+      "mesh": [
+        "260",
+        0
+      ]
+    },
+    "class_type": "MeshToFile3D",
+    "_meta": {
+      "title": "创建 3D 文件（来自网格）",
+      "cnr_id": "comfy-core",
+      "ver": "0.33.0"
+    }
+  },
+  "288": {
+    "inputs": {
+      "value": 4096
+    },
+    "class_type": "PrimitiveInt",
+    "_meta": {
+      "title": "Texture Resolution",
+      "cnr_id": "comfy-core",
+      "ver": "0.33.0"
+    }
+  },
+  "298": {
+    "inputs": {
+      "camera_angle_x": [
+        "355",
+        0
+      ],
+      "clip_vision_model": [
+        "15",
+        0
+      ],
+      "image": [
+        "302",
+        0
+      ]
+    },
+    "class_type": "Pixal3DConditioning",
+    "_meta": {
+      "title": "Pixal3D 条件",
+      "cnr_id": "comfy-core",
+      "ver": "0.33.0"
+    }
+  },
+  "299": {
+    "inputs": {
+      "clip_vision_model": [
+        "15",
+        0
+      ],
+      "image": [
+        "302",
+        0
+      ]
+    },
+    "class_type": "Trellis2Conditioning",
+    "_meta": {
+      "title": "Trellis2 条件",
+      "cnr_id": "comfy-core",
+      "ver": "0.17.0"
+    }
+  },
+  "302": {
+    "inputs": {
+      "images": [
+        "312",
+        0
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "预览图像",
+      "cnr_id": "comfy-core",
+      "ver": "0.33.0"
+    }
+  },
+  "303": {
+    "inputs": {
+      "mask": [
+        "248",
+        0
+      ]
+    },
+    "class_type": "MaskPreview",
+    "_meta": {
+      "title": "预览遮罩",
+      "cnr_id": "comfy-core",
+      "ver": "0.33.0"
+    }
+  },
+  "312": {
+    "inputs": {
+      "width": 1024,
+      "height": 1024,
+      "pad_factor": 1.1,
+      "grow_mask": 0,
+      "background": "#000000",
+      "images": [
+        "122",
+        0
+      ],
+      "masks": [
+        "303",
+        0
+      ]
+    },
+    "class_type": "ImageCropToMask",
+    "_meta": {
+      "title": "按遮罩裁剪图像",
+      "cnr_id": "comfy-core",
+      "ver": "0.33.0"
+    }
+  },
+  "314": {
+    "inputs": {
+      "switch": [
+        "316",
+        0
+      ],
+      "on_false": [
+        "298",
+        0
+      ],
+      "on_true": [
+        "299",
+        0
+      ]
+    },
+    "class_type": "ComfySwitchNode",
+    "_meta": {
+      "title": "切换",
+      "cnr_id": "comfy-core",
+      "ver": "0.33.0"
+    }
+  },
+  "315": {
+    "inputs": {
+      "switch": [
+        "316",
+        0
+      ],
+      "on_false": [
+        "298",
+        1
+      ],
+      "on_true": [
+        "299",
+        1
+      ]
+    },
+    "class_type": "ComfySwitchNode",
+    "_meta": {
+      "title": "切换",
+      "cnr_id": "comfy-core",
+      "ver": "0.33.0"
+    }
+  },
+  "316": {
+    "inputs": {
+      "value": [
+        "358",
+        0
+      ]
+    },
+    "class_type": "PrimitiveBoolean",
+    "_meta": {
+      "title": "Boolean (Switch to Trellis2)",
+      "cnr_id": "comfy-core",
+      "ver": "0.33.0"
+    }
+  },
+  "318": {
+    "inputs": {
+      "switch": [
+        "316",
+        0
+      ],
+      "on_false": [
+        "319",
+        0
+      ],
+      "on_true": [
+        "40",
+        0
+      ]
+    },
+    "class_type": "ComfySwitchNode",
+    "_meta": {
+      "title": "切换",
+      "cnr_id": "comfy-core",
+      "ver": "0.33.0"
+    }
+  },
+  "319": {
+    "inputs": {
+      "unet_name": "pixal3d_int8_convrot.safetensors",
+      "weight_dtype": "default"
+    },
+    "class_type": "UNETLoader",
+    "_meta": {
+      "title": "UNet加载器",
+      "cnr_id": "comfy-core",
+      "ver": "0.33.0"
+    }
+  },
+  "328": {
+    "inputs": {
+      "filename_prefix": "3d/ComfyUI",
+      "image": "",
+      "mesh": [
+        "285",
+        0
+      ]
+    },
+    "class_type": "SaveGLB",
+    "_meta": {
+      "title": "保存GLB"
+    }
+  },
+  "329": {
+    "inputs": {
+      "value": 6
+    },
+    "class_type": "PrimitiveFloat",
+    "_meta": {
+      "title": "Structure  CFG (def:7.5)"
+    }
+  },
+  "330": {
+    "inputs": {
+      "value": 6
+    },
+    "class_type": "PrimitiveFloat",
+    "_meta": {
+      "title": "Shape CFG (def:7.5)"
+    }
+  },
+  "331": {
+    "inputs": {
+      "value": 5.5
+    },
+    "class_type": "PrimitiveFloat",
+    "_meta": {
+      "title": "Upsample CFG (def:7.5)"
+    }
+  },
+  "332": {
+    "inputs": {
+      "value": 1
+    },
+    "class_type": "PrimitiveFloat",
+    "_meta": {
+      "title": "Texture CFG (def:1.0)"
+    }
+  },
+  "334": {
+    "inputs": {
+      "value": 16
+    },
+    "class_type": "PrimitiveInt",
+    "_meta": {
+      "title": "Structure Steps (def:12)"
+    }
+  },
+  "335": {
+    "inputs": {
+      "value": 28
+    },
+    "class_type": "PrimitiveInt",
+    "_meta": {
+      "title": "Shape Steps (def:20)"
+    }
+  },
+  "336": {
+    "inputs": {
+      "value": 16
+    },
+    "class_type": "PrimitiveInt",
+    "_meta": {
+      "title": "Upsample Steps (def:12)"
+    }
+  },
+  "337": {
+    "inputs": {
+      "value": 12
+    },
+    "class_type": "PrimitiveInt",
+    "_meta": {
+      "title": "Texture Steps (def:12)"
+    }
+  },
+  "338": {
+    "inputs": {
+      "value": 55
+    },
+    "class_type": "PrimitiveFloat",
+    "_meta": {
+      "title": "FOV (def:49.13) (0.0: use MoGe)"
+    }
+  },
+  "341": {
+    "inputs": {
+      "switch": [
+        "316",
+        0
+      ],
+      "on_false": [
+        "329",
+        0
+      ],
+      "on_true": [
+        "343",
+        0
+      ]
+    },
+    "class_type": "ComfySwitchNode",
+    "_meta": {
+      "title": "切换"
+    }
+  },
+  "342": {
+    "inputs": {
+      "value": 5
+    },
+    "class_type": "PrimitiveFloat",
+    "_meta": {
+      "title": "Shape CFG (def:7.5)"
+    }
+  },
+  "343": {
+    "inputs": {
+      "value": 5
+    },
+    "class_type": "PrimitiveFloat",
+    "_meta": {
+      "title": "Structure  CFG (def:7.5)"
+    }
+  },
+  "344": {
+    "inputs": {
+      "value": 5
+    },
+    "class_type": "PrimitiveFloat",
+    "_meta": {
+      "title": "Upsample CFG (def:7.5)"
+    }
+  },
+  "345": {
+    "inputs": {
+      "value": 1
+    },
+    "class_type": "PrimitiveFloat",
+    "_meta": {
+      "title": "Texture CFG (def:1.0)"
+    }
+  },
+  "346": {
+    "inputs": {
+      "value": 12
+    },
+    "class_type": "PrimitiveInt",
+    "_meta": {
+      "title": "Structure Steps (def:12)"
+    }
+  },
+  "347": {
+    "inputs": {
+      "value": 20
+    },
+    "class_type": "PrimitiveInt",
+    "_meta": {
+      "title": "Shape Steps (def:20)"
+    }
+  },
+  "348": {
+    "inputs": {
+      "value": 12
+    },
+    "class_type": "PrimitiveInt",
+    "_meta": {
+      "title": "Upsample Steps (def:12)"
+    }
+  },
+  "349": {
+    "inputs": {
+      "value": 12
+    },
+    "class_type": "PrimitiveInt",
+    "_meta": {
+      "title": "Texture Steps (def:12)"
+    }
+  },
+  "352": {
+    "inputs": {
+      "switch": [
+        "316",
+        0
+      ],
+      "on_false": [
+        "334",
+        0
+      ],
+      "on_true": [
+        "346",
+        0
+      ]
+    },
+    "class_type": "ComfySwitchNode",
+    "_meta": {
+      "title": "切换"
+    }
+  },
+  "354": {
+    "inputs": {
+      "expression": "a != 0.0",
+      "values.a": [
+        "338",
+        0
+      ]
+    },
+    "class_type": "ComfyMathExpression",
+    "_meta": {
+      "title": "数学表达式"
+    }
+  },
+  "355": {
+    "inputs": {
+      "switch": [
+        "354",
+        2
+      ],
+      "on_false": [
+        "242",
+        0
+      ],
+      "on_true": [
+        "338",
+        0
+      ]
+    },
+    "class_type": "ComfySwitchNode",
+    "_meta": {
+      "title": "切换"
+    }
+  },
+  "356": {
+    "inputs": {
+      "switch": [
+        "316",
+        0
+      ],
+      "on_false": [
+        "330",
+        0
+      ],
+      "on_true": [
+        "342",
+        0
+      ]
+    },
+    "class_type": "ComfySwitchNode",
+    "_meta": {
+      "title": "切换"
+    }
+  },
+  "357": {
+    "inputs": {
+      "switch": [
+        "316",
+        0
+      ],
+      "on_false": [
+        "335",
+        0
+      ],
+      "on_true": [
+        "347",
+        0
+      ]
+    },
+    "class_type": "ComfySwitchNode",
+    "_meta": {
+      "title": "切换"
+    }
+  },
+  "358": {
+    "inputs": {
+      "value": false
+    },
+    "class_type": "PrimitiveBoolean",
+    "_meta": {
+      "title": "Model (true:Trellis2, false:Pixal3D)",
+      "cnr_id": "comfy-core",
+      "ver": "0.33.0"
+    }
+  },
+  "359": {
+    "inputs": {
+      "switch": [
+        "316",
+        0
+      ],
+      "on_false": [
+        "331",
+        0
+      ],
+      "on_true": [
+        "344",
+        0
+      ]
+    },
+    "class_type": "ComfySwitchNode",
+    "_meta": {
+      "title": "切换"
+    }
+  },
+  "360": {
+    "inputs": {
+      "switch": [
+        "316",
+        0
+      ],
+      "on_false": [
+        "336",
+        0
+      ],
+      "on_true": [
+        "348",
+        0
+      ]
+    },
+    "class_type": "ComfySwitchNode",
+    "_meta": {
+      "title": "切换"
+    }
+  },
+  "361": {
+    "inputs": {
+      "switch": [
+        "316",
+        0
+      ],
+      "on_false": [
+        "337",
+        0
+      ],
+      "on_true": [
+        "349",
+        0
+      ]
+    },
+    "class_type": "ComfySwitchNode",
+    "_meta": {
+      "title": "切换"
+    }
+  },
+  "362": {
+    "inputs": {
+      "switch": [
+        "316",
+        0
+      ],
+      "on_false": [
+        "332",
+        0
+      ],
+      "on_true": [
+        "345",
+        0
+      ]
+    },
+    "class_type": "ComfySwitchNode",
+    "_meta": {
+      "title": "切换"
+    }
+  },
+  "363": {
+    "inputs": {
+      "value": 956023796122692
+    },
+    "class_type": "PrimitiveInt",
+    "_meta": {
+      "title": "Structure Seed (def:56)"
+    }
+  },
+  "364": {
+    "inputs": {
+      "value": 42
+    },
+    "class_type": "PrimitiveInt",
+    "_meta": {
+      "title": "Shape Seed (def:42)"
+    }
+  },
+  "365": {
+    "inputs": {
+      "value": 43
+    },
+    "class_type": "PrimitiveInt",
+    "_meta": {
+      "title": "Texture Seed (def:43)"
+    }
+  },
+  "366": {
+    "inputs": {
+      "switch": [
+        "367",
+        0
+      ],
+      "on_false": [
+        "23",
+        0
+      ],
+      "on_true": [
+        "18",
+        0
+      ]
+    },
+    "class_type": "ComfySwitchNode",
+    "_meta": {
+      "title": "Skip Upscale Switch"
+    }
+  },
+  "367": {
+    "inputs": {
+      "value": false
+    },
+    "class_type": "PrimitiveBoolean",
+    "_meta": {
+      "title": "Skip Shape Upscale"
+    }
+  },
+  "368": {
+    "inputs": {
+      "value": 12
+    },
+    "class_type": "PrimitiveInt",
+    "_meta": {
+      "title": "Remesh Smooth Iters (def:20)"
+    }
+  },
+  "369": {
+    "inputs": {
+      "value": 0.1
+    },
+    "class_type": "PrimitiveFloat",
+    "_meta": {
+      "title": "Remesh Project Back (def:0)"
+    }
+  },
+  "370": {
+    "inputs": {
+      "switch": [
+        "316",
+        0
+      ],
+      "on_false": [
+        "373",
+        0
+      ],
+      "on_true": [
+        "368",
+        0
+      ]
+    },
+    "class_type": "ComfySwitchNode",
+    "_meta": {
+      "title": "切换",
+      "cnr_id": "comfy-core",
+      "ver": "0.33.0"
+    }
+  },
+  "371": {
+    "inputs": {
+      "switch": [
+        "316",
+        0
+      ],
+      "on_false": [
+        "372",
+        0
+      ],
+      "on_true": [
+        "369",
+        0
+      ]
+    },
+    "class_type": "ComfySwitchNode",
+    "_meta": {
+      "title": "切换",
+      "cnr_id": "comfy-core",
+      "ver": "0.33.0"
+    }
+  },
+  "372": {
+    "inputs": {
+      "value": 0.3
+    },
+    "class_type": "PrimitiveFloat",
+    "_meta": {
+      "title": "Remesh Project Back (def:0)"
+    }
+  },
+  "373": {
+    "inputs": {
+      "value": 12
+    },
+    "class_type": "PrimitiveInt",
+    "_meta": {
+      "title": "Remesh Smooth Iters (def:20)"
+    }
+  },
+  "374": {
+    "inputs": {
+      "value": 700000
+    },
+    "class_type": "PrimitiveInt",
+    "_meta": {
+      "title": "Target Face Count (def:700000)"
+    }
+  },
+  "378": {
+    "inputs": {
+      "expression": "0.02",
+      "values.a": [
+        "379",
+        0
+      ]
+    },
+    "class_type": "ComfyMathExpression",
+    "_meta": {
+      "title": "NormalMap Cage Distance"
+    }
+  },
+  "379": {
+    "inputs": {
+      "value": 0
+    },
+    "class_type": "PrimitiveInt",
+    "_meta": {
+      "title": "calc dummy"
+    }
+  },
+  "382": {
+    "inputs": {
+      "mode": "auto",
+      "width": 1024,
+      "height": 1024,
+      "background": "#303030",
+      "mesh": [
+        "252",
+        0
+      ]
+    },
+    "class_type": "RenderMesh",
+    "_meta": {
+      "title": "渲染网格"
+    }
+  },
+  "383": {
+    "inputs": {
+      "images": [
+        "382",
+        0
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "预览图像"
+    }
+  },
+  "384": {
+    "inputs": {
+      "mode": "auto",
+      "width": 1024,
+      "height": 1024,
+      "background": "#303030",
+      "mesh": [
+        "260",
+        0
+      ]
+    },
+    "class_type": "RenderMesh",
+    "_meta": {
+      "title": "渲染网格"
+    }
+  },
+  "385": {
+    "inputs": {
+      "images": [
+        "384",
+        0
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "预览图像"
+    }
+  },
+  "386": {
+    "inputs": {
+      "mode": "auto",
+      "width": 1024,
+      "height": 1024,
+      "background": "#303030",
+      "mesh": [
+        "4",
+        0
+      ]
+    },
+    "class_type": "RenderMesh",
+    "_meta": {
+      "title": "渲染网格"
+    }
+  },
+  "387": {
+    "inputs": {
+      "images": [
+        "386",
+        0
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "预览图像"
+    }
+  },
+  "390": {
+    "inputs": {
+      "images": [
+        "391",
+        0
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "预览图像"
+    }
+  },
+  "391": {
+    "inputs": {
+      "mode": "auto",
+      "width": 1024,
+      "height": 1024,
+      "background": "#303030",
+      "mesh": [
+        "395",
+        0
+      ]
+    },
+    "class_type": "RenderMesh",
+    "_meta": {
+      "title": "渲染网格"
+    }
+  },
+  "393": {
+    "inputs": {
+      "images": [
+        "394",
+        0
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "预览图像"
+    }
+  },
+  "394": {
+    "inputs": {
+      "mode": "auto",
+      "width": 1024,
+      "height": 1024,
+      "background": "#303030",
+      "mesh": [
+        "92",
+        0
+      ]
+    },
+    "class_type": "RenderMesh",
+    "_meta": {
+      "title": "渲染网格"
+    }
+  },
+  "395": {
+    "inputs": {
+      "mesh": [
+        "92",
+        0
+      ],
+      "voxel_colors": [
+        "93",
+        0
+      ]
+    },
+    "class_type": "PaintMesh",
+    "_meta": {
+      "title": "为网格着色",
+      "cnr_id": "comfy-core",
+      "ver": "0.33.0"
+    }
+  }
+}
