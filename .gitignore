@@ -16,3 +16,5 @@ wheels/
 
 # Local credentials (never commit)
 /.secrets/*.env
+
+/.env

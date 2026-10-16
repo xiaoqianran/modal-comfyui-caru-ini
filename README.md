@@ -104,14 +104,19 @@ Performance improvements/optimizations are very welcome.
 
 ## Automatic Modal Secret setup
 
-`deploy-modal.bat` runs `setup-secrets.ps1` before deployment. Existing secrets are reused and never overwritten.
-
-Create an R2 Object Read & Write API token scoped to `modal-studio-assets`, then on the deployment PC:
+Use one local `.env` file for all three credentials. It is excluded from Git.
 
 ```powershell
-Copy-Item .secrets/cloudflare-r2.env.example .secrets/cloudflare-r2.env
-# Fill AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY in .secrets/cloudflare-r2.env
+Copy-Item .env.example .env
+# Fill AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, HF_TOKEN and GITHUB_TOKEN
 .\deploy-modal.bat community-pixal3d-trellis2-tuning
 ```
 
-Optional first-time files: `.secrets/huggingface-secret.env` containing `HF_TOKEN=...`; `.secrets/github.env` containing `GITHUB_TOKEN=...`. Their existing Modal Secrets are preserved. GitHub credentials are stored but not injected into ComfyUI unless explicitly needed. Actual `.env` credential files are ignored by Git. To rotate an existing secret, update it in the Modal dashboard.
+The deployment script creates missing Modal Secrets from their respective keys:
+`cloudflare-r2` (required), `huggingface-secret` (optional), and
+`github` (optional). It reuses existing Modal Secrets without overwriting
+them, and deletes its temporary per-secret files. To rotate a previously
+created secret, update it in the Modal dashboard. The GitHub token is not
+injected into ComfyUI unless a workflow explicitly needs it.
+
+If any credentials have been exposed, revoke and regenerate them before use.
