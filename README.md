@@ -127,6 +127,7 @@ Deployment does not read `.env` or change any Secret.
 
 ## Preview private R2 GLB files
 
-Run `uv run python preview_r2.py` and open http://127.0.0.1:8765 .
+Run `uv run python preview_r2.py` and open http://127.0.0.1:8766 .
 It streams GLB files from the private R2 bucket through a local-only server, without changing ComfyUI or enabling public bucket access.
+
 

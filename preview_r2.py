@@ -1,4 +1,4 @@
-"""Private R2 GLB gallery: http://127.0.0.1:8765."""
+"""Private R2 GLB gallery: http://127.0.0.1:8766."""
 import json
 import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -103,5 +103,6 @@ class Handler(BaseHTTPRequestHandler):
 
 
 if __name__ == "__main__":
-    print("GLB Gallery: http://127.0.0.1:8765")
-    ThreadingHTTPServer(("127.0.0.1", 8765), Handler).serve_forever()
+    print("GLB Gallery: http://127.0.0.1:8766")
+    ThreadingHTTPServer(("127.0.0.1", 8766), Handler).serve_forever()
+
