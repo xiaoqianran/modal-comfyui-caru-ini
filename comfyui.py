@@ -263,10 +263,10 @@ def wait_for_port(port: int, timeout: int = 60):
 #     ),
 # )
 
-# Hugging Face Storage Bucket (requires HF_BUCKET, HF_NAMESPACE and huggingface-s3 Secret).
+# Hugging Face Storage Bucket (S3 credentials in Modal Secret huggingface-s3).
 hf_mount = modal.CloudBucketMount(
-    bucket_name=os.environ["HF_BUCKET"],
-    bucket_endpoint_url=f'https://s3.hf.co/{os.environ["HF_NAMESPACE"]}',
+    bucket_name="comfyui-assets",
+    bucket_endpoint_url="https://s3.hf.co/seachen",
     key_prefix=f"comfyui/{WORKFLOW}/3d/",
     secret=modal.Secret.from_name(
         "huggingface-s3",
