@@ -1,9 +1,12 @@
 {
-  "comfy_plugins": [],
+  "comfy_plugins": [
+    "comfyui-kjnodes",
+    "promptmodels"
+  ],
   "comfy_plugins_ext": [
     {
-      "url": "https://github.com/visualbruno/ComfyUI-Hunyuan3d-2-1.git",
-      "commit": "a0b26fbb94c9a9d32720526c52e64f87e05d2b53",
+      "url": "https://github.com/xiaoqianran/ComfyUI-Hunyuan3d-2-1-visualbruno.git",
+      "commit": "7df174e6adf7c6155ff6a9e8d40385605d33c644",
       "requirements": [
         "requirements.txt"
       ],
