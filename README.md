@@ -94,6 +94,22 @@ For complete real examples see `workflows/comfyui-hunyuan3d-2-1/`. ComfyUI Manag
 
 源码、编译脚本进 Git；编译产物 `.whl` 进 GitHub Releases（不要 commit 到仓库）。目前仅适用于 Hunyuan3D-2.1 的 `custom_rasterizer` 和 `DifferentiableRenderer`。
 
+#### Modal 云端编译及一键发布（推荐）
+
+使用独立的 `wheel_build.py`，无需在 PC2 安装 Linux CUDA 编译环境。构建任务使用 CUDA 12.6.3 / Python 3.11 / L40S，并通过 `comfy-cli` 安装 ComfyUI 与 PyTorch；发布前应核对 `BUILD-INFO.txt` 和目标部署镜像的 Torch 版本是否一致。
+
+```powershell
+# 仅构建和验证 Wheel，不发布
+uv run modal run wheel_build.py --workflow comfyui-hunyuan3d-2-1
+
+# 显式发布到 GitHub Releases（Tag 不能与已有 Release 重名）
+uv run modal run wheel_build.py --workflow comfyui-hunyuan3d-2-1 --publish --tag hunyuan3d-py311-torchVERSION-cuVERSION-sm89-v1
+```
+
+发布需要 Modal Secret `github` 中设置 `GITHUB_TOKEN`，该令牌需要对目标仓库具有 Contents 写入权限。任务默认不发布；失败不覆盖已有 Release。构建验证目前包含 wheel 压缩包完整性检查，**不等同于实际 CUDA 算子运行测试**，在正式跨账号使用前仍需执行 GPU 推理验证。成功发布后 Modal 日志输出可直接复制到 `plugins.json` 的 `wheel_torch`、`wheels` 配置。普通 `modal deploy comfyui.py` 不会触发上传。
+
+#### 手动 Linux 编译与发布（备用）
+
 1. 使用**与 Modal ComfyUI 镜像一致**的 Linux x86_64 / Python 3.11 / PyTorch / CUDA 开发环境。运行 `python -c "import torch; print(torch.__version__, torch.version.cuda)"` 和 `nvcc --version` 核对版本，并确保包含 gcc/g++、git、pip、setuptools 和 wheel。
 2. 在该 Linux 环境内执行相应 Workflow 自带的构建脚本；脚本自动读取同目录 `plugins.json` 的 Git 仓库地址及固定 `commit`，不需要手工传参：
 
