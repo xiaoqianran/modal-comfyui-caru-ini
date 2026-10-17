@@ -1,0 +1,8 @@
+import{init as initWorkflows,load as loadWorkflows,refresh}from'./workflows.js';import{init as initAssets,load as loadAssets,close}from'./assets.js';
+let current='overview',assetLoaded=false;const pages=['overview','workflows','assets'],notice=document.getElementById('notice');let timeout;
+function notify(message){notice.textContent=message;notice.hidden=false;clearTimeout(timeout);timeout=setTimeout(()=>notice.hidden=true,6000)}
+function navigate(page){if(!pages.includes(page))return;if(current==='assets'&&page!=='assets')close();current=page;for(const p of pages)document.getElementById(p).hidden=p!==page;for(const n of document.querySelectorAll('[data-page]'))n.classList.toggle('active',n.dataset.page===page);document.getElementById('page-title').textContent={overview:'总览',workflows:'工作流',assets:'资产库'}[page];document.getElementById('breadcrumb').textContent='Workspace / '+document.getElementById('page-title').textContent;if(page==='assets'&&!assetLoaded){assetLoaded=true;loadAssets()}}
+for(const n of document.querySelectorAll('[data-page]'))n.onclick=()=>navigate(n.dataset.page);
+initWorkflows(notify,navigate);initAssets(notify);
+document.getElementById('refresh').onclick=async()=>{try{await refresh();if(current==='assets')await loadAssets()}catch(e){notify('刷新失败：'+e.message)}};
+try{await loadWorkflows();await refresh()}catch(e){notify('初始化失败：'+e.message)}navigate('overview');

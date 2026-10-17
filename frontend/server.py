@@ -110,6 +110,13 @@ class Handler(BaseHTTPRequestHandler):
             query = parse_qs(path.query)
             if path.path == "/":
                 return self.send_data((Path(__file__).parent / "index.html").read_bytes(),mime="text/html; charset=utf-8")
+            # Serve only explicitly allowed frontend modules, never project files.
+            if re.fullmatch(r"/(?:css|js)/[a-zA-Z0-9_-]+\.(?:css|js)", path.path):
+                static_file = Path(__file__).parent / path.path.lstrip("/")
+                if static_file.is_file():
+                    mime = "text/css; charset=utf-8" if static_file.suffix == ".css" else "text/javascript; charset=utf-8"
+                    return self.send_data(static_file.read_bytes(), mime=mime)
+                return self.send_error(404)
             if path.path == "/api/workflows":
                 return self.send_data(workflows())
             if path.path == "/api/status":
