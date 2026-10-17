@@ -1,8 +1,18 @@
-# modal-comfyui
+# modal-comfyui-caru-ini
 
-Run ComfyUI on Modal with auto-scaling, GPU snapshots, and easy model management.
+基于 [caru-ini/modal-comfyui](https://github.com/caru-ini/modal-comfyui) 的 Fork 扩展项目。感谢原作者 **caru-ini** 开源 Modal + ComfyUI 的部署方案、自动扩缩容、模型缓存与自定义节点管理能力。本仓库在原项目基础上继续开发；原项目与本仓库的后续改动请分别查看各自的 Git 历史。
 
-Good for testing wan2.2 or other video generation models.
+This project builds on [caru-ini/modal-comfyui](https://github.com/caru-ini/modal-comfyui). Thanks to **caru-ini** for the original open-source Modal + ComfyUI implementation. This fork adds workflow-oriented deployment and asset management while preserving the upstream foundation.
+
+## 本 Fork 新增功能
+
+- **多工作流配置**：每个 `workflows/<name>/` 使用 API Workflow JSON、`models.json`、`plugins.json`；工作流独立 Modal App。
+- **工作流部署管理**：通用部署 BAT；本地 `frontend/` 管理界面可查看状态、触发部署或取消部署。
+- **统一资产浏览**：`storage/s3.py` 访问 Cloudflare R2 与 Hugging Face Storage Buckets；预览 GLB 和 Gaussian Splat 文件。
+- **生成资产同步**：R2 挂载 `output/3d`，`storage/hf_sync.py` 后台将生成文件复制到 HF S3。
+- **GPU 与自定义 CUDA 节点**：各工作流独立配置 GPU，支持额外编译命令。
+
+> 本项目是社区 Fork，并非原作者的官方发布。部分工作流依赖第三方自定义节点和云端凭据；部署前请自行核对依赖与权限。
 
 ## Prerequisites
 
@@ -79,6 +89,7 @@ Each `workflows/<name>/` folder contains exactly one **ComfyUI API graph** plus 
 - For no extra plugins use `{"comfy_plugins": [], "comfy_plugins_ext": []}`. The deployment still runs `comfy node install-deps` on the API graph.
 
 For complete real examples see `workflows/comfyui-hunyuan3d-2-1/`. ComfyUI Manager → **Used in Workflow** can help identify missing nodes.
+
 ## Usage
 
 ### Serve (Development)
@@ -91,10 +102,12 @@ This will provide a temporary URL where you can access the ComfyUI interface.
 
 ### Deploy (Production)
 
-To deploy ComfyUI as a persistent app:
-```bash
-modal deploy comfyui.py
+To deploy a specific workflow (Windows):
+```powershell
+.\deploy-modal.bat comfyui-pixal3d-trellis2
 ```
+
+Alternatively set `WORKFLOW` in the environment and run `uv run modal deploy comfyui.py`.
 
 ## Features
 
@@ -164,7 +177,11 @@ Deployment does not read `.env` or change any Secret.
 
 ## Preview private R2 GLB files
 
-Run `uv run python preview_r2.py` and open http://127.0.0.1:8766 .
-It streams GLB files from the private R2 bucket through a local-only server, without changing ComfyUI or enabling public bucket access.
+The unified asset browser is available via `uv run python frontend/server.py` at http://127.0.0.1:8768.
+Legacy `preview_r2.py` and `preview_hf.py` remain optional standalone previews for now.
 
 
+
+## 致谢 / Acknowledgements
+
+特别感谢 [caru-ini](https://github.com/caru-ini) 和原项目 [modal-comfyui](https://github.com/caru-ini/modal-comfyui) 的贡献。本 Fork 以其开源实现为基础，持续增加工作流部署、资产存储与可视化管理功能；原项目的设计与贡献归属于原作者及其贡献者。
