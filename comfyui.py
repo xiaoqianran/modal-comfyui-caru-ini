@@ -281,16 +281,17 @@ def install_ext_plugin(image: modal.Image, plugin: dict) -> modal.Image:
             f"--python $(command -v python) --compile-bytecode {files}"
         )
 
+    # Install explicit dependencies before running plugin install.py.
+    ext_deps = plugin.get("ext_deps") or []
+    if ext_deps:
+        image = image.uv_pip_install(ext_deps, extra_options="--no-deps")
+
     install = plugin.get("install", "").strip()
     if install:
         if install.endswith(".py"):
             image = image.run_commands(f"cd {work_dir} && python {shlex.quote(install)}")
         else:
             print(f"Unsupported installation script: {install}")
-
-    ext_deps = plugin.get("ext_deps") or []
-    if ext_deps:
-        image = image.uv_pip_install(ext_deps, extra_options="--no-deps")
 
     wheels = plugin.get("wheels") or []
     if wheels:
