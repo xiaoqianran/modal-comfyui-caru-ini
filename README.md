@@ -97,6 +97,17 @@ Only `output/3d/` is persisted to R2; other ComfyUI outputs remain ephemeral.
 File writes need to complete normally. Modal/S3 mounts do not support all POSIX
 filesystem operations, and a real GLB write must be verified after deployment.
 
+## Local console
+
+Run `uv run python frontend/server.py` and open http://127.0.0.1:8768 .
+The console manages Modal workflows and previews private R2 / Hugging Face S3
+assets. It binds only to localhost and reads local credentials from `.env`.
+The original `deploy-modal.bat` remains available independently.
+
+Cloud output uses `storage/hf_sync.py` (R2 to HF replication).
+Build and deployment remain in `comfyui.py`. The web UI is not baked into
+the Modal image.
+
 ## Contributing
 
 Please feel free to contribute to make this project better.

@@ -62,7 +62,7 @@ def hf_download(
 
     target_dir = resolve_model_dir(model_dir)
     target_dir.mkdir(parents=True, exist_ok=True)
-    local_filename = Path(filename).name
+    local_filename = next((m.get("local_filename") for m in models if m["repo_id"] == repo_id and m["filename"] == filename), None) or Path(filename).name
     target_path = target_dir / local_filename
 
     # Remove existing file/link if it exists to ensure fresh link
@@ -142,8 +142,8 @@ vol = modal.Volume.from_name("hf-hub-cache", create_if_missing=True)
 # construct images and install deps/custom nodes
 VERSION = f"--version {COMFY_VER}" if COMFY_VER else ""
 image = (
-    modal.Image.debian_slim(python_version="3.11")
-    .apt_install("git", "git-lfs", "libgl1-mesa-dev", "libglib2.0-0", "axel")
+    (modal.Image.from_registry("nvidia/cuda:12.6.3-devel-ubuntu22.04", add_python="3.11") if model_config.get("cuda_devel") else modal.Image.debian_slim(python_version="3.11"))
+    .apt_install("git", "git-lfs", "libgl1-mesa-dev", "libglib2.0-0", "axel", "build-essential", "ninja-build")
     .pip_install_from_requirements(str(root_dir / "requirements_comfy.txt"))
     .run_commands(f"comfy --skip-prompt install --nvidia {VERSION}")
     .run_commands("git lfs install")
@@ -179,7 +179,6 @@ image = image.env(
 # ============================================================================
 # 5. 安装工作流插件：仅注入当前 Workflow JSON，安装节点及可选 CUDA 扩展
 # ============================================================================
-# setup custom nodes
 workflow_files = sorted(
     p for p in WORKFLOW_DIR.glob("*.json")
     if p.name.lower() not in {"model.json", "models.json", "plugins.json"}
@@ -187,6 +186,9 @@ workflow_files = sorted(
 if len(workflow_files) != 1:
     raise ValueError(f"Expected exactly one workflow JSON in {WORKFLOW_DIR}, found: {[p.name for p in workflow_files]}")
 workflow_file_path = workflow_files[0]
+# Only the selected workflow is needed inside the image. Keep this copy after
+# the shared base and model layers so changes to unrelated workflows do not
+# invalidate their caches.
 image = image.add_local_file(
     workflow_file_path, "/root/workflow_api.json", copy=True
 ).run_commands("comfy node install-deps --workflow=/root/workflow_api.json")
@@ -210,8 +212,12 @@ def install_ext_plugin(image: modal.Image, plugin: dict) -> modal.Image:
     branch = plugin.get("branch", "").strip()
     branch_opt = f"--branch {shlex.quote(branch)} " if branch else ""
     image = image.run_commands(
-        f"cd {nodes_dir} && git clone --recurse-submodules --single-branch "
-        f"{branch_opt}{shlex.quote(url)}"
+        f"if [ -d {work_dir}/.git ]; then "
+        f"echo 'Custom node already installed: {name}'; "
+        f"elif [ -e {work_dir} ]; then "
+        f"echo 'Custom node directory exists without .git: {name}' >&2; exit 1; "
+        f"else cd {nodes_dir} && git clone --recurse-submodules --single-branch "
+        f"{branch_opt}{shlex.quote(url)}; fi"
     )
 
     requirements = plugin.get("requirements") or []
@@ -234,6 +240,9 @@ def install_ext_plugin(image: modal.Image, plugin: dict) -> modal.Image:
     ext_deps = plugin.get("ext_deps") or []
     if ext_deps:
         image = image.uv_pip_install(ext_deps, extra_options="--no-deps")
+
+    for command in plugin.get("build_commands", []):
+        image = image.run_commands(f"cd {work_dir} && {command}")
 
     return image
 
@@ -270,29 +279,19 @@ def wait_for_port(port: int, timeout: int = 60):
             time.sleep(0.5)
     raise TimeoutError(f"ComfyUI never became ready on port {port}")
     
-# Previous R2 mount; uncomment to roll back.
-# r2_mount = modal.CloudBucketMount(
-#     bucket_name="modal-studio-assets",
-#     bucket_endpoint_url=os.getenv(
-#         "R2_ENDPOINT", "https://f863e42ff2096d089d4d4129197abd17.r2.cloudflarestorage.com"
-#     ),
-#     key_prefix=f"comfyui/{WORKFLOW}/3d/",
-#     secret=modal.Secret.from_name(
-#         "cloudflare-r2",
-#         required_keys=["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"],
-#     ),
-# )
-
-# Hugging Face Storage Bucket (S3 credentials in Modal Secret huggingface-s3).
-hf_mount = modal.CloudBucketMount(
-    bucket_name="comfyui-assets",
-    bucket_endpoint_url="https://s3.hf.co/seachen",
+r2_mount = modal.CloudBucketMount(
+    bucket_name="modal-studio-assets",
+    bucket_endpoint_url=os.getenv(
+        "R2_ENDPOINT", "https://f863e42ff2096d089d4d4129197abd17.r2.cloudflarestorage.com"
+    ),
     key_prefix=f"comfyui/{WORKFLOW}/3d/",
     secret=modal.Secret.from_name(
-        "huggingface-s3",
+        "cloudflare-r2",
         required_keys=["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"],
     ),
-    force_path_style=True,
+)
+image = image.pip_install("boto3").add_local_file(
+    root_dir / "storage" / "hf_sync.py", "/root/hf_sync.py", copy=True
 )
 # ============================================================================
 # 7. 声明 Modal App：为每个 Workflow 分配独立应用、GPU、Volume 和 Secret
@@ -305,8 +304,9 @@ app = modal.App(name=f"modal-{WORKFLOW}", image=image)
     gpu=GPU_TYPE,
     volumes={
         "/cache": vol,
-        "/root/comfy/ComfyUI/output/3d": hf_mount,
+        "/root/comfy/ComfyUI/output/3d": r2_mount,
     },
+    secrets=[modal.Secret.from_name("huggingface-s3")],
     scaledown_window=60,  # idle 1 minutes to shutdown
     enable_memory_snapshot=True,
     experimental_options={"enable_gpu_snapshot": True},
@@ -327,6 +327,10 @@ class ComfyUI:
     @modal.enter(snap=False)
     def start_restore(self):
         wait_for_port(8000, timeout=30)
+        self.sync_proc = subprocess.Popen(
+            ["python", "-u", "/root/hf_sync.py"],
+            env={**os.environ, "WORKFLOW": WORKFLOW},
+        )
         print("App Restored!")
     
     @modal.web_server(8000, startup_timeout=300)
@@ -335,6 +339,13 @@ class ComfyUI:
     
     @modal.exit()
     def cleanup(self):
+        sync_proc = getattr(self, "sync_proc", None)
+        if sync_proc is not None:
+            sync_proc.terminate()
+            try:
+                sync_proc.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                sync_proc.kill()
         proc = getattr(self, "proc", None)
         if proc is not None:
             try:

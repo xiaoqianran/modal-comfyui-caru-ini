@@ -1,0 +1,80 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ComfyUI Console</title>
+<script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.1.0/model-viewer.min.js"></script>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#111923;color:#eef;font:14px system-ui}
+header,nav,main{padding:14px 22px}header,nav{border-bottom:1px solid #354455}
+nav{display:flex;gap:10px}button,select,input{background:#202e40;color:#eef;border:1px solid #43546a;border-radius:7px;padding:9px;cursor:pointer}
+button:hover{background:#384b62}h1{font-size:20px;margin:0}article{border:1px solid #38495d;border-radius:9px;padding:14px;margin:12px 0}
+.row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.grow{flex:1}.muted{color:#aebdcd}
+pre{padding:14px;background:#0a1119;max-height:270px;overflow:auto;white-space:pre-wrap}
+#gallery{display:grid;grid-template-columns:minmax(260px,36%) 1fr;gap:15px}
+#files{max-height:70vh;overflow:auto}#files button{display:block;width:100%;margin:6px 0;text-align:left;overflow-wrap:anywhere}
+#viewer{height:65vh;min-height:300px;background:#1b2838;border-radius:8px}
+model-viewer,#splat{width:100%;height:100%;display:none}a{color:#9cd0ff}
+@media(max-width:750px){#gallery{grid-template-columns:1fr}#viewer{height:45vh}}
+</style></head><body><header><h1>ComfyUI Console</h1><small class="muted">本地管理 · Modal / R2 / HF</small></header>
+<nav><button id="deploy-tab">部署管理</button><button id="asset-tab">资产预览</button></nav>
+<main><section id="deploy"><div class="row"><h2 class="grow">Workflows</h2><button id="refresh">刷新</button></div><div id="workflows"></div><pre id="logs">选择操作以查看日志。</pre></section>
+<section id="gallery" hidden><div><div class="row"><select id="source"><option value="r2">Cloudflare R2</option><option value="hf">Hugging Face S3</option></select><select id="workflow"><option value="">所有工作流</option></select><button id="reload">刷新</button></div><p id="count" class="muted"></p><input id="filter" placeholder="过滤文件名" style="width:100%"><div id="files"></div></div>
+<div><div class="row"><strong id="filename" class="grow">选择一个资产</strong><a id="download" hidden>下载</a></div><div id="viewer"><model-viewer id="model" camera-controls auto-rotate></model-viewer><div id="splat"></div><p id="hint" class="muted" style="padding:20px">GLB / GLTF / Gaussian Splat 预览</p></div></div></section></main>
+<script type="module">
+const $=id=>document.getElementById(id);
+const request=async(url,options)=>{const r=await fetch(url,options),v=await r.json();if(!r.ok)throw Error(v.error||r.status);return v};
+let workflows=[],items=[],scene=null,selection=0;
+function show(page){$('deploy').hidden=page!=='deploy';$('gallery').hidden=page!=='gallery'}
+$('deploy-tab').onclick=()=>show('deploy');$('asset-tab').onclick=()=>show('gallery');
+async function refresh(){
+ try{
+  const state=await request('/api/status');$('workflows').replaceChildren();
+  for(const wf of workflows){
+   const app=(state.apps||{})[wf.app]||{},card=document.createElement('article'),row=document.createElement('div');row.className='row';
+   const title=document.createElement('strong');title.className='grow';title.textContent=wf.id;
+   const status=document.createElement('span');status.className='muted';status.textContent=wf.gpu+' · '+(app.state||'未部署');
+   row.append(title,status);card.append(row);
+   const buttons=document.createElement('div');buttons.className='row';buttons.style.marginTop='12px';
+   for(const [label,action] of [['部署','deploy'],['取消部署','stop']]){
+    const button=document.createElement('button');button.textContent=label;button.onclick=()=>operate(wf.id,action);buttons.append(button);
+   }
+   const log=document.createElement('button');log.textContent='运行日志';
+   log.onclick=async()=>{try{$('logs').textContent=(await request('/api/logs?workflow='+encodeURIComponent(wf.id))).log}catch(e){$('logs').textContent=e.message}};
+   buttons.append(log);const link=state.links?.[wf.id];
+   if(link){const a=document.createElement('a');a.href=link;a.target='_blank';a.rel='noopener';a.textContent='打开 ComfyUI ↗';buttons.append(a)}
+   card.append(buttons);$('workflows').append(card);
+  }
+ }catch(e){$('logs').textContent='状态读取失败：'+e.message}
+}
+async function operate(workflow,action){
+ if(action==='stop'&&!confirm('停止部署 '+workflow+'？'))return;
+ try{
+  const task=await request('/api/operate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({workflow,action})});
+  const poll=async()=>{try{const t=await request('/api/task/'+task.id);$('logs').textContent=t.log||t.state;if(t.state==='running')setTimeout(poll,1500);else refresh()}catch(e){$('logs').textContent=e.message}};
+  poll();
+ }catch(e){$('logs').textContent=e.message}
+}
+async function loadAssets(){
+ try{items=await request('/api/assets?source='+$('source').value+'&workflow='+encodeURIComponent($('workflow').value));render()}
+ catch(e){$('count').textContent='读取失败：'+e.message}
+}
+function render(){
+ const shown=items.filter(i=>i.key.toLowerCase().includes($('filter').value.toLowerCase()));$('count').textContent=shown.length+' / '+items.length+' 个文件';
+ $('files').replaceChildren();for(const item of shown){const b=document.createElement('button');b.textContent=item.key+' ('+(item.size/1048576).toFixed(1)+' MiB)';b.onclick=()=>preview(item);$('files').append(b)}
+}
+async function preview(item){
+ const ticket=++selection,url='/asset/'+item.source+'/'+item.key.split('/').map(encodeURIComponent).join('/'),ext=item.key.split('.').pop().toLowerCase();
+ $('filename').textContent=item.key;$('download').href=url+'?download=1';$('download').hidden=false;
+ $('model').removeAttribute('src');$('model').style.display='none';$('splat').style.display='none';$('hint').style.display='block';
+ if(scene){scene.dispose();scene=null}$('splat').replaceChildren();
+ if(['glb','gltf'].includes(ext)){$('model').src=url;$('model').style.display='block';$('hint').style.display='none';return}
+ if(['ply','splat','ksplat','spz'].includes(ext)){
+  $('hint').textContent='加载 Gaussian Splat…';
+  try{const G=await import('https://esm.sh/@mkkellogg/gaussian-splats-3d@0.4.7?bundle');if(ticket!==selection)return;
+   scene=new G.Viewer({rootElement:$('splat'),selfDrivenMode:true,sharedMemoryForWorkers:false,dynamicScene:false});$('splat').style.display='block';
+   await scene.addSplatScene(url,{splatAlphaRemovalThreshold:5,showLoadingUI:true});if(ticket===selection){scene.start();$('hint').style.display='none'}
+  }catch(e){$('hint').textContent='预览失败：'+e.message+'；可以下载原文件'}return;
+ }
+ $('hint').textContent='暂不支持预览，请下载原文件';
+}
+$('refresh').onclick=refresh;$('reload').onclick=loadAssets;$('source').onchange=loadAssets;$('workflow').onchange=loadAssets;$('filter').oninput=render;
+try{workflows=await request('/api/workflows');for(const wf of workflows)$('workflow').add(new Option(wf.id,wf.id));await refresh()}catch(e){$('logs').textContent=e.message}
+</script></body></html>
