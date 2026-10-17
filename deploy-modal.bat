@@ -21,11 +21,9 @@ if not exist "workflows\%WORKFLOW%\plugins.json" (
     exit /b 1
 )
 
-set /a WORKFLOW_JSON_COUNT=0
-for %%F in ("workflows\%WORKFLOW%\*.json") do (
-    if /i not "%%~nxF"=="models.json" if /i not "%%~nxF"=="model.json" if /i not "%%~nxF"=="plugins.json" set /a WORKFLOW_JSON_COUNT+=1 >nul
-)
-if "%WORKFLOW_JSON_COUNT%"=="0" (
+rem Validate recursively; only models.json and plugins.json are configuration.
+powershell -NoProfile -Command "$files = @(Get-ChildItem -LiteralPath 'workflows\%WORKFLOW%' -Recurse -File -Filter '*.json' | Where-Object { $_.Name -notin @('models.json','plugins.json') }); if ($files.Count -eq 0) { exit 1 }; Write-Host ('Found ' + $files.Count + ' workflow JSON files.')"
+if errorlevel 1 (
     echo ERROR: At least one workflow JSON is required.
     exit /b 1
 )

@@ -11,6 +11,17 @@ import modal
 
 import json
 
+# Modal 镜像构建与应用声明顺序（必须保持）：
+# 1. 安装 ComfyUI。
+# 2. 下载模型（构建时使用 models.json / plugins.json）。
+# 3. 安装工作流插件。
+# 4. 编译所需的 CUDA 扩展。
+# 5. 安装其余依赖并完成所有镜像构建步骤。
+# 6. 最后通过 copy=False 挂载所有工作流 JSON（排除 models.json / plugins.json）。
+# 7. 声明 Modal App。
+# 注意：copy=False 的 add_local_file 必须位于所有 run_commands / pip_install 等构建操作之后，
+# 否则 Modal 会拒绝构建；工作流 JSON 改动不应触发 CUDA 扩展重编译。
+
 # ============================================================================
 # 1. 读取 Workflow 配置：选择目录，解析模型、插件及 GPU 参数
 # ============================================================================
@@ -26,12 +37,8 @@ models = model_config["models"]
 models_ext = model_config.get("models_ext", [])
 comfy_plugins = plugin_config.get("comfy_plugins", [])
 comfy_plugins_ext = plugin_config.get("comfy_plugins_ext", [])
-workflow_files = sorted(
-    p for p in WORKFLOW_DIR.glob("*.json")
-    if p.name.lower() not in {"model.json", "models.json", "plugins.json"}
-)
-if not workflow_files:
-    raise ValueError(f"No workflow JSON in {WORKFLOW_DIR}")
+# Workflow files are intentionally not validated at module import time:
+# Modal re-imports this module during download_all before workflow mounts exist.
 
 COMFY_MODELS_ROOT = Path("/root/comfy/ComfyUI/models")
 
@@ -190,21 +197,8 @@ image = image.env(
 
 
 # ============================================================================
-# 5. 插件由 plugins.json 声明；工作流只作为运行时文件挂载
+# 5. 插件由 plugins.json 声明；工作流在全部构建步骤完成后挂载
 # ============================================================================
-# Keep workflow JSON out of image build layers. ComfyUI discovers UI-format
-# graphs from user/default/workflows after a deployment updates these mounts.
-# Other JSON files (models/plugins) are deliberately excluded.
-for workflow_json in sorted(WORKFLOW_DIR.rglob("*.json")):
-    if workflow_json.name.lower() in {"model.json", "models.json", "plugins.json"}:
-        continue
-    relative = workflow_json.relative_to(WORKFLOW_DIR).as_posix()
-    image = image.add_local_file(
-        workflow_json,
-        f"/root/comfy/ComfyUI/user/default/workflows/{WORKFLOW}/{relative}",
-        copy=False,
-    )
-
 if WORKFLOW == "community-hunyuan3d-2-1-visualbruno":
     # The bundled DINOv2 checkpoint uses Transformers 4.x state_dict names.
     # ComfyUI Manager installs unpinned Transformers; v5 renames these keys.
@@ -364,6 +358,18 @@ r2_mount = modal.CloudBucketMount(
 image = image.pip_install("boto3").add_local_file(
     root_dir / "storage" / "hf_sync.py", "/root/hf_sync.py", copy=True
 )
+
+# Mount workflow JSONs last: copy=False mounts cannot precede image build steps.
+# Keep the relative directory structure and exclude only configuration JSONs.
+for workflow_json in sorted(WORKFLOW_DIR.rglob("*.json")):
+    if workflow_json.name.lower() in {"models.json", "plugins.json"}:
+        continue
+    relative = workflow_json.relative_to(WORKFLOW_DIR).as_posix()
+    image = image.add_local_file(
+        workflow_json,
+        f"/root/comfy/ComfyUI/user/default/workflows/{WORKFLOW}/{relative}",
+        copy=False,
+    )
 # ============================================================================
 # 7. 声明 Modal App：为每个 Workflow 分配独立应用、GPU、Volume 和 Secret
 # ============================================================================
