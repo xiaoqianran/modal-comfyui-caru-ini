@@ -1,0 +1,19 @@
+{
+  "models": [
+    {
+      "repo_id": "tencent/Hunyuan3D-2.1",
+      "filename": "hunyuan3d-dit-v2-1/model.fp16.ckpt",
+      "model_dir": "diffusion_models",
+      "local_filename": "hunyuan3d-dit-v2-1-fp16.ckpt"
+    },
+    {
+      "repo_id": "tencent/Hunyuan3D-2.1",
+      "filename": "hunyuan3d-vae-v2-1/model.fp16.ckpt",
+      "model_dir": "vae",
+      "local_filename": "Hunyuan3D-vae-v2-1-fp16.ckpt"
+    }
+  ],
+  "models_ext": [],
+  "gpu": "L40S",
+  "cuda_devel": true
+}

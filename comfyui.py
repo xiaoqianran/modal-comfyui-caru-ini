@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 import shlex
 import subprocess
 from pathlib import Path
@@ -197,6 +198,34 @@ if comfy_plugins:
     image = image.run_commands("comfy node install " + " ".join(comfy_plugins))
 
 
+def install_wheel(image: modal.Image, wheel: dict) -> modal.Image:
+    """Install a verified wheel from this fork's public GitHub Releases."""
+    url, sha = wheel["url"], wheel["sha256"].lower()
+    parts = urlsplit(url)
+    filename = parts.path.rsplit("/", 1)[-1]
+    if (
+        parts.scheme != "https"
+        or parts.netloc != "github.com"
+        or parts.path.split("/")[1:5] !=
+        ["xiaoqianran", "modal-comfyui-caru-ini", "releases", "download"]
+        or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._+-]*\.whl", filename)
+        or not re.fullmatch(r"[0-9a-f]{64}", sha)
+    ):
+        raise ValueError(f"Invalid wheel URL or SHA256: {url}")
+    target = f"/tmp/{filename}"
+    download = (
+        "import hashlib, pathlib, urllib.request\n"
+        f"p = pathlib.Path({target!r})\n"
+        f"urllib.request.urlretrieve({url!r}, p)\n"
+        f"if hashlib.sha256(p.read_bytes()).hexdigest() != {sha!r}:\n"
+        "    raise RuntimeError('Wheel SHA256 mismatch')"
+    )
+    return image.run_commands(
+        f"python -c {shlex.quote(download)} && "
+        f"uv pip install --reinstall --no-deps --python $(command -v python) {shlex.quote(target)}"
+    )
+
+
 def install_ext_plugin(image: modal.Image, plugin: dict) -> modal.Image:
     """Install one external custom node from git into ComfyUI's custom_nodes.
 
@@ -220,6 +249,15 @@ def install_ext_plugin(image: modal.Image, plugin: dict) -> modal.Image:
         f"{branch_opt}{shlex.quote(url)}; fi"
     )
 
+    commit = plugin.get("commit")
+    if commit:
+        if not isinstance(commit, str) or not re.fullmatch(r"[0-9a-fA-F]{40}", commit):
+            raise ValueError("Plugin commit must be a full 40-character Git SHA")
+        image = image.run_commands(
+            f"git -C {work_dir} checkout --detach {commit} && "
+            f"git -C {work_dir} submodule update --init --recursive"
+        )
+
     requirements = plugin.get("requirements") or []
     if requirements:
         files = " ".join(f"-r {shlex.quote(f)}" for f in requirements)
@@ -241,8 +279,22 @@ def install_ext_plugin(image: modal.Image, plugin: dict) -> modal.Image:
     if ext_deps:
         image = image.uv_pip_install(ext_deps, extra_options="--no-deps")
 
-    for command in plugin.get("build_commands", []):
-        image = image.run_commands(f"cd {work_dir} && {command}")
+    wheels = plugin.get("wheels") or []
+    if wheels:
+        expected_torch = plugin.get("wheel_torch")
+        if not isinstance(expected_torch, str) or not expected_torch:
+            raise ValueError("wheel_torch must be set when using prebuilt wheels")
+        check = (
+            "import sys, torch; "
+            f"torch.__version__ == {expected_torch!r} or "
+            f"sys.exit('Wheel requires PyTorch {expected_torch}')"
+        )
+        image = image.run_commands(f"python -c {shlex.quote(check)}")
+        for wheel in wheels:
+            image = install_wheel(image, wheel)
+    else:
+        for command in plugin.get("build_commands", []):
+            image = image.run_commands(f"cd {work_dir} && {command}")
 
     return image
 

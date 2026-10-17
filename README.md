@@ -84,11 +84,47 @@ Each `workflows/<name>/` folder contains exactly one **ComfyUI API graph** plus 
 ```
 
 - `comfy_plugins`: optional list of node names/IDs for `comfy node install`.
-- `comfy_plugins_ext`: optional list of Git custom nodes. `url` is required; `branch`, `requirements`, `install` (Python script), `ext_deps`, and `build_commands` are optional.
+- `comfy_plugins_ext`: optional list of Git custom nodes. `url` is required; `branch`, `commit`, `requirements`, `install` (Python script), `ext_deps`, `build_commands`, `wheels`, and `wheel_torch` are optional.
 - `requirements` and `ext_deps` are installed using `--no-deps`; `build_commands` runs as shell commands in the cloned plugin directory. Only configure trusted commands.
 - For no extra plugins use `{"comfy_plugins": [], "comfy_plugins_ext": []}`. The deployment still runs `comfy node install-deps` on the API graph.
 
 For complete real examples see `workflows/comfyui-hunyuan3d-2-1/`. ComfyUI Manager → **Used in Workflow** can help identify missing nodes.
+
+### 跨 Modal 账号复用 CUDA Wheels（GitHub Releases）
+
+源码、编译脚本进 Git；编译产物 `.whl` 进 GitHub Releases（不要 commit 到仓库）。目前仅适用于 Hunyuan3D-2.1 的 `custom_rasterizer` 和 `DifferentiableRenderer`。
+
+1. 使用**与 Modal ComfyUI 镜像一致**的 Linux x86_64 / Python 3.11 / PyTorch / CUDA 开发环境。运行 `python -c "import torch; print(torch.__version__, torch.version.cuda)"` 和 `nvcc --version` 核对版本，并确保包含 gcc/g++、git、pip、setuptools 和 wheel。
+2. 在该 Linux 环境内运行（指定已核实的上游 commit，必须与 `plugins.json` 的 `commit` 相同）：
+
+   ```bash
+   bash build-wheels.sh a0b26fbb94c9a9d32720526c52e64f87e05d2b53
+   ```
+
+   产物生成在被 Git 忽略的 `wheels/`：两个 `.whl`、`SHA256SUMS` 和 `BUILD-INFO.txt`。脚本不会发布或清除已存在的 wheel；再次编译前需自行移走旧 wheel。需要在匹配环境实际测试两个包的导入和 GPU 运算。
+3. 发布到本仓库 **GitHub Releases**（Tag 的 Torch/CUDA 版本必须来自 `BUILD-INFO.txt`，下面仅为命名示例）：
+
+   ```bash
+   gh release create hunyuan3d-py311-torchVERSION-cuVERSION-sm89-v1 \
+     wheels/*.whl wheels/SHA256SUMS wheels/BUILD-INFO.txt \
+     --title "Hunyuan3D Linux CUDA wheels" --notes-file wheels/BUILD-INFO.txt
+   ```
+
+4. 成功上传并校验下载链接后，在 `workflows/comfyui-hunyuan3d-2-1/plugins.json` 的同一插件对象中填入：
+
+   ```json
+   {
+     "wheel_torch": "实际的 torch.__version__（例如包含 +cu126 后缀）",
+     "wheels": [
+       {"url": "https://github.com/xiaoqianran/modal-comfyui-caru-ini/releases/download/<TAG>/<WHEEL_1>.whl", "sha256": "<WHEEL_1 的 64 位 SHA256>"},
+       {"url": "https://github.com/xiaoqianran/modal-comfyui-caru-ini/releases/download/<TAG>/<WHEEL_2>.whl", "sha256": "<WHEEL_2 的 64 位 SHA256>"}
+     ]
+   }
+   ```
+
+   以上只是字段示意，需**替换真实文件名、Torch 版本和 SHA256**，不要直接复制部署。当前 `wheels: []` 表示保留源码编译。配置非空后，`comfyui.py` 先检查 Torch 完全一致，再下载、验证 SHA256 并安装 wheel；不会执行 `build_commands`，也**不会在失败时自动回退**。若需恢复源码编译，将 `wheels` 改回 `[]`。
+
+注意：`comfy node install-deps` 仍在外部插件安装之前执行，可能有自己的依赖安装/编译行为；是否存在重复编译必须依据 Modal Build 日志判断。预编译包不能代替完整镜像或模型缓存。发布第三方 CUDA 扩展之前应检查对应上游许可证和分发限制。
 
 ## Usage
 
