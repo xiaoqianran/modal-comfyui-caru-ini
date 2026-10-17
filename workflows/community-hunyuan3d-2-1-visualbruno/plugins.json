@@ -10,6 +10,11 @@
       "requirements": [
         "requirements.txt"
       ],
+      "resolve_dependencies": true,
+      "ext_deps": [
+        "lazy-loader",
+        "lightning-utilities"
+      ],
       "wheels": [],
       "build_commands": [
         "cd hy3dpaint/custom_rasterizer && CC=gcc CXX=g++ TORCH_CUDA_ARCH_LIST=8.9 pip install --no-build-isolation .",

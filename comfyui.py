@@ -274,10 +274,27 @@ def install_ext_plugin(image: modal.Image, plugin: dict) -> modal.Image:
     requirements = plugin.get("requirements") or []
     if requirements:
         files = " ".join(f"-r {shlex.quote(f)}" for f in requirements)
-        # --no-deps so a node's requirements can't pull a CPU-only torch over
-        # the CUDA build; use "ext_deps" below to add back what's needed.
+        # Resolve transitive dependencies unless explicitly disabled. Preserve
+        # installed CUDA PyTorch packages with constraints to avoid replacing
+        # torch/torchvision/torchaudio with incompatible wheels.
+        dep_flags = ""
+        if plugin.get("resolve_dependencies"):
+            constraints = "/tmp/comfy-torch-constraints.txt"
+            image = image.run_commands(
+                "python -c "
+                + shlex.quote(
+                    "from importlib.metadata import version, PackageNotFoundError; "
+                    "from pathlib import Path; "
+                    "packages=('torch','torchvision','torchaudio'); "
+                    "installed=[(p, version(p)) for p in packages]; "
+                    f"Path('{constraints}').write_text(''.join(p+'=='+v+chr(10) for p,v in installed))"
+                )
+            )
+            dep_flags = f"--constraint {constraints}"
+        else:
+            dep_flags = "--no-deps"
         image = image.run_commands(
-            f"cd {work_dir} && uv pip install --no-deps "
+            f"cd {work_dir} && uv pip install {dep_flags} "
             f"--python $(command -v python) --compile-bytecode {files}"
         )
 
