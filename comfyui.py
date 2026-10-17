@@ -10,6 +10,9 @@ import modal
 
 import json
 
+# ============================================================================
+# 1. 读取 Workflow 配置：选择目录，解析模型、插件及 GPU 参数
+# ============================================================================
 root_dir = Path(__file__).parent
 WORKFLOW = os.getenv("WORKFLOW", "comfyui-pixal3d-trellis2")
 WORKFLOW_DIR = root_dir / "workflows" / WORKFLOW
@@ -28,6 +31,10 @@ COMFY_MODELS_ROOT = Path("/root/comfy/ComfyUI/models")
 GPU_TYPE = os.getenv("MODAL_GPU") or model_config.get("gpu", "L40S")
 COMFY_VER = os.getenv("COMFY_VER")
 
+# ============================================================================
+# 2. 准备模型下载函数：定位目标目录，从 HF / 外部地址下载并建立链接
+#    这里定义函数；实际下载在第 4 阶段构建镜像时执行。
+# ============================================================================
 def resolve_model_dir(model_dir: str) -> Path:
     """Resolve model_dir: absolute paths are used as-is, relative paths are
     placed under /root/comfy/ComfyUI/models/ (e.g. "checkpoints")."""
@@ -126,6 +133,10 @@ def download_all():
         download_external_model(model["url"], model["filename"], model["model_dir"])
 
 
+# ============================================================================
+# 3. 构建 Modal 基础镜像：选择 CUDA / Python，安装系统依赖与 ComfyUI
+#    模型与插件暂不在此层加入，便于复用基础镜像缓存。
+# ============================================================================
 vol = modal.Volume.from_name("hf-hub-cache", create_if_missing=True)
 
 # construct images and install deps/custom nodes
@@ -138,6 +149,9 @@ image = (
     .run_commands("git lfs install")
 )
 
+# ============================================================================
+# 4. 下载模型权重：获取 HF 凭据，在构建阶段写入共享 Volume 并建立链接
+# ============================================================================
 def _hf_secrets() -> list[modal.Secret]:
     """Prefer Modal Secret 'huggingface-secret'; fall back to local HF_TOKEN
     env. Public models work even when both are absent (warned)."""
@@ -162,6 +176,9 @@ image = image.env(
 ).run_function(download_all, volumes={"/cache": vol}, secrets=_hf_secrets())
 
 
+# ============================================================================
+# 5. 安装工作流插件：仅注入当前 Workflow JSON，安装节点及可选 CUDA 扩展
+# ============================================================================
 # setup custom nodes
 workflow_files = sorted(
     p for p in WORKFLOW_DIR.glob("*.json")
@@ -235,6 +252,10 @@ image = image.add_local_dir(
 
 
 
+# ============================================================================
+# 6. 配置输出存储：挂载生成资产目录 output/3d，准备关联的存储依赖
+#    wait_for_port 用于后续 ComfyUI 启动时检查 HTTP 服务是否就绪。
+# ============================================================================
 def wait_for_port(port: int, timeout: int = 60):
     """Block until the port is accepting connections."""
     import time
@@ -273,6 +294,9 @@ hf_mount = modal.CloudBucketMount(
     ),
     force_path_style=True,
 )
+# ============================================================================
+# 7. 声明 Modal App：为每个 Workflow 分配独立应用、GPU、Volume 和 Secret
+# ============================================================================
 app = modal.App(name=f"modal-{WORKFLOW}", image=image)
 
 
@@ -287,6 +311,9 @@ app = modal.App(name=f"modal-{WORKFLOW}", image=image)
     enable_memory_snapshot=True,
     experimental_options={"enable_gpu_snapshot": True},
 )
+# ============================================================================
+# 8. ComfyUI 生命周期：启动 Web 服务、恢复快照、执行退出清理
+# ============================================================================
 @modal.concurrent(max_inputs=10)
 class ComfyUI:
     @modal.enter(snap=True)
