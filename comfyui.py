@@ -26,6 +26,13 @@ models = model_config["models"]
 models_ext = model_config.get("models_ext", [])
 comfy_plugins = plugin_config.get("comfy_plugins", [])
 comfy_plugins_ext = plugin_config.get("comfy_plugins_ext", [])
+workflow_files = sorted(
+    p for p in WORKFLOW_DIR.glob("*.json")
+    if p.name.lower() not in {"model.json", "models.json", "plugins.json"}
+)
+if len(workflow_files) != 1:
+    raise ValueError(f"Expected exactly one workflow JSON in {WORKFLOW_DIR}, found: {[p.name for p in workflow_files]}")
+workflow_file_path = workflow_files[0]
 
 COMFY_MODELS_ROOT = Path("/root/comfy/ComfyUI/models")
 
@@ -172,6 +179,15 @@ def _hf_secrets() -> list[modal.Secret]:
         return [modal.Secret.from_dict({"HF_TOKEN": hf_token, "CIVITAI_TOKEN": civ_token})]
 
 # download models
+# run_function imports comfyui.py inside the image: its selected Workflow
+# config must already exist there (without copying unrelated workflows).
+for filename in ("models.json", "plugins.json"):
+    image = image.add_local_file(
+        WORKFLOW_DIR / filename, f"/root/workflows/{WORKFLOW}/{filename}", copy=True
+    )
+image = image.add_local_file(
+    workflow_file_path, f"/root/workflows/{WORKFLOW}/{workflow_file_path.name}", copy=True
+)
 image = image.env(
     {"HF_HUB_ENABLE_HF_TRANSFER": "1", "HF_XET_HIGH_PERFORMANCE": "1", "WORKFLOW": WORKFLOW}
 ).run_function(download_all, volumes={"/cache": vol}, secrets=_hf_secrets())
@@ -180,13 +196,6 @@ image = image.env(
 # ============================================================================
 # 5. 安装工作流插件：仅注入当前 Workflow JSON，安装节点及可选 CUDA 扩展
 # ============================================================================
-workflow_files = sorted(
-    p for p in WORKFLOW_DIR.glob("*.json")
-    if p.name.lower() not in {"model.json", "models.json", "plugins.json"}
-)
-if len(workflow_files) != 1:
-    raise ValueError(f"Expected exactly one workflow JSON in {WORKFLOW_DIR}, found: {[p.name for p in workflow_files]}")
-workflow_file_path = workflow_files[0]
 # Only the selected workflow is needed inside the image. Keep this copy after
 # the shared base and model layers so changes to unrelated workflows do not
 # invalidate their caches.
