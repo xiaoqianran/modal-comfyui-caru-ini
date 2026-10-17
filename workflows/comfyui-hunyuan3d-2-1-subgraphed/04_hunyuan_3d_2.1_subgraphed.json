@@ -1,0 +1,821 @@
+{
+  "config": {},
+  "definitions": {
+    "subgraphs": [
+      {
+        "config": {},
+        "extra": {
+          "workflowRendererVersion": "LG"
+        },
+        "groups": [],
+        "id": "d7344a5a-fd0d-4b8a-b5e1-1237e5b21937",
+        "inputNode": {
+          "bounding": [
+            -138.94803619384766,
+            -392.62060546875,
+            120,
+            80
+          ],
+          "id": -10
+        },
+        "inputs": [
+          {
+            "id": "ab9b5b83-88f9-4698-954d-93f644bd07aa",
+            "linkIds": [
+              21
+            ],
+            "localized_name": "image",
+            "name": "image",
+            "pos": [
+              -38.948036193847656,
+              -372.62060546875
+            ],
+            "type": "IMAGE"
+          },
+          {
+            "id": "e15b0ba4-b5fe-41eb-9266-006ce1f1cf79",
+            "linkIds": [
+              23
+            ],
+            "name": "ckpt_name",
+            "pos": [
+              -38.948036193847656,
+              -352.62060546875
+            ],
+            "type": "COMBO"
+          }
+        ],
+        "links": [
+          {
+            "id": 16,
+            "origin_id": 1,
+            "origin_slot": 0,
+            "target_id": 3,
+            "target_slot": 0,
+            "type": "MODEL"
+          },
+          {
+            "id": 19,
+            "origin_id": 3,
+            "origin_slot": 0,
+            "target_id": 7,
+            "target_slot": 0,
+            "type": "MODEL"
+          },
+          {
+            "id": 5,
+            "origin_id": 6,
+            "origin_slot": 0,
+            "target_id": 7,
+            "target_slot": 1,
+            "type": "CONDITIONING"
+          },
+          {
+            "id": 6,
+            "origin_id": 6,
+            "origin_slot": 1,
+            "target_id": 7,
+            "target_slot": 2,
+            "type": "CONDITIONING"
+          },
+          {
+            "id": 7,
+            "origin_id": 4,
+            "origin_slot": 0,
+            "target_id": 7,
+            "target_slot": 3,
+            "type": "LATENT"
+          },
+          {
+            "id": 8,
+            "origin_id": 7,
+            "origin_slot": 0,
+            "target_id": 8,
+            "target_slot": 0,
+            "type": "LATENT"
+          },
+          {
+            "id": 18,
+            "origin_id": 1,
+            "origin_slot": 2,
+            "target_id": 8,
+            "target_slot": 1,
+            "type": "VAE"
+          },
+          {
+            "id": 10,
+            "origin_id": 8,
+            "origin_slot": 0,
+            "target_id": 9,
+            "target_slot": 0,
+            "type": "VOXEL"
+          },
+          {
+            "id": 20,
+            "origin_id": 1,
+            "origin_slot": 1,
+            "target_id": 13,
+            "target_slot": 0,
+            "type": "CLIP_VISION"
+          },
+          {
+            "id": 22,
+            "origin_id": 13,
+            "origin_slot": 0,
+            "target_id": 6,
+            "target_slot": 0,
+            "type": "CLIP_VISION_OUTPUT"
+          },
+          {
+            "id": 21,
+            "origin_id": -10,
+            "origin_slot": 0,
+            "target_id": 13,
+            "target_slot": 1,
+            "type": "IMAGE"
+          },
+          {
+            "id": 11,
+            "origin_id": 9,
+            "origin_slot": 0,
+            "target_id": -20,
+            "target_slot": 0,
+            "type": "MESH"
+          },
+          {
+            "id": 23,
+            "origin_id": -10,
+            "origin_slot": 1,
+            "target_id": 1,
+            "target_slot": 0,
+            "type": "COMBO"
+          }
+        ],
+        "name": "Hunyuan 2.1 Image-to-3D (Simplified)",
+        "nodes": [
+          {
+            "flags": {},
+            "id": 7,
+            "inputs": [
+              {
+                "link": 19,
+                "localized_name": "model",
+                "name": "model",
+                "type": "MODEL"
+              },
+              {
+                "link": 5,
+                "localized_name": "positive",
+                "name": "positive",
+                "type": "CONDITIONING"
+              },
+              {
+                "link": 6,
+                "localized_name": "negative",
+                "name": "negative",
+                "type": "CONDITIONING"
+              },
+              {
+                "link": 7,
+                "localized_name": "latent_image",
+                "name": "latent_image",
+                "type": "LATENT"
+              }
+            ],
+            "mode": 0,
+            "order": 4,
+            "outputs": [
+              {
+                "links": [
+                  8
+                ],
+                "localized_name": "LATENT",
+                "name": "LATENT",
+                "type": "LATENT"
+              }
+            ],
+            "pos": [
+              760,
+              -510
+            ],
+            "properties": {
+              "Node name for S&R": "KSampler",
+              "cnr_id": "comfy-core",
+              "ver": "0.3.59"
+            },
+            "size": [
+              270,
+              262
+            ],
+            "type": "KSampler",
+            "widgets_values": [
+              894796671366012,
+              "randomize",
+              30,
+              5,
+              "euler",
+              "normal",
+              1
+            ]
+          },
+          {
+            "flags": {},
+            "id": 13,
+            "inputs": [
+              {
+                "link": 20,
+                "localized_name": "clip_vision",
+                "name": "clip_vision",
+                "type": "CLIP_VISION"
+              },
+              {
+                "link": 21,
+                "localized_name": "image",
+                "name": "image",
+                "type": "IMAGE"
+              }
+            ],
+            "mode": 0,
+            "order": 7,
+            "outputs": [
+              {
+                "links": [
+                  22
+                ],
+                "localized_name": "CLIP_VISION_OUTPUT",
+                "name": "CLIP_VISION_OUTPUT",
+                "type": "CLIP_VISION_OUTPUT"
+              }
+            ],
+            "pos": [
+              450,
+              -410
+            ],
+            "properties": {
+              "Node name for S&R": "CLIPVisionEncode",
+              "cnr_id": "comfy-core",
+              "ver": "0.3.59"
+            },
+            "size": [
+              270,
+              80
+            ],
+            "type": "CLIPVisionEncode",
+            "widgets_values": [
+              "center"
+            ]
+          },
+          {
+            "flags": {},
+            "id": 6,
+            "inputs": [
+              {
+                "link": 22,
+                "localized_name": "clip_vision_output",
+                "name": "clip_vision_output",
+                "type": "CLIP_VISION_OUTPUT"
+              }
+            ],
+            "mode": 0,
+            "order": 3,
+            "outputs": [
+              {
+                "links": [
+                  5
+                ],
+                "localized_name": "positive",
+                "name": "positive",
+                "type": "CONDITIONING"
+              },
+              {
+                "links": [
+                  6
+                ],
+                "localized_name": "negative",
+                "name": "negative",
+                "type": "CONDITIONING"
+              }
+            ],
+            "pos": [
+              510,
+              -280
+            ],
+            "properties": {
+              "Node name for S&R": "Hunyuan3Dv2Conditioning",
+              "cnr_id": "comfy-core",
+              "ver": "0.3.59"
+            },
+            "size": [
+              217.82578125,
+              46
+            ],
+            "type": "Hunyuan3Dv2Conditioning",
+            "widgets_values": []
+          },
+          {
+            "flags": {},
+            "id": 4,
+            "inputs": [],
+            "mode": 0,
+            "order": 0,
+            "outputs": [
+              {
+                "links": [
+                  7
+                ],
+                "localized_name": "LATENT",
+                "name": "LATENT",
+                "type": "LATENT"
+              }
+            ],
+            "pos": [
+              450,
+              -180
+            ],
+            "properties": {
+              "Node name for S&R": "EmptyLatentHunyuan3Dv2",
+              "cnr_id": "comfy-core",
+              "ver": "0.3.59"
+            },
+            "size": [
+              270,
+              82
+            ],
+            "type": "EmptyLatentHunyuan3Dv2",
+            "widgets_values": [
+              4096,
+              1
+            ]
+          },
+          {
+            "flags": {},
+            "id": 9,
+            "inputs": [
+              {
+                "link": 10,
+                "localized_name": "voxel",
+                "name": "voxel",
+                "type": "VOXEL"
+              }
+            ],
+            "mode": 0,
+            "order": 6,
+            "outputs": [
+              {
+                "links": [
+                  11
+                ],
+                "localized_name": "MESH",
+                "name": "MESH",
+                "type": "MESH"
+              }
+            ],
+            "pos": [
+              760,
+              -40
+            ],
+            "properties": {
+              "Node name for S&R": "VoxelToMesh",
+              "cnr_id": "comfy-core",
+              "ver": "0.3.59"
+            },
+            "size": [
+              270,
+              82
+            ],
+            "type": "VoxelToMesh",
+            "widgets_values": [
+              "surface net",
+              0.6
+            ]
+          },
+          {
+            "flags": {},
+            "id": 8,
+            "inputs": [
+              {
+                "link": 8,
+                "localized_name": "samples",
+                "name": "samples",
+                "type": "LATENT"
+              },
+              {
+                "link": 18,
+                "localized_name": "vae",
+                "name": "vae",
+                "type": "VAE"
+              }
+            ],
+            "mode": 0,
+            "order": 5,
+            "outputs": [
+              {
+                "links": [
+                  10
+                ],
+                "localized_name": "VOXEL",
+                "name": "VOXEL",
+                "type": "VOXEL"
+              }
+            ],
+            "pos": [
+              760,
+              -200
+            ],
+            "properties": {
+              "Node name for S&R": "VAEDecodeHunyuan3D",
+              "cnr_id": "comfy-core",
+              "ver": "0.3.59"
+            },
+            "size": [
+              270,
+              102
+            ],
+            "type": "VAEDecodeHunyuan3D",
+            "widgets_values": [
+              8000,
+              256
+            ]
+          },
+          {
+            "flags": {},
+            "id": 1,
+            "inputs": [
+              {
+                "link": 23,
+                "localized_name": "ckpt_name",
+                "name": "ckpt_name",
+                "type": "COMBO",
+                "widget": {
+                  "name": "ckpt_name"
+                }
+              }
+            ],
+            "mode": 0,
+            "order": 1,
+            "outputs": [
+              {
+                "links": [
+                  16
+                ],
+                "localized_name": "MODEL",
+                "name": "MODEL",
+                "type": "MODEL"
+              },
+              {
+                "links": [
+                  20
+                ],
+                "localized_name": "CLIP_VISION",
+                "name": "CLIP_VISION",
+                "type": "CLIP_VISION"
+              },
+              {
+                "links": [
+                  18
+                ],
+                "localized_name": "VAE",
+                "name": "VAE",
+                "type": "VAE"
+              }
+            ],
+            "pos": [
+              60,
+              -510
+            ],
+            "properties": {
+              "Node name for S&R": "ImageOnlyCheckpointLoader",
+              "cnr_id": "comfy-core",
+              "models": [
+                {
+                  "directory": "checkpoints",
+                  "name": "hunyuan_3d_v2.1.safetensors",
+                  "url": "https://huggingface.co/Comfy-Org/hunyuan3D_2.1_repackaged/resolve/main/hunyuan_3d_v2.1.safetensors"
+                }
+              ],
+              "ver": "0.3.59"
+            },
+            "size": [
+              356.0005859375,
+              100
+            ],
+            "type": "ImageOnlyCheckpointLoader",
+            "widgets_values": [
+              "hunyuan_3d_v2.1.safetensors"
+            ]
+          },
+          {
+            "flags": {},
+            "id": 3,
+            "inputs": [
+              {
+                "link": 16,
+                "localized_name": "model",
+                "name": "model",
+                "type": "MODEL"
+              }
+            ],
+            "mode": 0,
+            "order": 2,
+            "outputs": [
+              {
+                "links": [
+                  19
+                ],
+                "localized_name": "MODEL",
+                "name": "MODEL",
+                "type": "MODEL"
+              }
+            ],
+            "pos": [
+              450,
+              -510
+            ],
+            "properties": {
+              "Node name for S&R": "ModelSamplingAuraFlow",
+              "cnr_id": "comfy-core",
+              "ver": "0.3.59"
+            },
+            "size": [
+              270,
+              58
+            ],
+            "type": "ModelSamplingAuraFlow",
+            "widgets_values": [
+              1
+            ]
+          }
+        ],
+        "outputNode": {
+          "bounding": [
+            1090,
+            -310,
+            120,
+            60
+          ],
+          "id": -20
+        },
+        "outputs": [
+          {
+            "id": "c8744662-e812-49b3-8bc8-744d557db6d6",
+            "linkIds": [
+              11
+            ],
+            "localized_name": "MESH",
+            "name": "MESH",
+            "pos": [
+              1110,
+              -290
+            ],
+            "type": "MESH"
+          }
+        ],
+        "revision": 0,
+        "state": {
+          "lastGroupId": 2,
+          "lastLinkId": 23,
+          "lastNodeId": 18,
+          "lastRerouteId": 0
+        },
+        "version": 1,
+        "widgets": []
+      }
+    ]
+  },
+  "extra": {
+    "VHS_KeepIntermediate": true,
+    "VHS_MetadataImage": true,
+    "VHS_latentpreview": false,
+    "VHS_latentpreviewrate": 0,
+    "ds": {
+      "offset": [
+        1038.8375633747019,
+        1016.8542667701035
+      ],
+      "scale": 0.6209213230591554
+    },
+    "frontendVersion": "1.35.7",
+    "workflowRendererVersion": "LG"
+  },
+  "groups": [],
+  "id": "4125c6df-9bca-430d-8e85-7cff9cc592d4",
+  "last_link_id": 24,
+  "last_node_id": 23,
+  "links": [
+    [
+      23,
+      2,
+      0,
+      19,
+      0,
+      "IMAGE"
+    ],
+    [
+      24,
+      19,
+      0,
+      10,
+      0,
+      "MESH"
+    ]
+  ],
+  "nodes": [
+    {
+      "flags": {},
+      "id": 10,
+      "inputs": [
+        {
+          "link": 24,
+          "name": "mesh",
+          "type": "MESH"
+        }
+      ],
+      "mode": 0,
+      "order": 4,
+      "outputs": [],
+      "pos": [
+        990.9999517005296,
+        -405.9999805298452
+      ],
+      "properties": {
+        "Camera Config": {
+          "cameraType": "perspective",
+          "fov": 75,
+          "state": {
+            "cameraType": "perspective",
+            "position": {
+              "x": 7.278568522102301,
+              "y": 7.278568522102303,
+              "z": 7.278568522102302
+            },
+            "target": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "zoom": 1
+          }
+        },
+        "Camera Info": {
+          "cameraType": "perspective",
+          "position": {
+            "x": 9.380174569468211,
+            "y": 10,
+            "z": 9.380174569468211
+          },
+          "target": {
+            "x": 0,
+            "y": 2.5,
+            "z": 0
+          },
+          "zoom": 1
+        },
+        "Node name for S&R": "SaveGLB",
+        "cnr_id": "comfy-core",
+        "ver": "0.3.59"
+      },
+      "size": [
+        810,
+        861.6666666666667
+      ],
+      "type": "SaveGLB",
+      "widgets_values": [
+        "mesh/ComfyUI",
+        ""
+      ]
+    },
+    {
+      "flags": {},
+      "id": 2,
+      "inputs": [],
+      "mode": 0,
+      "order": 0,
+      "outputs": [
+        {
+          "links": [
+            23
+          ],
+          "name": "IMAGE",
+          "type": "IMAGE"
+        },
+        {
+          "links": null,
+          "name": "MASK",
+          "type": "MASK"
+        }
+      ],
+      "pos": [
+        101.000073770842,
+        -405.9999805298452
+      ],
+      "properties": {
+        "Node name for S&R": "LoadImage",
+        "cnr_id": "comfy-core",
+        "ver": "0.3.59"
+      },
+      "size": [
+        510.87239583333337,
+        619.2057291666667
+      ],
+      "type": "LoadImage",
+      "widgets_values": [
+        "04_hunyuan_3d_2.1_subgraphed_input_image.png",
+        "image"
+      ]
+    },
+    {
+      "flags": {},
+      "id": 19,
+      "inputs": [
+        {
+          "link": 23,
+          "name": "image",
+          "type": "IMAGE"
+        }
+      ],
+      "mode": 0,
+      "order": 3,
+      "outputs": [
+        {
+          "links": [
+            24
+          ],
+          "name": "MESH",
+          "type": "MESH"
+        }
+      ],
+      "pos": [
+        631.0000127356856,
+        -405.9999805298452
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "proxyWidgets": [
+          [
+            "-1",
+            "ckpt_name"
+          ]
+        ],
+        "ver": "0.3.65"
+      },
+      "size": [
+        340,
+        70
+      ],
+      "type": "d7344a5a-fd0d-4b8a-b5e1-1237e5b21937",
+      "widgets_values": [
+        "hunyuan_3d_v2.1.safetensors"
+      ]
+    },
+    {
+      "bgcolor": "#000",
+      "color": "#432",
+      "flags": {},
+      "id": 20,
+      "inputs": [],
+      "mode": 0,
+      "order": 1,
+      "outputs": [],
+      "pos": [
+        -358.99995674673625,
+        -405.9999805298452
+      ],
+      "properties": {},
+      "size": [
+        450,
+        628.1901041666667
+      ],
+      "title": "Note: how to use this workflow",
+      "type": "MarkdownNote",
+      "widgets_values": [
+        "Huanyuan3D 2.1 is an image-to-3D model tool. It can turn any of your images into a 3D model.\n\n## For Comfy Cloud Users\n\nIf you are using [cloud.comfy.org](https://cloud.comfy.org/):\n1. Since the workflow in the Cloud will have the input image ready, for the first run, you can just click the run button to see what happens. \n\n2. Try to upload your own image; the input image requires a clean, simple background.\n3. You can also find some other 3D workflows in the left sidebar templates.\n\n## For Local Users\nIf you are using this workflow locally, you need to download all the models to your local storage. \n\nUse the right-click menu to edit the subgraph. Then you can find the original workflow and notes inside it.\nYou can find the tutorial and original workflow [here](https://raw.githubusercontent.com/Comfy-Org/workflow_templates/refs/heads/main/templates/3d_hunyuan3d-v2.1.json).\n\n## Model\nDownload [hunyuan_3d_v2.1.safetensors](https://huggingface.co/Comfy-Org/hunyuan3D_2.1_repackaged/resolve/main/hunyuan_3d_v2.1.safetensors) \n\nPut it under the **ComfyUI/models/checkpoints** directory\n\n## Report Issues\n\nIf you have any problems running this workflow, please report template-related issues via this link: [report the template issue here](https://github.com/Comfy-Org/workflow_templates/issues)"
+      ]
+    },
+    {
+      "bgcolor": "#000",
+      "color": "#432",
+      "flags": {},
+      "id": 21,
+      "inputs": [],
+      "mode": 0,
+      "order": 2,
+      "outputs": [],
+      "pos": [
+        990,
+        510
+      ],
+      "properties": {},
+      "size": [
+        440,
+        90
+      ],
+      "title": "Download the 3D model.",
+      "type": "Note",
+      "widgets_values": [
+        "On the SaveGLB node, you can find an `export` menu in the left-side menu. You can use it to export the 3D model. If you are running ComfyUI locally, you can find the saved model in \"ComfyUI/output/3D\"."
+      ]
+    }
+  ],
+  "revision": 1,
+  "version": 0.4
+}

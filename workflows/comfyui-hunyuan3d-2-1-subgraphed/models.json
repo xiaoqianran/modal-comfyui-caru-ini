@@ -1,0 +1,11 @@
+{
+  "models": [
+    {
+      "repo_id": "Comfy-Org/hunyuan3D_2.1_repackaged",
+      "filename": "hunyuan_3d_v2.1.safetensors",
+      "model_dir": "checkpoints"
+    }
+  ],
+  "models_ext": [],
+  "gpu": "L40S"
+}
