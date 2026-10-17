@@ -28,31 +28,57 @@ Good for testing wan2.2 or other video generation models.
 
 ## Configuration
 
-### Models
+### Workflow configuration
 
-Copy `models.example.py` to `models.py` and edit it to manage your models. You can specify:
-- Hugging Face models(`models`) using `repo_id` and `filename`.
-- External models(`models_ext`, e.g. civitai) using a direct `url`.
+Each `workflows/<name>/` folder contains exactly one **ComfyUI API graph** plus `models.json` and `plugins.json`. The graph can have any name. Do not put extra JSON examples in this folder because the loader detects the graph by excluding only `models.json`, `model.json`, and `plugins.json`.
 
-Models are downloaded to volumes and symlinked to the specified `model_dir`.
+#### `models.json`
 
-`model_dir` accepts two styles:
-- **Relative path** (recommended for standard ComfyUI folders): resolved under `/root/comfy/ComfyUI/models/`. e.g. `"checkpoints"` → `/root/comfy/ComfyUI/models/checkpoints`.
-- **Absolute path**: used as-is. Use this when the target lives outside `ComfyUI/models/` (e.g. a custom node's own model directory).
+```json
+{
+  "models": [
+    {
+      "repo_id": "tencent/Hunyuan3D-2.1",
+      "filename": "hunyuan3d-dit-v2-1/model.fp16.ckpt",
+      "model_dir": "diffusion_models",
+      "local_filename": "hunyuan3d-dit-v2-1-fp16.ckpt"
+    }
+  ],
+  "models_ext": [],
+  "gpu": "L40S",
+  "cuda_devel": true
+}
+```
 
-See `models.example.py` for reference.
+- `models`: Hugging Face Hub models. Each requires `repo_id`, `filename`, and `model_dir`; `local_filename` optionally renames the linked file.
+- `models_ext`: external direct downloads. Each requires `url`, `filename`, and `model_dir`; use `[]` if none.
+- `model_dir`: relative to `/root/comfy/ComfyUI/models/`, or an absolute destination.
+- `gpu`: Modal GPU specification; `MODAL_GPU` overrides it. Current workflows target `L40S`.
+- `cuda_devel`: optional boolean, enabling a CUDA 12.6 development image for compiling custom extensions.
 
-### Plugins and Custom Nodes
+#### `plugins.json`
 
-Copy `plugins.example.py` to `plugins.py` and edit it to add custom node IDs or titles to be installed via `comfy-cli`.
-- **Workflow Dependencies**: If you have a `workflow_api.json` in the root directory, the setup will automatically install the necessary custom nodes for that workflow.
+```json
+{
+  "comfy_plugins": [],
+  "comfy_plugins_ext": [
+    {
+      "url": "https://github.com/visualbruno/ComfyUI-Hunyuan3d-2-1.git",
+      "requirements": ["requirements.txt"],
+      "build_commands": [
+        "cd hy3dpaint/custom_rasterizer && CC=gcc CXX=g++ TORCH_CUDA_ARCH_LIST=8.9 pip install --no-build-isolation ."
+      ]
+    }
+  ]
+}
+```
 
-### In case of Insufficient Custom Node
+- `comfy_plugins`: optional list of node names/IDs for `comfy node install`.
+- `comfy_plugins_ext`: optional list of Git custom nodes. `url` is required; `branch`, `requirements`, `install` (Python script), `ext_deps`, and `build_commands` are optional.
+- `requirements` and `ext_deps` are installed using `--no-deps`; `build_commands` runs as shell commands in the cloned plugin directory. Only configure trusted commands.
+- For no extra plugins use `{"comfy_plugins": [], "comfy_plugins_ext": []}`. The deployment still runs `comfy node install-deps` on the API graph.
 
-Open ComfyUI manager on comfyui and click "Used in Workflow" to see which custom nodes are used in the workflow.
-
-Add these custom nodes to `plugins.py`(be careful of node id).
-
+For complete real examples see `workflows/comfyui-hunyuan3d-2-1/`. ComfyUI Manager → **Used in Workflow** can help identify missing nodes.
 ## Usage
 
 ### Serve (Development)
