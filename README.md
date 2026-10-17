@@ -95,19 +95,20 @@ For complete real examples see `workflows/comfyui-hunyuan3d-2-1/`. ComfyUI Manag
 源码、编译脚本进 Git；编译产物 `.whl` 进 GitHub Releases（不要 commit 到仓库）。目前仅适用于 Hunyuan3D-2.1 的 `custom_rasterizer` 和 `DifferentiableRenderer`。
 
 1. 使用**与 Modal ComfyUI 镜像一致**的 Linux x86_64 / Python 3.11 / PyTorch / CUDA 开发环境。运行 `python -c "import torch; print(torch.__version__, torch.version.cuda)"` 和 `nvcc --version` 核对版本，并确保包含 gcc/g++、git、pip、setuptools 和 wheel。
-2. 在该 Linux 环境内运行（指定已核实的上游 commit，必须与 `plugins.json` 的 `commit` 相同）：
+2. 在该 Linux 环境内执行相应 Workflow 自带的构建脚本；脚本自动读取同目录 `plugins.json` 的 Git 仓库地址及固定 `commit`，不需要手工传参：
 
    ```bash
-   bash build-wheels.sh a0b26fbb94c9a9d32720526c52e64f87e05d2b53
+   bash workflows/comfyui-hunyuan3d-2-1/build-wheels.sh
    ```
 
-   产物生成在被 Git 忽略的 `wheels/`：两个 `.whl`、`SHA256SUMS` 和 `BUILD-INFO.txt`。脚本不会发布或清除已存在的 wheel；再次编译前需自行移走旧 wheel。需要在匹配环境实际测试两个包的导入和 GPU 运算。
+   产物生成在被 Git 忽略的 `workflows/comfyui-hunyuan3d-2-1/wheels/`：两个 `.whl`、`SHA256SUMS` 和 `BUILD-INFO.txt`。脚本不会发布或清除已存在的 wheel；再次编译前需自行移走旧 wheel。需要在匹配环境实际测试两个包的导入和 GPU 运算。若其他 Workflow 有独立 CUDA 编译需求，可按需在其目录下添加自己的 `build-wheels.sh`，无需改动 Modal 部署入口。
 3. 发布到本仓库 **GitHub Releases**（Tag 的 Torch/CUDA 版本必须来自 `BUILD-INFO.txt`，下面仅为命名示例）：
 
    ```bash
+   WHEEL_DIR=workflows/comfyui-hunyuan3d-2-1/wheels
    gh release create hunyuan3d-py311-torchVERSION-cuVERSION-sm89-v1 \
-     wheels/*.whl wheels/SHA256SUMS wheels/BUILD-INFO.txt \
-     --title "Hunyuan3D Linux CUDA wheels" --notes-file wheels/BUILD-INFO.txt
+     "$WHEEL_DIR"/*.whl "$WHEEL_DIR"/SHA256SUMS "$WHEEL_DIR"/BUILD-INFO.txt \
+     --title "Hunyuan3D Linux CUDA wheels" --notes-file "$WHEEL_DIR"/BUILD-INFO.txt
    ```
 
 4. 成功上传并校验下载链接后，在 `workflows/comfyui-hunyuan3d-2-1/plugins.json` 的同一插件对象中填入：
