@@ -2,6 +2,12 @@
   "comfy_plugins": [],
   "comfy_plugins_ext": [
     {
+      "url": "https://github.com/PozzettiAndrea/ComfyUI-GaussianPack.git",
+      "requirements": [
+        "requirements.txt"
+      ]
+    },
+    {
       "url": "https://github.com/PozzettiAndrea/ComfyUI-Sharp.git",
       "requirements": [
         "requirements.txt"
