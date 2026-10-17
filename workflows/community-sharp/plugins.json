@@ -1,0 +1,17 @@
+{
+  "comfy_plugins": [],
+  "comfy_plugins_ext": [
+    {
+      "url": "https://github.com/PozzettiAndrea/ComfyUI-Sharp.git",
+      "requirements": [
+        "requirements.txt"
+      ],
+      "ext_deps": [
+        "comfy-env==0.3.89",
+        "comfy-3d-viewers==0.2.44",
+        "trimesh"
+      ],
+      "install": "install.py"
+    }
+  ]
+}

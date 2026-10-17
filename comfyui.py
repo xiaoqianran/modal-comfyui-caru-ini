@@ -30,9 +30,8 @@ workflow_files = sorted(
     p for p in WORKFLOW_DIR.glob("*.json")
     if p.name.lower() not in {"model.json", "models.json", "plugins.json"}
 )
-if len(workflow_files) != 1:
-    raise ValueError(f"Expected exactly one workflow JSON in {WORKFLOW_DIR}, found: {[p.name for p in workflow_files]}")
-workflow_file_path = workflow_files[0]
+if not workflow_files:
+    raise ValueError(f"No workflow JSON in {WORKFLOW_DIR}")
 
 COMFY_MODELS_ROOT = Path("/root/comfy/ComfyUI/models")
 
@@ -185,23 +184,26 @@ for filename in ("models.json", "plugins.json"):
     image = image.add_local_file(
         WORKFLOW_DIR / filename, f"/root/workflows/{WORKFLOW}/{filename}", copy=True
     )
-image = image.add_local_file(
-    workflow_file_path, f"/root/workflows/{WORKFLOW}/{workflow_file_path.name}", copy=True
-)
 image = image.env(
     {"HF_HUB_ENABLE_HF_TRANSFER": "1", "HF_XET_HIGH_PERFORMANCE": "1", "WORKFLOW": WORKFLOW}
 ).run_function(download_all, volumes={"/cache": vol}, secrets=_hf_secrets())
 
 
 # ============================================================================
-# 5. 安装工作流插件：仅注入当前 Workflow JSON，安装节点及可选 CUDA 扩展
+# 5. 插件由 plugins.json 声明；工作流只作为运行时文件挂载
 # ============================================================================
-# Only the selected workflow is needed inside the image. Keep this copy after
-# the shared base and model layers so changes to unrelated workflows do not
-# invalidate their caches.
-image = image.add_local_file(
-    workflow_file_path, "/root/workflow_api.json", copy=True
-).run_commands("comfy node install-deps --workflow=/root/workflow_api.json")
+# Keep workflow JSON out of image build layers. ComfyUI discovers UI-format
+# graphs from user/default/workflows after a deployment updates these mounts.
+# Other JSON files (models/plugins) are deliberately excluded.
+for workflow_json in sorted(WORKFLOW_DIR.rglob("*.json")):
+    if workflow_json.name.lower() in {"model.json", "models.json", "plugins.json"}:
+        continue
+    relative = workflow_json.relative_to(WORKFLOW_DIR).as_posix()
+    image = image.add_local_file(
+        workflow_json,
+        f"/root/comfy/ComfyUI/user/default/workflows/{WORKFLOW}/{relative}",
+        copy=False,
+    )
 
 if WORKFLOW == "community-hunyuan3d-2-1-visualbruno":
     # The bundled DINOv2 checkpoint uses Transformers 4.x state_dict names.

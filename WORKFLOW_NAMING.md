@@ -24,16 +24,21 @@
 ## 配置与工作流文件
 
 ```text
-workflows/
-  comfyui-pixal3d-trellis2/
-    native_pixal3d_trellis2.json  # 保留原始文件名
-    models.json
-    plugins.json
+workflows/community-sharp/
+  models.json
+  plugins.json
+  sharp_basic.json
+  sharp_exif.json
+  pano.json
+  vanilla_vs_image_depth_gaussians.json
 ```
 
-每个目录必须有 `models.json` 和 `plugins.json`。其余顶层 `.json` 文件中**必须恰好有一个**工作流文件；名称可任意，自动识别（同时排除旧写法 `model.json`）。若有多个候选则报错，避免误用。
-
-工作流 JSON 应为 ComfyUI API 格式；只改文件名不会自动转换格式。
+每个环境必须有 `models.json`、`plugins.json` 与至少一个顶层工作流 JSON。
+一个目录只部署一个 Modal ComfyUI 环境，但可包含多个 UI 格式的工作流。
+插件仅由 `plugins.json` 配置；工作流 JSON 通过 `copy=False` 运行时挂载到
+`ComfyUI/user/default/workflows/<环境名>/`，不触发镜像构建。
+编辑 JSON 后重新执行 `modal deploy` 更新运行时文件，但并非实时同步。
+多个 JSON 使用未安装的节点时仍需更新 `plugins.json` 并重新构建插件层。
 
 ## 输出映射
 

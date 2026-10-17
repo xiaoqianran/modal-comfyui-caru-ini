@@ -28,7 +28,7 @@ def workflows():
         if not folder.is_dir() or not (folder / "models.json").is_file() or not (folder / "plugins.json").is_file():
             continue
         names = [x for x in folder.glob("*.json") if x.name.lower() not in {"models.json","plugins.json","model.json"}]
-        if len(names) != 1:
+        if not names:
             continue
         config = json.loads((folder / "models.json").read_text(encoding="utf-8"))
         items.append({"id":folder.name,"gpu":config.get("gpu","L40S"),"app":"modal-"+folder.name})
