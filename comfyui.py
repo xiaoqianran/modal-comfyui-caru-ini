@@ -136,7 +136,6 @@ image = (
     .pip_install_from_requirements(str(root_dir / "requirements_comfy.txt"))
     .run_commands(f"comfy --skip-prompt install --nvidia {VERSION}")
     .run_commands("git lfs install")
-    .add_local_dir(root_dir / "workflows", "/root/workflows", copy=True)
 )
 
 def _hf_secrets() -> list[modal.Secret]:
@@ -274,7 +273,7 @@ hf_mount = modal.CloudBucketMount(
     ),
     force_path_style=True,
 )
-app = modal.App(name="modal-comfyui", image=image)
+app = modal.App(name=f"modal-{WORKFLOW}", image=image)
 
 
 @app.cls(
