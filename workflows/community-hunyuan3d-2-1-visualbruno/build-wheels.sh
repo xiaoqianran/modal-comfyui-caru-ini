@@ -2,7 +2,7 @@
 # Build Hunyuan3D wheels in a Linux environment matching the Modal image.
 set -euo pipefail
 
-[[ $# == 0 ]] || { echo "Usage: bash workflows/comfyui-hunyuan3d-2-1/build-wheels.sh" >&2; exit 2; }
+[[ $# == 0 ]] || { echo "Usage: bash workflows/community-hunyuan3d-2-1-visualbruno/build-wheels.sh" >&2; exit 2; }
 [[ "$(uname -s)" == "Linux" ]] || { echo "Linux is required" >&2; exit 2; }
 command -v nvcc >/dev/null || { echo "CUDA toolkit (nvcc) is required" >&2; exit 2; }
 

@@ -203,7 +203,7 @@ image = image.add_local_file(
     workflow_file_path, "/root/workflow_api.json", copy=True
 ).run_commands("comfy node install-deps --workflow=/root/workflow_api.json")
 
-if WORKFLOW == "comfyui-hunyuan3d-2-1":
+if WORKFLOW == "community-hunyuan3d-2-1-visualbruno":
     # The bundled DINOv2 checkpoint uses Transformers 4.x state_dict names.
     # ComfyUI Manager installs unpinned Transformers; v5 renames these keys.
     image = image.run_commands(

@@ -88,7 +88,7 @@ Each `workflows/<name>/` folder contains exactly one **ComfyUI API graph** plus 
 - `requirements` and `ext_deps` are installed using `--no-deps`; `build_commands` runs as shell commands in the cloned plugin directory. Only configure trusted commands.
 - For no extra plugins use `{"comfy_plugins": [], "comfy_plugins_ext": []}`. The deployment still runs `comfy node install-deps` on the API graph.
 
-For complete real examples see `workflows/comfyui-hunyuan3d-2-1/`. ComfyUI Manager → **Used in Workflow** can help identify missing nodes.
+For complete real examples see `workflows/community-hunyuan3d-2-1-visualbruno/`. ComfyUI Manager → **Used in Workflow** can help identify missing nodes.
 
 ### 跨 Modal 账号复用 CUDA Wheels（GitHub Releases）
 
@@ -100,10 +100,10 @@ For complete real examples see `workflows/comfyui-hunyuan3d-2-1/`. ComfyUI Manag
 
 ```powershell
 # 仅构建和验证 Wheel，不发布
-uv run modal run wheel_build.py --workflow comfyui-hunyuan3d-2-1
+uv run modal run wheel_build.py --workflow community-hunyuan3d-2-1-visualbruno
 
 # 显式发布到 GitHub Releases（Tag 不能与已有 Release 重名）
-uv run modal run wheel_build.py --workflow comfyui-hunyuan3d-2-1 --publish --tag hunyuan3d-py311-torchVERSION-cuVERSION-sm89-v1
+uv run modal run wheel_build.py --workflow community-hunyuan3d-2-1-visualbruno --publish --tag hunyuan3d-py311-torchVERSION-cuVERSION-sm89-v1
 ```
 
 发布需要 Modal Secret `github` 中设置 `GITHUB_TOKEN`，该令牌需要对目标仓库具有 Contents 写入权限。任务默认不发布；失败不覆盖已有 Release。构建验证目前包含 wheel 压缩包完整性检查，**不等同于实际 CUDA 算子运行测试**，在正式跨账号使用前仍需执行 GPU 推理验证。成功发布后 Modal 日志输出可直接复制到 `plugins.json` 的 `wheel_torch`、`wheels` 配置。普通 `modal deploy comfyui.py` 不会触发上传。
@@ -114,20 +114,20 @@ uv run modal run wheel_build.py --workflow comfyui-hunyuan3d-2-1 --publish --tag
 2. 在该 Linux 环境内执行相应 Workflow 自带的构建脚本；脚本自动读取同目录 `plugins.json` 的 Git 仓库地址及固定 `commit`，不需要手工传参：
 
    ```bash
-   bash workflows/comfyui-hunyuan3d-2-1/build-wheels.sh
+   bash workflows/community-hunyuan3d-2-1-visualbruno/build-wheels.sh
    ```
 
-   产物生成在被 Git 忽略的 `workflows/comfyui-hunyuan3d-2-1/wheels/`：两个 `.whl`、`SHA256SUMS` 和 `BUILD-INFO.txt`。脚本不会发布或清除已存在的 wheel；再次编译前需自行移走旧 wheel。需要在匹配环境实际测试两个包的导入和 GPU 运算。若其他 Workflow 有独立 CUDA 编译需求，可按需在其目录下添加自己的 `build-wheels.sh`，无需改动 Modal 部署入口。
+   产物生成在被 Git 忽略的 `workflows/community-hunyuan3d-2-1-visualbruno/wheels/`：两个 `.whl`、`SHA256SUMS` 和 `BUILD-INFO.txt`。脚本不会发布或清除已存在的 wheel；再次编译前需自行移走旧 wheel。需要在匹配环境实际测试两个包的导入和 GPU 运算。若其他 Workflow 有独立 CUDA 编译需求，可按需在其目录下添加自己的 `build-wheels.sh`，无需改动 Modal 部署入口。
 3. 发布到本仓库 **GitHub Releases**（Tag 的 Torch/CUDA 版本必须来自 `BUILD-INFO.txt`，下面仅为命名示例）：
 
    ```bash
-   WHEEL_DIR=workflows/comfyui-hunyuan3d-2-1/wheels
+   WHEEL_DIR=workflows/community-hunyuan3d-2-1-visualbruno/wheels
    gh release create hunyuan3d-py311-torchVERSION-cuVERSION-sm89-v1 \
      "$WHEEL_DIR"/*.whl "$WHEEL_DIR"/SHA256SUMS "$WHEEL_DIR"/BUILD-INFO.txt \
      --title "Hunyuan3D Linux CUDA wheels" --notes-file "$WHEEL_DIR"/BUILD-INFO.txt
    ```
 
-4. 成功上传并校验下载链接后，在 `workflows/comfyui-hunyuan3d-2-1/plugins.json` 的同一插件对象中填入：
+4. 成功上传并校验下载链接后，在 `workflows/community-hunyuan3d-2-1-visualbruno/plugins.json` 的同一插件对象中填入：
 
    ```json
    {

@@ -124,5 +124,5 @@ def build(workflow: str, publish: bool = False, tag: str = ""):
 
 
 @app.local_entrypoint()
-def main(workflow: str = "comfyui-hunyuan3d-2-1", publish: bool = False, tag: str = ""):
+def main(workflow: str = "community-hunyuan3d-2-1-visualbruno", publish: bool = False, tag: str = ""):
     build.remote(workflow, publish, tag)
