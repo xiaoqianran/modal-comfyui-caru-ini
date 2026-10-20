@@ -170,18 +170,24 @@ def download_all():
 # 3. 构建 Modal 基础镜像：选择 CUDA / Python，安装系统依赖与 ComfyUI
 #    模型与插件暂不在此层加入，便于复用基础镜像缓存。
 # ============================================================================
-vol = modal.Volume.from_name("hf-hub-cache", create_if_missing=True)
+vol = modal.Volume.from_name("modal-comfyui-models", create_if_missing=True)
 
 # construct images and install deps/custom nodes
 VERSION = f"--version {COMFY_VER}" if COMFY_VER else ""
+# Unified CUDA 13.0 / PyTorch 2.14.1 image for every GPU type.
 image = (
-    (modal.Image.from_registry("nvidia/cuda:12.6.3-devel-ubuntu22.04", add_python="3.11") if model_config.get("cuda_devel") else modal.Image.debian_slim(python_version="3.11"))
+    modal.Image.from_registry("nvidia/cuda:13.0.3-devel-ubuntu22.04", add_python="3.11")
+    .entrypoint([])
     .apt_install("git", "git-lfs", "libgl1-mesa-dev", "libglib2.0-0", "axel", "build-essential", "ninja-build")
     .pip_install_from_requirements(str(root_dir / "requirements_comfy.txt"))
-    .run_commands(f"comfy --skip-prompt install --nvidia {VERSION}")
+    .run_commands(
+        "uv pip install --system "
+        "torch==2.14.1 torchvision==0.29.1 "
+        "--index-url https://download.pytorch.org/whl/cu130"
+    )
+    .run_commands(f"comfy --skip-prompt install --nvidia --skip-torch-or-directml {VERSION}")
     .run_commands("git lfs install")
 )
-
 # ============================================================================
 # 4. 下载模型权重：获取 HF 凭据，在构建阶段写入共享 Volume 并建立链接
 # ============================================================================
@@ -218,14 +224,6 @@ image = image.env(
 # ============================================================================
 # 5. 插件由 plugins.json 声明；工作流在全部构建步骤完成后挂载
 # ============================================================================
-if WORKFLOW == "community-hunyuan3d-2-1-visualbruno":
-    # The bundled DINOv2 checkpoint uses Transformers 4.x state_dict names.
-    # ComfyUI Manager installs unpinned Transformers; v5 renames these keys.
-    image = image.run_commands(
-        "python -m pip install 'transformers==4.49.0' 'diffusers==0.35.2' && "
-        "python -c 'import transformers; assert transformers.__version__ == \"4.49.0\"'"
-    )
-
 if comfy_plugins:
     image = image.run_commands("comfy node install " + " ".join(comfy_plugins))
 
