@@ -140,11 +140,27 @@ def download_external_model(url: str, filename: str, model_dir: str):
 
 
 def download_all():
-    for model in models:
-        hf_download(model["repo_id"], model["filename"], model["model_dir"])
+    from concurrent.futures import ThreadPoolExecutor
+    from time import sleep
 
-    for model in models_ext:
-        download_external_model(model["url"], model["filename"], model["model_dir"])
+    def fetch(item):
+        kind, model = item
+        for attempt in range(3):
+            try:
+                if kind == "hf":
+                    hf_download(model["repo_id"], model["filename"], model["model_dir"])
+                else:
+                    download_external_model(model["url"], model["filename"], model["model_dir"])
+                return
+            except Exception:
+                if attempt == 2:
+                    raise
+                sleep(2 ** attempt)
+
+    items = [("hf", model) for model in models]
+    items += [("external", model) for model in models_ext]
+    with ThreadPoolExecutor(max_workers=min(3, len(items) or 1)) as pool:
+        list(pool.map(fetch, items))
 
 
 # ============================================================================
