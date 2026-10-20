@@ -1,5 +1,8 @@
-# FastH3 V2 FL2VA — BF16 diffusion + FP16 video VAE
+# FastH3 8-Step V2: T2V + I2V
 
-Source: https://github.com/Comfy-Org/workflow_templates/blob/main/templates/video_fastvideo_fasth3_i2v.json
+Two official ComfyUI workflow templates coexist in this one Modal app and share models.json.
 
-No image: T2VA; first frame: I2VA; first + last frames: FL2VA. FL2VA output quality needs inference verification.
+- T2V: https://comfy.org/workflows/4707fc533d15-4707fc533d15/
+- I2V (first/last frame): https://comfy.org/workflows/0edd9b3fffb3-0edd9b3fffb3/
+
+Model precision: BF16 diffusion / FP16 video VAE.
