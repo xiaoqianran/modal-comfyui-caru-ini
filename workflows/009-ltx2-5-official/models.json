@@ -1,0 +1,34 @@
+{
+  "models": [
+    {
+      "repo_id": "Lightricks/LTX-2.5",
+      "filename": "text_encoders/gemma4-12b-with-proj-ltx-2.5-comfy-int8-convrot.safetensors",
+      "model_dir": "text_encoders"
+    },
+    {
+      "repo_id": "Lightricks/LTX-2.5",
+      "filename": "diffusion_models/ltx-2.5-22b-distilled-transformer-comfy-int8-convrot.safetensors",
+      "model_dir": "diffusion_models"
+    },
+    {
+      "repo_id": "Lightricks/LTX-2.5",
+      "filename": "vae/ltx-2.5-video-vae-bf16.safetensors",
+      "model_dir": "vae"
+    },
+    {
+      "repo_id": "Lightricks/LTX-2.5",
+      "filename": "vae/ltx-2.5-audio-vae-bf16.safetensors",
+      "model_dir": "vae"
+    },
+    {
+      "repo_id": "Lightricks/LTX-2.5",
+      "filename": "latent_upscale_models/ltx-2.5-latent-spatial-upscaler-x2-bf16-1.0.safetensors",
+      "model_dir": "latent_upscale_models"
+    },
+    {
+      "repo_id": "Comfy-Org/gemma-4",
+      "filename": "text_encoders/gemma4_e2b_it_int8_convrot.safetensors",
+      "model_dir": "text_encoders"
+    }
+  ]
+}
