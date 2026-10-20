@@ -126,7 +126,10 @@ class Handler(BaseHTTPRequestHandler):
             if path.path == "/api/logs":
                 wf = selected(query.get("workflow",[""])[0])
                 output = command(["app","logs",wf["app"],"--tail","100"],timeout=30)
-                return self.send_data({"log":output.stdout or output.stderr,"ok":output.returncode==0})
+                log = output.stdout or output.stderr
+                if output.returncode != 0 and "No App with name" in log:
+                    log = "该工作流尚未部署到 Modal，请先点击「部署」。"
+                return self.send_data({"log":log,"ok":output.returncode==0})
             if path.path == "/api/assets":
                 source = query.get("source",["r2"])[0]
                 workflow = query.get("workflow",[""])[0]
