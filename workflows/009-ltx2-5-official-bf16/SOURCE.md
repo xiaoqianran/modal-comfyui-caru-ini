@@ -1,11 +1,11 @@
-# LTX-2.5 · ComfyUI official templates
+# LTX-2.5 official BF16 variants
+
+Based on the three Comfy-Org templates in `../009-ltx2-5-official`; only model filenames replaced in workflow JSON files.
+
+- LTX-2.5 distilled 22B BF16 main model and Gemma4 12B BF16 text encoder: `Lightricks/LTX-2.5`.
+- Gemma4 E2B BF16 optional prompt enhancer: `Comfy-Org/gemma-4` (disabled by default).
+- BF16 audio/video VAE and spatial upscaler are shared with original templates.
+- No third-party plugins declared. Native LTX-2.5 ComfyUI nodes required.
+- Model download, loading, and GPU inference not yet tested.
 
 Source: https://github.com/Comfy-Org/workflow_templates/tree/main/templates
-
-- `video_ltx2_5_t2v.json` — official T2V
-- `video_ltx2_5_i2v.json` — official I2V
-- `video_ltx2_5_flf2v.json` — official first/last frame
-
-All three JSON files are unmodified upstream templates.
-
-Main transformer and Gemma 12B encoder are **INT8 ConvRot**, not BF16; VAEs and x2 latent upscaler are **BF16**. The Gemma E2B enhancer is optional; the default prompt enhancer is disabled. No third-party ComfyUI node package is declared, but the bundled ComfyUI version must include the LTX-2.5 core nodes. GPU inference has not been tested.
