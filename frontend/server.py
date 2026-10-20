@@ -79,7 +79,8 @@ def operate(taskid, workflow, action):
         if action == "deploy" and result.returncode == 0:
             urls = re.findall(r"https://[^\s]+\.modal\.run[^\s]*", task["log"])
             if urls:
-                LINKS[workflow] = urls[-1].rstrip("),")
+                parsed = urlsplit(urls[-1].rstrip("),"))
+                LINKS[workflow] = f"https://{parsed.netloc}/"
         if action == "stop" and result.returncode == 0:
             LINKS.pop(workflow, None)
         task["state"] = "success" if result.returncode == 0 else "failed"
