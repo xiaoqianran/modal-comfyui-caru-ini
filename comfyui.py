@@ -159,7 +159,10 @@ def download_all():
 
     items = [("hf", model) for model in models]
     items += [("external", model) for model in models_ext]
-    with ThreadPoolExecutor(max_workers=min(3, len(items) or 1)) as pool:
+    workers = int(os.getenv("MODEL_DOWNLOAD_WORKERS", "4"))
+    if not 1 <= workers <= 6:
+        raise ValueError("MODEL_DOWNLOAD_WORKERS must be between 1 and 6")
+    with ThreadPoolExecutor(max_workers=min(workers, len(items) or 1)) as pool:
         list(pool.map(fetch, items))
 
 
