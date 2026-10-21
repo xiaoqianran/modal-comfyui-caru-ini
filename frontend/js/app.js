@@ -5,4 +5,4 @@ function navigate(page){if(!pages.includes(page))return;if(current==='assets'&&p
 for(const n of document.querySelectorAll('[data-page]'))n.onclick=()=>navigate(n.dataset.page);
 initWorkflows(notify,navigate);initAssets(notify);
 document.getElementById('refresh').onclick=async()=>{try{await refresh();if(current==='assets')await loadAssets()}catch(e){notify('刷新失败：'+e.message)}};
-try{await loadWorkflows();await refresh()}catch(e){notify('初始化失败：'+e.message)}navigate('overview');
+navigate('overview');try{await loadWorkflows();refresh().catch(e=>notify('部署状态读取失败：'+e.message))}catch(e){notify('初始化失败：'+e.message)}

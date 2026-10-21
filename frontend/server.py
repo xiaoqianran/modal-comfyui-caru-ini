@@ -3,6 +3,7 @@ import json
 import mimetypes
 import os
 import re
+import socket
 import subprocess
 import sys
 import threading
@@ -194,6 +195,20 @@ class Handler(BaseHTTPRequestHandler):
         except Exception as exc:
             self.send_data({"error":type(exc).__name__+": "+str(exc)[:300]},502)
 
+class ExclusiveServer(ThreadingHTTPServer):
+    # Windows may allow multiple Python servers to listen on the same port.
+    # Prevent random requests from hitting an outdated process.
+    allow_reuse_address = False
+
+    def server_bind(self):
+        if hasattr(socket, "SO_EXCLUSIVEADDRUSE"):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+        super().server_bind()
+
+
 if __name__ == "__main__":
-    print(f"ComfyUI Console: http://{HOST}:{PORT}")
-    ThreadingHTTPServer((HOST,PORT),Handler).serve_forever()
+    print(f"ComfyUI Console: http://{HOST}:{PORT}", flush=True)
+    try:
+        ExclusiveServer((HOST, PORT), Handler).serve_forever()
+    except OSError as exc:
+        raise SystemExit(f"Port {PORT} is already in use; close the previous frontend first: {exc}")
