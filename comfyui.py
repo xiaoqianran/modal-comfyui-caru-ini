@@ -362,7 +362,7 @@ image = image.add_local_dir(
 
 
 # ============================================================================
-# 6. 配置输出存储：挂载生成资产目录 output/3d，准备关联的存储依赖
+# 6. Output staging Volume; R2 only stores small previews
 #    wait_for_port 用于后续 ComfyUI 启动时检查 HTTP 服务是否就绪。
 # ============================================================================
 def wait_for_port(port: int, timeout: int = 60):
@@ -379,29 +379,19 @@ def wait_for_port(port: int, timeout: int = 60):
             time.sleep(0.5)
     raise TimeoutError(f"ComfyUI never became ready on port {port}")
     
-r2_mount = modal.CloudBucketMount(
+# Generated files stay in a persistent staging Volume until HF archive succeeds.
+output_volume = modal.Volume.from_name(f"modal-comfyui-output-{WORKFLOW}", create_if_missing=True)
+preview_mount = modal.CloudBucketMount(
     bucket_name="modal-studio-assets",
     bucket_endpoint_url=os.getenv(
         "R2_ENDPOINT", "https://f863e42ff2096d089d4d4129197abd17.r2.cloudflarestorage.com"
     ),
-    key_prefix=f"comfyui/{WORKFLOW}/3d/",
+    key_prefix=f"previews/{WORKFLOW}/",
     secret=modal.Secret.from_name(
-        "cloudflare-r2",
-        required_keys=["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"],
+        "cloudflare-r2", required_keys=["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"]
     ),
 )
-r2_3dgs_mount = modal.CloudBucketMount(
-    bucket_name="modal-studio-assets",
-    bucket_endpoint_url=os.getenv(
-        "R2_ENDPOINT", "https://f863e42ff2096d089d4d4129197abd17.r2.cloudflarestorage.com"
-    ),
-    key_prefix=f"comfyui/{WORKFLOW}/3dgs/",
-    secret=modal.Secret.from_name(
-        "cloudflare-r2",
-        required_keys=["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"],
-    ),
-)
-image = image.pip_install("boto3").add_local_file(
+image = image.pip_install("boto3", "imageio-ffmpeg").add_local_file(
     root_dir / "storage" / "hf_sync.py", "/root/hf_sync.py", copy=True
 )
 
@@ -427,8 +417,8 @@ app = modal.App(name=f"modal-{WORKFLOW}", image=image)
     gpu=GPU_TYPE,
     volumes={
         "/cache": vol,
-        "/root/comfy/ComfyUI/output/3d": r2_mount,
-        "/root/comfy/ComfyUI/output/3dgs": r2_3dgs_mount,
+        "/outputs": output_volume,
+        "/r2-previews": preview_mount,
     },
     secrets=[modal.Secret.from_name("huggingface-s3")],
     scaledown_window=60,  # idle 1 minutes to shutdown
@@ -443,7 +433,7 @@ class ComfyUI:
     @modal.enter(snap=True)
     def start_checkpoint(self):
         self.proc = subprocess.Popen(
-            "comfy launch --background -- --listen 0.0.0.0 --port 8000", shell=True
+            "comfy launch --background -- --listen 0.0.0.0 --port 8000 --output-directory /outputs", shell=True
         )
         # Block here — snapshot is taken only after this returns
         wait_for_port(8000, timeout=300)
@@ -463,6 +453,8 @@ class ComfyUI:
     
     @modal.exit()
     def cleanup(self):
+        # Persist staging files even if HF was temporarily unavailable.
+        output_volume.commit()
         sync_proc = getattr(self, "sync_proc", None)
         if sync_proc is not None:
             sync_proc.terminate()

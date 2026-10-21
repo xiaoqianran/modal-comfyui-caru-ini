@@ -1,108 +1,133 @@
-"""Replicate completed ComfyUI 3D outputs from the primary R2 mount to HF S3.
-
-The source directory is R2-backed; HF is best-effort and never blocks inference.
-"""
+"""Archive ComfyUI outputs in HF; keep only small previews in CF R2."""
 import logging
 import os
-import signal
+import shutil
+import subprocess
 import time
 from pathlib import Path
 
 import boto3
+from botocore.config import Config
 from boto3.s3.transfer import TransferConfig
+from botocore.exceptions import ClientError
 
-OUTPUT_ROOT = Path(os.getenv("COMFY_OUTPUT_ROOT", "/root/comfy/ComfyUI/output"))
-SOURCES = {
-    "3d": Path(os.getenv("COMFY_3D_OUTPUT", str(OUTPUT_ROOT / "3d"))),
-    "3dgs": Path(os.getenv("COMFY_3DGS_OUTPUT", str(OUTPUT_ROOT / "3dgs"))),
-}
-PREFIX = f"comfyui/{os.getenv('WORKFLOW', 'comfyui-pixal3d-trellis2')}/"
-BUCKET = os.getenv("HF_S3_BUCKET", "comfyui-assets")
-ENDPOINT = os.getenv("HF_S3_ENDPOINT", "https://s3.hf.co/seachen")
-EXTENSIONS = {".glb", ".gltf", ".ply", ".splat", ".ksplat", ".spz"}
-POLL = int(os.getenv("HF_SYNC_INTERVAL", "15"))
-LOG = logging.getLogger("hf-s3-sync")
-RUNNING = True
-
-
-def stop(_signum, _frame):
-    global RUNNING
-    RUNNING = False
+ROOT = Path(os.getenv("COMFY_OUTPUT_ROOT", "/outputs"))
+WORKFLOW = os.getenv("WORKFLOW", "default")
+SOURCES = {name: ROOT / name for name in ("3d", "3dgs", "video")}
+PREVIEWS = Path(os.getenv("COMFY_R2_PREVIEWS", "/r2-previews"))
+HF_BUCKET = os.getenv("HF_S3_BUCKET", "comfyui-assets")
+INTERVAL = int(os.getenv("HF_SYNC_INTERVAL", "15"))
+EXTENSIONS = {".glb", ".gltf", ".ply", ".splat", ".ksplat", ".spz",
+              ".mp4", ".webm", ".mov", ".mkv", ".png", ".jpg", ".jpeg",
+              ".json", ".bin", ".obj", ".mtl", ".stl"}
+VIDEOS = {".mp4", ".webm", ".mov", ".mkv"}
+IMAGES = {".png", ".jpg", ".jpeg"}
+LOG = logging.getLogger("hf-archive")
 
 
-def client():
+def hf_client():
     return boto3.client(
-        "s3", endpoint_url=ENDPOINT,
+        "s3",
+        endpoint_url=os.getenv("HF_S3_ENDPOINT", "https://s3.hf.co/seachen"),
         aws_access_key_id=os.environ["AWS_ACCESS_KEY_ID"],
         aws_secret_access_key=os.environ["AWS_SECRET_ACCESS_KEY"],
-        region_name="auto",
-        config=boto3.session.Config(
+        region_name="us-east-1",
+        config=Config(
             s3={"addressing_style": "path"},
+            signature_version="s3v4",
+            request_checksum_calculation="when_required",
+            response_checksum_validation="when_required",
             retries={"max_attempts": 5, "mode": "standard"},
         ),
     )
 
 
-def sync_once(s3, observed, completed, now=None):
-    """Two equal consecutive metadata observations ensure the writer has settled.
+def same_size(client, bucket, key, size):
+    try:
+        return client.head_object(Bucket=bucket, Key=key)["ContentLength"] == size
+    except ClientError as exc:
+        if exc.response["Error"]["Code"] in ("404", "NoSuchKey", "NotFound"):
+            return False
+        raise
 
-    completed is deliberately process-local: subsequent container runs can retry
-    files left on the persistent R2 mount.
-    """
+
+def make_video_preview(video):
+    preview = video.with_name(video.stem + "_preview.png")
+    if preview.exists():
+        return
+    temporary = video.with_name(video.stem + "_preview.part.png")
+    try:
+        from imageio_ffmpeg import get_ffmpeg_exe
+        subprocess.run(
+            [get_ffmpeg_exe(), "-hide_banner", "-loglevel", "error", "-y",
+             "-i", str(video), "-frames:v", "1", str(temporary)],
+            capture_output=True, check=True, timeout=90,
+        )
+        temporary.replace(preview)
+    except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
+        temporary.unlink(missing_ok=True)
+        LOG.warning("Video preview failed %s: %s", video.name, exc)
+
+
+def archive_once(hf, observed, completed, now=None):
+    """Only upload files unchanged for one interval; retry on future scans."""
     now = time.monotonic() if now is None else now
-    found = set()
-    for category, source in SOURCES.items():
-        for path in source.rglob("*"):
+    present = set()
+    for category, directory in SOURCES.items():
+        for path in directory.rglob("*"):
             if not path.is_file() or path.suffix.lower() not in EXTENSIONS:
                 continue
-            relative = f"{category}/" + path.relative_to(source).as_posix()
-            found.add(relative)
+            relative = f"{category}/{path.relative_to(directory).as_posix()}"
+            present.add(relative)
             stat = path.stat()
-            if stat.st_size == 0:
-                continue
             version = (stat.st_size, stat.st_mtime_ns)
-            if completed.get(relative) == version:
+            if not stat.st_size or completed.get(relative) == version:
                 continue
             previous = observed.get(relative)
-            observed[relative] = (version, now)
-            if previous is None or previous[0] != version or now - previous[1] < POLL:
+            if previous is None or previous[0] != version:
+                observed[relative] = (version, now)
                 continue
-            key = PREFIX + relative
+            if now - previous[1] < INTERVAL:
+                continue
+            key = f"comfyui/{WORKFLOW}/{relative}"
             try:
-                # Streaming transfer; do not load large point clouds into RAM.
-                s3.upload_file(
-                    str(path), BUCKET, key,
-                    Config=TransferConfig(multipart_threshold=64 * 1024 * 1024),
-                )
+                if not same_size(hf, HF_BUCKET, key, stat.st_size):
+                    hf.upload_file(str(path), HF_BUCKET, key,
+                                   Config=TransferConfig(multipart_threshold=64 * 1024 * 1024))
+                if not same_size(hf, HF_BUCKET, key, stat.st_size):
+                    raise RuntimeError("HF upload verification failed")
+
+                if path.suffix.lower() in IMAGES:
+                    target = PREVIEWS / relative
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    if not target.exists() or target.stat().st_size != stat.st_size:
+                        shutil.copyfile(path, target)
+                    if target.stat().st_size != stat.st_size:
+                        raise RuntimeError("R2 preview verification failed")
+
                 completed[relative] = version
-                LOG.info("Uploaded %s (%d bytes) -> hf://%s/%s",
-                         relative, stat.st_size, BUCKET, key)
+                LOG.info("Archived %s", key)
+                if path.suffix.lower() in VIDEOS:
+                    make_video_preview(path)
             except Exception as exc:
-                LOG.warning("Upload failed for %s: %s: %s",
-                            relative, type(exc).__name__, str(exc)[:250])
+                LOG.warning("Will retry %s: %s", relative, exc)
     for key in list(observed):
-        if key not in found:
+        if key not in present:
             observed.pop(key, None)
             completed.pop(key, None)
 
 
 def main():
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
-    signal.signal(signal.SIGTERM, stop)
-    signal.signal(signal.SIGINT, stop)
-    s3 = client()
-    LOG.info("Syncing R2 directories %s -> HF bucket %s, prefix %s",
-             SOURCES, BUCKET, PREFIX)
+    hf = hf_client()
     observed, completed = {}, {}
-    while RUNNING:
+    LOG.info("Syncing %s to HF, small previews to CF R2", SOURCES)
+    while True:
         try:
-            sync_once(s3, observed, completed)
-        except Exception as exc:
-            LOG.warning("Scan failed: %s: %s", type(exc).__name__, str(exc)[:250])
-        for _ in range(POLL):
-            if not RUNNING:
-                break
-            time.sleep(1)
+            archive_once(hf, observed, completed)
+        except Exception:
+            LOG.exception("Archive scan failed; retrying")
+        time.sleep(INTERVAL)
 
 
 if __name__ == "__main__":
