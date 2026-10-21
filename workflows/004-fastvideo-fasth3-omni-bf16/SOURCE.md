@@ -1,9 +1,6 @@
-# FastH3 Omni 8-Step V1 BF16 Ref2VA
+# FastH3 Omni BF16 — official ComfyUI workflow
 
-Official model: https://huggingface.co/FastVideo/FastH3-Omni-Comfy
-
-Adapted from 002 MiniMax H3 Ref2VA. Native MiniMaxH3ReferenceToVideo, encoder, audio and video VAEs retained. Eight sampler steps. Original Turbo LoRA removed.
-
-Official recommended guidance 1.0, video shift 12, audio shift 3. The imported original graph does not expose explicit video/audio shift settings; verify with native ComfyUI runtime. Float 5 is duration, not shift.
-
-Not yet inference-tested.
+Official template: https://github.com/Comfy-Org/workflow_templates/blob/main/templates/video_fasth3_ominiref_r2v.json
+Adapted from official INT8 template to FastH3 Omni BF16 diffusion weights and FP16 video VAE.
+8 steps; native MiniMaxH3SigmaShift video=12 audio=3.
+The FL2VA Turbo LoRA and FL2VA diffusion model belong to a different workflow and are intentionally not included.
