@@ -82,8 +82,8 @@
         "fixed",
         true,
         true,
-        false,
-        "infinisplat/InfiniSplat",
+        true,
+        "3d/infinisplat/InfiniSplat",
         "geocalib"
       ]
     },
