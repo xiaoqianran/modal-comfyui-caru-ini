@@ -31,3 +31,5 @@ function choose(item){
   link.href='/asset/'+encodeURIComponent(item.source)+'/'+item.key.split('/').map(encodeURIComponent).join('/')+'?download=1';
   preview(item);
 }
+
+export function close(){deactivate()}
