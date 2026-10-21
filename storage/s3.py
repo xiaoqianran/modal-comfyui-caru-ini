@@ -35,12 +35,16 @@ def check_key(key):
 
 def list_assets(source, workflow=None):
     s3, bucket = client(source)
-    prefix = f"comfyui/{workflow}/3d/" if workflow else "comfyui/"
+    prefix = f"comfyui/{workflow}/" if workflow else "comfyui/"
     result = []
     for page in s3.get_paginator("list_objects_v2").paginate(Bucket=bucket, Prefix=prefix):
-        result.extend({"source": source, "key": obj["Key"], "size": obj["Size"]}
-                      for obj in page.get("Contents", [])
-                      if Path(obj["Key"]).suffix.lower() in EXTENSIONS)
+        for obj in page.get("Contents", []):
+            key = obj["Key"]
+            remainder = key[len(prefix):]
+            if workflow and not remainder.startswith(("3d/", "3dgs/")):
+                continue
+            if Path(key).suffix.lower() in EXTENSIONS:
+                result.append({"source": source, "key": key, "size": obj["Size"]})
     return result
 
 def get_asset(source, key):

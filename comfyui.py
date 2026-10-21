@@ -390,6 +390,17 @@ r2_mount = modal.CloudBucketMount(
         required_keys=["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"],
     ),
 )
+r2_3dgs_mount = modal.CloudBucketMount(
+    bucket_name="modal-studio-assets",
+    bucket_endpoint_url=os.getenv(
+        "R2_ENDPOINT", "https://f863e42ff2096d089d4d4129197abd17.r2.cloudflarestorage.com"
+    ),
+    key_prefix=f"comfyui/{WORKFLOW}/3dgs/",
+    secret=modal.Secret.from_name(
+        "cloudflare-r2",
+        required_keys=["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"],
+    ),
+)
 image = image.pip_install("boto3").add_local_file(
     root_dir / "storage" / "hf_sync.py", "/root/hf_sync.py", copy=True
 )
@@ -417,6 +428,7 @@ app = modal.App(name=f"modal-{WORKFLOW}", image=image)
     volumes={
         "/cache": vol,
         "/root/comfy/ComfyUI/output/3d": r2_mount,
+        "/root/comfy/ComfyUI/output/3dgs": r2_3dgs_mount,
     },
     secrets=[modal.Secret.from_name("huggingface-s3")],
     scaledown_window=60,  # idle 1 minutes to shutdown

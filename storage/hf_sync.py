@@ -11,8 +11,12 @@ from pathlib import Path
 import boto3
 from boto3.s3.transfer import TransferConfig
 
-SOURCE = Path(os.getenv("COMFY_3D_OUTPUT", "/root/comfy/ComfyUI/output/3d"))
-PREFIX = f"comfyui/{os.getenv('WORKFLOW', 'comfyui-pixal3d-trellis2')}/3d/"
+OUTPUT_ROOT = Path(os.getenv("COMFY_OUTPUT_ROOT", "/root/comfy/ComfyUI/output"))
+SOURCES = {
+    "3d": Path(os.getenv("COMFY_3D_OUTPUT", str(OUTPUT_ROOT / "3d"))),
+    "3dgs": Path(os.getenv("COMFY_3DGS_OUTPUT", str(OUTPUT_ROOT / "3dgs"))),
+}
+PREFIX = f"comfyui/{os.getenv('WORKFLOW', 'comfyui-pixal3d-trellis2')}/"
 BUCKET = os.getenv("HF_S3_BUCKET", "comfyui-assets")
 ENDPOINT = os.getenv("HF_S3_ENDPOINT", "https://s3.hf.co/seachen")
 EXTENSIONS = {".glb", ".gltf", ".ply", ".splat", ".ksplat", ".spz"}
@@ -47,34 +51,35 @@ def sync_once(s3, observed, completed, now=None):
     """
     now = time.monotonic() if now is None else now
     found = set()
-    for path in SOURCE.rglob("*"):
-        if not path.is_file() or path.suffix.lower() not in EXTENSIONS:
-            continue
-        relative = path.relative_to(SOURCE).as_posix()
-        found.add(relative)
-        stat = path.stat()
-        if stat.st_size == 0:
-            continue
-        version = (stat.st_size, stat.st_mtime_ns)
-        if completed.get(relative) == version:
-            continue
-        previous = observed.get(relative)
-        observed[relative] = (version, now)
-        if previous is None or previous[0] != version or now - previous[1] < POLL:
-            continue
-        key = PREFIX + relative
-        try:
-            # Streaming transfer; do not load large point clouds into RAM.
-            s3.upload_file(
-                str(path), BUCKET, key,
-                Config=TransferConfig(multipart_threshold=64 * 1024 * 1024),
-            )
-            completed[relative] = version
-            LOG.info("Uploaded %s (%d bytes) -> hf://%s/%s",
-                     relative, stat.st_size, BUCKET, key)
-        except Exception as exc:
-            LOG.warning("Upload failed for %s: %s: %s",
-                        relative, type(exc).__name__, str(exc)[:250])
+    for category, source in SOURCES.items():
+        for path in source.rglob("*"):
+            if not path.is_file() or path.suffix.lower() not in EXTENSIONS:
+                continue
+            relative = f"{category}/" + path.relative_to(source).as_posix()
+            found.add(relative)
+            stat = path.stat()
+            if stat.st_size == 0:
+                continue
+            version = (stat.st_size, stat.st_mtime_ns)
+            if completed.get(relative) == version:
+                continue
+            previous = observed.get(relative)
+            observed[relative] = (version, now)
+            if previous is None or previous[0] != version or now - previous[1] < POLL:
+                continue
+            key = PREFIX + relative
+            try:
+                # Streaming transfer; do not load large point clouds into RAM.
+                s3.upload_file(
+                    str(path), BUCKET, key,
+                    Config=TransferConfig(multipart_threshold=64 * 1024 * 1024),
+                )
+                completed[relative] = version
+                LOG.info("Uploaded %s (%d bytes) -> hf://%s/%s",
+                         relative, stat.st_size, BUCKET, key)
+            except Exception as exc:
+                LOG.warning("Upload failed for %s: %s: %s",
+                            relative, type(exc).__name__, str(exc)[:250])
     for key in list(observed):
         if key not in found:
             observed.pop(key, None)
@@ -86,8 +91,8 @@ def main():
     signal.signal(signal.SIGTERM, stop)
     signal.signal(signal.SIGINT, stop)
     s3 = client()
-    LOG.info("Syncing primary R2 directory %s -> HF bucket %s, prefix %s",
-             SOURCE, BUCKET, PREFIX)
+    LOG.info("Syncing R2 directories %s -> HF bucket %s, prefix %s",
+             SOURCES, BUCKET, PREFIX)
     observed, completed = {}, {}
     while RUNNING:
         try:
