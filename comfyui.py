@@ -323,7 +323,11 @@ def install_ext_plugin(image: modal.Image, plugin: dict) -> modal.Image:
     install = plugin.get("install", "").strip()
     if install:
         if install.endswith(".py"):
-            image = image.run_commands(f"cd {work_dir} && python {shlex.quote(install)}")
+            args = plugin.get("install_args", [])
+            if not isinstance(args, list) or not all(isinstance(arg, str) for arg in args):
+                raise ValueError("install_args must be a list of strings")
+            command = " ".join(shlex.quote(arg) for arg in [install, *args])
+            image = image.run_commands(f"cd {work_dir} && python {command}")
         else:
             print(f"Unsupported installation script: {install}")
 
@@ -388,7 +392,7 @@ def wait_for_port(port: int, timeout: int = 60):
     raise TimeoutError(f"ComfyUI never became ready on port {port}")
     
 # Generated files stay in a persistent staging Volume until HF archive succeeds.
-output_volume = modal.Volume.from_name(f"modal-comfyui-output-{WORKFLOW}", create_if_missing=True)
+output_volume = modal.Volume.from_name("modal-comfyui-models-output", create_if_missing=True)
 preview_mount = modal.CloudBucketMount(
     bucket_name="modal-studio-assets",
     bucket_endpoint_url=os.getenv(
@@ -441,7 +445,7 @@ class ComfyUI:
     @modal.enter(snap=True)
     def start_checkpoint(self):
         self.proc = subprocess.Popen(
-            "comfy launch --background -- --listen 0.0.0.0 --port 8000 --output-directory /outputs", shell=True
+            f"comfy launch --background -- --listen 0.0.0.0 --port 8000 --output-directory /outputs/{WORKFLOW}", shell=True
         )
         # Block here — snapshot is taken only after this returns
         wait_for_port(8000, timeout=300)
@@ -451,7 +455,7 @@ class ComfyUI:
         wait_for_port(8000, timeout=30)
         self.sync_proc = subprocess.Popen(
             ["python", "-u", "/root/hf_sync.py"],
-            env={**os.environ, "WORKFLOW": WORKFLOW},
+            env={**os.environ, "WORKFLOW": WORKFLOW, "COMFY_OUTPUT_ROOT": f"/outputs/{WORKFLOW}"},
         )
         print("App Restored!")
     
