@@ -15,7 +15,7 @@ captured value containing ``/`` still cannot escape the user directory.
 from server import PromptServer
 
 _SUFFIX = "/userdata/{file}"
-_METHODS = ("POST", "DELETE")
+_METHODS = ("GET", "POST", "DELETE")
 
 
 def _register_slash_tolerant_userdata(app):
