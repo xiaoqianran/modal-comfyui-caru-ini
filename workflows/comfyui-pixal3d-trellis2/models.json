@@ -37,5 +37,5 @@
     }
   ],
   "models_ext": [],
-  "gpu": "A100-40GB"
+  "gpu": "RTX_PRO_6000"
 }
