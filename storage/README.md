@@ -1,6 +1,6 @@
 # Storage: 3D / 3DGS / Video
 
-- **Modal Volume `/outputs`**: temporary durable staging, split into `3d/`, `3dgs/`, `video/`.
+- **Modal Volume `modal-comfyui-models-output`**: shared persistent staging mounted at `/outputs`, separated by workflow into `/outputs/{workflow}/3d/`, `3dgs/`, and `video/`.
 - **Hugging Face Storage Bucket**: permanent source of truth at `comfyui/{workflow}/{category}/...`.
 - **Cloudflare R2**: preview images in `previews/{workflow}/{category}/...`; original files only on request at `downloads/comfyui/...`.
 - **Local PC2 console**: the HF download button copies the original to R2 (or reuses an existing identical cached copy), then issues a one-hour presigned URL.
@@ -8,7 +8,7 @@
 
 ## Process
 
-1. ComfyUI writes files to `/outputs/<category>/`. Standard SaveVideo workflows already write under `video/`.
+1. ComfyUI writes files to `/outputs/{workflow}/<category>/`. Standard SaveVideo workflows already write under `video/`.
 2. `hf_sync.py` checks stable files every 15 seconds, uploads to HF, verifies the remote size, then copies any preview images to the R2 preview mount.
 3. For video, it extracts the first frame using imageio-ffmpeg as `*_preview.png`, and archives that image in the next scan.
 4. The local `storage/s3.py` implements the independent HF -> CF transfer and avoids retransfers using source ETag + size.
