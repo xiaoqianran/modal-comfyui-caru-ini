@@ -1,3 +1,4 @@
+import{api}from'./api.js';
 let sequence=0,scene=null,splatLibrary=null;
 const image=document.getElementById('preview-img'),model=document.getElementById('model'),splat=document.getElementById('splat'),hint=document.getElementById('hint');
 function clear(){image.hidden=true;image.removeAttribute('src');model.removeAttribute('src');model.style.display='none';splat.style.display='none';if(scene){try{scene.dispose()}catch(e){console.warn(e)}scene=null}splat.replaceChildren()}
@@ -15,5 +16,23 @@ if(['mp4','webm','mov','mkv','png','jpg','jpeg'].includes(ext)){
   return;
 }
 if(ext==='glb'||ext==='gltf'){try{if(!customElements.get('model-viewer'))await import('https://ajax.googleapis.com/ajax/libs/model-viewer/4.1.0/model-viewer.min.js');if(id!==sequence)return;model.src=url;model.style.display='block';hint.hidden=true}catch(e){if(id===sequence)hint.textContent='无法加载 3D Viewer：'+e.message}return}
-if(['spz','ply','splat','ksplat'].includes(ext)){try{splatLibrary ||= import('https://esm.sh/@mkkellogg/gaussian-splats-3d@0.4.7?bundle');const G=await splatLibrary;if(id!==sequence)return;const v=new G.Viewer({rootElement:splat,selfDrivenMode:true,sharedMemoryForWorkers:false,dynamicScene:false});scene=v;splat.style.display='block';await v.addSplatScene(url,{splatAlphaRemovalThreshold:5,showLoadingUI:true});if(id!==sequence)return;v.start();hint.hidden=true}catch(e){if(id===sequence){clear();hint.textContent='预览失败：'+e.message+'，可下载文件'}}return}
+if(['spz','ply','splat','ksplat'].includes(ext)){try{
+  // Render the actual 3DGS file. For HF assets, first stage it in CF R2.
+  let modelUrl=url;
+  if(item.source==='hf'){
+    hint.textContent='正在将原始高斯模型从 HF 中转到 CF…';
+    await api.transfer(item.key);
+    if(id!==sequence)return;
+    modelUrl='/asset/r2/downloads/'+item.key.split('/').map(encodeURIComponent).join('/');
+  }
+  hint.textContent='正在加载高斯模型…';
+  splatLibrary ||= import('https://esm.sh/@mkkellogg/gaussian-splats-3d@0.4.7?bundle');
+  const G=await splatLibrary;
+  if(id!==sequence)return;
+  const v=new G.Viewer({rootElement:splat,selfDrivenMode:true,sharedMemoryForWorkers:false,dynamicScene:false});
+  scene=v;splat.style.display='block';
+  await v.addSplatScene(modelUrl,{splatAlphaRemovalThreshold:5,showLoadingUI:true});
+  if(id!==sequence)return;
+  v.start();hint.hidden=true;
+}catch(e){if(id===sequence){clear();hint.hidden=false;hint.textContent='加载模型失败：'+e.message+'，可下载原文件'}}return}
 hint.textContent='暂不支持该格式直接预览，请下载文件'}
