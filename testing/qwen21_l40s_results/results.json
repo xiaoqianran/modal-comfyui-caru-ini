@@ -1,0 +1,62 @@
+[
+  {
+    "case": "A_1024_20",
+    "size": 1024,
+    "steps": 20,
+    "elapsed_sec": 7.4,
+    "idle_vram_gib": 28.6,
+    "sampled_peak_vram_gib": 29.03,
+    "samples": 3,
+    "images": 1,
+    "status": "success",
+    "messages": "[['execution_start', {'prompt_id': '2a93b014-3009-4eaa-b2a8-c8f2bbf7c744', 'timestamp': 1792820042918}], ['execution_cached', {'nodes': ['1', '2', '3', '4', '5', '6'], 'prompt_id': '2a93b014-3009-4eaa-b2a8-c8f2bbf7c744', 'timestamp': 1792820042919}], ['execution_success', {'prompt_id': '2a93b014-3009-4eaa-b2a8-c8f2bbf7c744', 'timestamp': 1792820050483}]]"
+  },
+  {
+    "case": "B_1024_25",
+    "size": 1024,
+    "steps": 25,
+    "elapsed_sec": 10.46,
+    "idle_vram_gib": 28.6,
+    "sampled_peak_vram_gib": 29.03,
+    "samples": 4,
+    "images": 1,
+    "status": "success",
+    "messages": "[['execution_start', {'prompt_id': '3c0c72b3-542f-440d-a35f-e43a49a3683a', 'timestamp': 1792820053949}], ['execution_cached', {'nodes': ['1', '2', '3', '4', '5', '6'], 'prompt_id': '3c0c72b3-542f-440d-a35f-e43a49a3683a', 'timestamp': 1792820053950}], ['execution_success', {'prompt_id': '3c0c72b3-542f-440d-a35f-e43a49a3683a', 'timestamp': 1792820063345}]]"
+  },
+  {
+    "case": "C_1024_35",
+    "size": 1024,
+    "steps": 35,
+    "elapsed_sec": 14.8,
+    "idle_vram_gib": 28.6,
+    "sampled_peak_vram_gib": 29.03,
+    "samples": 7,
+    "images": 1,
+    "status": "success",
+    "messages": "[['execution_start', {'prompt_id': 'e7a14095-4bbb-4c18-a28d-d64f413315a7', 'timestamp': 1792820066417}], ['execution_cached', {'nodes': ['1', '2', '3', '4', '5', '6'], 'prompt_id': 'e7a14095-4bbb-4c18-a28d-d64f413315a7', 'timestamp': 1792820066418}], ['execution_success', {'prompt_id': 'e7a14095-4bbb-4c18-a28d-d64f413315a7', 'timestamp': 1792820079399}]]"
+  },
+  {
+    "case": "D_1536_25",
+    "size": 1536,
+    "steps": 25,
+    "elapsed_sec": 27.03,
+    "idle_vram_gib": 28.6,
+    "sampled_peak_vram_gib": 29.78,
+    "samples": 11,
+    "images": 1,
+    "status": "success",
+    "messages": "[['execution_start', {'prompt_id': '0f1feeb7-44de-44ab-93c7-da25349aaa0c', 'timestamp': 1792820083051}], ['execution_cached', {'nodes': ['1', '2', '3', '4', '5'], 'prompt_id': '0f1feeb7-44de-44ab-93c7-da25349aaa0c', 'timestamp': 1792820083052}], ['execution_success', {'prompt_id': '0f1feeb7-44de-44ab-93c7-da25349aaa0c', 'timestamp': 1792820107942}]]"
+  },
+  {
+    "case": "E_2048_25",
+    "size": 2048,
+    "steps": 25,
+    "elapsed_sec": 51.78,
+    "idle_vram_gib": 28.6,
+    "sampled_peak_vram_gib": 30.21,
+    "samples": 22,
+    "images": 1,
+    "status": "success",
+    "messages": "[['execution_start', {'prompt_id': 'c6b3ca37-a679-414c-971a-95baefb8f63c', 'timestamp': 1792820111801}], ['execution_cached', {'nodes': ['1', '2', '3', '4', '5'], 'prompt_id': 'c6b3ca37-a679-414c-971a-95baefb8f63c', 'timestamp': 1792820111802}], ['execution_success', {'prompt_id': 'c6b3ca37-a679-414c-971a-95baefb8f63c', 'timestamp': 1792820162102}]]"
+  }
+]
