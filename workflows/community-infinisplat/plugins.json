@@ -1,1 +1,1 @@
-{"comfy_plugins":[],"comfy_plugins_ext":[{"url":"https://github.com/jKaarlehto/ComfyUI-InfiniSplat.git","commit":"0722bc45e86b51f3fff2415ffc0c982fb0ffa5aa","install":"install.py"}]}
+{"comfy_plugins":[],"comfy_plugins_ext":[{"url":"https://github.com/jKaarlehto/ComfyUI-InfiniSplat.git","commit":"0722bc45e86b51f3fff2415ffc0c982fb0ffa5aa","install":"install.py","install_args":["--camera"]}]}
