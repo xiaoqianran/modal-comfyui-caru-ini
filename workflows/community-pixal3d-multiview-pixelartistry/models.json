@@ -22,6 +22,11 @@
     },
     {
       "repo_id": "Comfy-Org/Qwen-Image-2.1",
+      "filename": "text_encoders/qwen3.5_9b_qwen_image_2.1_pe_t2i.int8_convrot.safetensors",
+      "model_dir": "text_encoders"
+    },
+    {
+      "repo_id": "Comfy-Org/Qwen-Image-2.1",
       "filename": "vae/qwen_image_2.1_vae_bf16.safetensors",
       "model_dir": "vae"
     },
@@ -47,5 +52,5 @@
     }
   ],
   "models_ext": [],
-  "gpu": "L40S"
+  "gpu": "RTX_PRO_6000"
 }
