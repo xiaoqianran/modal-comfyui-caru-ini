@@ -362,6 +362,14 @@ image = image.add_local_dir(
 
 
 # ============================================================================
+# Qwen-Image-2.1: fix missing os.memfd_create in ComfyUI only, without PYTHONPATH overrides.
+if WORKFLOW == "comfyui-qwen-image-2-1":
+    image = image.add_local_file(
+        root_dir / "testing" / "qwen21_patch_memfd.py",
+        "/root/qwen21_patch_memfd.py",
+        copy=True,
+    ).run_commands("python /root/qwen21_patch_memfd.py")
+
 # 6. Output staging Volume; R2 only stores small previews
 #    wait_for_port 用于后续 ComfyUI 启动时检查 HTTP 服务是否就绪。
 # ============================================================================

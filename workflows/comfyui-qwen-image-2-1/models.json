@@ -1,5 +1,5 @@
 {
-  "gpu": "RTX PRO 6000",
+  "gpu": "RTX-PRO-6000",
   "models": [
     {
       "repo_id": "Comfy-Org/Qwen-Image-2.1",
