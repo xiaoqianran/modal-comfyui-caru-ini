@@ -124,5 +124,7 @@ def build(workflow: str, publish: bool = False, tag: str = ""):
 
 
 @app.local_entrypoint()
-def main(workflow: str = "community-hunyuan3d-2-1-visualbruno", publish: bool = False, tag: str = ""):
+def main(workflow: str = "", publish: bool = False, tag: str = ""):
+    if not workflow:
+        raise ValueError("Specify an existing workflow with --workflow")
     build.remote(workflow, publish, tag)
