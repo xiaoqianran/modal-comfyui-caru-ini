@@ -37,5 +37,5 @@
     }
   ],
   "models_ext": [],
-  "gpu": "RTX-PRO-6000"
+  "gpu": "RTX_PRO_6000"
 }
