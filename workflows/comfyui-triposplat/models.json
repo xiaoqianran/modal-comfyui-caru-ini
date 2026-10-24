@@ -1,0 +1,31 @@
+{
+  "models": [
+    {
+      "repo_id": "VAST-AI/TripoSplat",
+      "filename": "diffusion_models/triposplat_fp16.safetensors",
+      "model_dir": "diffusion_models"
+    },
+    {
+      "repo_id": "VAST-AI/TripoSplat",
+      "filename": "clip_vision/dino_v3_vit_h.safetensors",
+      "model_dir": "clip_vision"
+    },
+    {
+      "repo_id": "VAST-AI/TripoSplat",
+      "filename": "vae/flux2-vae.safetensors",
+      "model_dir": "vae"
+    },
+    {
+      "repo_id": "VAST-AI/TripoSplat",
+      "filename": "vae/triposplat_vae_decoder_fp16.safetensors",
+      "model_dir": "vae"
+    },
+    {
+      "repo_id": "VAST-AI/TripoSplat",
+      "filename": "background_removal/birefnet.safetensors",
+      "model_dir": "background_removal"
+    }
+  ],
+  "models_ext": [],
+  "gpu": "L40S"
+}
