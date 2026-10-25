@@ -160,7 +160,7 @@ uv run --env-file .env modal run download-models.py
 WORKFLOW=comfyui-pixal3d-trellis2 uv run --env-file .env modal run download-models.py
 ```
 
-该脚本优先使用云端 `huggingface-secret`，未创建时使用本地 `HF_TOKEN`。针对需要 CivitAI 认证或自定义认证头的直链模型，请先确认授权及下载方式；当前独立下载入口只支持普通 HTTP(S) 直链。模型缓存位于云端 Volume，而不是 Linux/Windows 本地磁盘。
+该脚本的 Modal CPU 镜像已安装 `hf_xet`，支持 Hugging Face Xet 下载；如果正在执行的旧容器出现 `hf_xet package is not installed`，属于性能警告，不是下载失败，新代码只会在下一次运行时生效。该脚本优先使用云端 `huggingface-secret`，未创建时使用本地 `HF_TOKEN`。针对需要 CivitAI 认证或自定义认证头的直链模型，请先确认授权及下载方式；当前独立下载入口只支持普通 HTTP(S) 直链。模型缓存位于云端 Volume，而不是 Linux/Windows 本地磁盘。
 
 ### 3. 部署指定工作流
 

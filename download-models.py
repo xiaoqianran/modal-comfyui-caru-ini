@@ -18,7 +18,7 @@ try:
     hf_secret.hydrate()
 except modal.exception.NotFoundError:
     hf_secret = modal.Secret.from_dict({"HF_TOKEN": os.getenv("HF_TOKEN", "")})
-image = modal.Image.debian_slim(python_version="3.11").pip_install("huggingface_hub>=0.30,<2", "httpx")
+image = modal.Image.debian_slim(python_version="3.11").pip_install("huggingface_hub>=0.30,<2", "hf_xet", "httpx")
 
 @app.function(image=image, volumes={"/cache": volume}, timeout=86400, secrets=[hf_secret])
 def download_models(config_json: str):
