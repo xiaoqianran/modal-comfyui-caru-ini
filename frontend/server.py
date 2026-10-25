@@ -52,8 +52,15 @@ def selected(name):
         raise ValueError("Unknown workflow")
     return item
 
+def modal_env(extra=None):
+    """Force UTF-8 so Modal CLI output (Unicode symbols) never crashes on Windows GBK pipes."""
+    env = os.environ.copy()
+    env.update({"PYTHONUTF8":"1","PYTHONIOENCODING":"utf-8","NO_COLOR":"1"})
+    env.update(extra or {})
+    return env
+
 def command(args, env=None, timeout=30):
-    return subprocess.run(["uv","run","modal",*args], cwd=ROOT, env=env,
+    return subprocess.run(["uv","run","modal",*args], cwd=ROOT, env=env or modal_env(),
                           capture_output=True, text=True, encoding="utf-8",
                           errors="replace", timeout=timeout)
 
@@ -74,19 +81,16 @@ def operate(taskid, workflow, action):
     app = "modal-" + workflow
     try:
         if action == "deploy":
-            env = os.environ.copy()
-            env["WORKFLOW"] = workflow
+            env = modal_env({"WORKFLOW": workflow})
             args = ["deploy","comfyui.py"]
             timeout = 7200
         elif action == "stop":
-            env = None
+            env = modal_env()
             args = ["app","stop",app,"--yes"]
             timeout = 120
         else:
             raise ValueError("Unsupported action")
-        result = subprocess.run(["uv","run","modal",*args], cwd=ROOT, env=env,
-                                capture_output=True, text=True, encoding="utf-8",
-                                errors="replace", timeout=timeout)
+        result = command(args, env=env, timeout=timeout)
         task["log"] = (result.stdout + "\n" + result.stderr)[-100000:]
         if action == "deploy" and result.returncode == 0:
             urls = re.findall(r"https://[^\s]+\.modal\.run[^\s]*", task["log"])
