@@ -19,11 +19,6 @@
       "repo_id": "FastVideo/FastH3-Omni-Comfy",
       "filename": "text_encoders/qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
       "model_dir": "text_encoders"
-    },
-    {
-      "repo_id": "Comfy-Org/MiniMax-H3",
-      "filename": "diffusion_models/minimax_h3_fl2va_bf16.safetensors",
-      "model_dir": "diffusion_models"
     }
   ],
   "models_ext": [],
