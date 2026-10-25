@@ -183,7 +183,29 @@ uv run --env-file .env modal deploy comfyui.py
 
 `MODAL_GPU` 可覆盖该工作流 `models.json` 中的 GPU 设置。在 Linux 的 `.env` 中应写 `WORKFLOW=comfyui-pixal3d-trellis2`，不要写 PowerShell 的 `$env:WORKFLOW=...`。普通 `uv run modal deploy comfyui.py` **不会自动读取 .env**；必须通过 `--env-file .env` 或提前导出变量。部署会使用已创建的云端 Secrets，不会替你上传或更新这些 Secrets。
 
-### 4. 检查部署
+### 4. 部署后显示真实 ComfyUI URL（不更改 Web 入口）
+
+原有的 `ComfyUI.ui` 是 Modal Class Web 方法，其 URL 位于 `method_details.ui.web_url`。部分 Modal Dashboard App 概览不会直接显示该方法 URL；这不是部署失败。本项目不修改入口函数、URL、GPU 或 Volume：部署脚本完成后自动从 Modal 元数据读取并输出原 URL。请勿手动猜测域名。
+
+**Windows（PowerShell）：**
+
+```powershell
+.\deploy-modal.bat comfyui-qwen-image-2-1
+# 只查询现有部署，不重新部署：
+uv run python show-web-url.py --workflow comfyui-qwen-image-2-1 --profile xiaoshuhuaer
+```
+
+**Linux（Bash）：**
+
+```bash
+bash deploy-modal.sh comfyui-qwen-image-2-1
+# 只查询现有部署，不重新部署：
+uv run python show-web-url.py --workflow comfyui-qwen-image-2-1 --profile xiaoshuhuaer
+```
+
+`--profile` 可省略，默认使用当前登录的 Modal profile。`show-web-url.py` 读取 Modal 返回的 `method_details.ui.web_url`，不会启动新容器或改动现有部署。它只解决部署命令行的 URL 可见性；Modal Dashboard 的页面展示形式由 Modal 管理，不能保证通过本地脚本改变 Dashboard 页面。
+
+### 5. 检查部署
 
 ```bash
 uv run modal app list
