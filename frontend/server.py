@@ -90,8 +90,21 @@ def operate(taskid, workflow, action):
             timeout = 120
         else:
             raise ValueError("Unsupported action")
-        result = command(args, env=env, timeout=timeout)
-        task["log"] = (result.stdout + "\n" + result.stderr)[-100000:]
+        # Stream output so the UI shows live progress and the log survives a page refresh.
+        LOG_DIR.mkdir(exist_ok=True)
+        proc = subprocess.Popen(["uv","run","modal",*args], cwd=ROOT, env=env, stdout=subprocess.PIPE,
+                                stderr=subprocess.STDOUT, text=True, encoding="utf-8", errors="replace")
+        timer = threading.Timer(timeout, proc.kill)
+        timer.start()
+        with open(LOG_DIR / f"{workflow}.log", "w", encoding="utf-8") as fh:
+            fh.write("$ modal " + " ".join(args) + "\n")
+            for line in proc.stdout:
+                task["log"] = (task["log"] + line)[-100000:]
+                fh.write(line)
+                fh.flush()
+        proc.wait()
+        timer.cancel()
+        result = subprocess.CompletedProcess(args, proc.returncode)
         if action == "deploy" and result.returncode == 0:
             urls = re.findall(r"https://[^\s]+\.modal\.run[^\s]*", task["log"])
             if urls:
@@ -138,6 +151,11 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send_data(workflows())
             if path.path == "/api/status":
                 return self.send_data({"apps":statuses(),"links":LINKS,"workspace":workspace()})
+            if path.path == "/api/tasks":
+                latest = {}
+                for tid, t in TASKS.items():
+                    latest[t["workflow"]] = {**t, "id": tid}
+                return self.send_data(latest)
             if path.path.startswith("/api/task/"):
                 return self.send_data(TASKS.get(path.path.rsplit("/",1)[-1],{"state":"not_found"}))
             if path.path == "/api/logs":

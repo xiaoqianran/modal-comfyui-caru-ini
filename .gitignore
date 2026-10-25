@@ -27,3 +27,7 @@ wheels/
 /testing/omni_live_test.py
 /testing/omni_queue_others.py
 /testing/omni_same_first_last_xiaoshuhuaer.py
+
+# Batch outputs
+/results/
+frontend/logs/

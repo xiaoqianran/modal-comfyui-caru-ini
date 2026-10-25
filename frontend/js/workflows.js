@@ -7,6 +7,8 @@ const MAX_LABEL = 63;
 
 let all = [], apps = {}, links = {}, workspace = '';
 let selected = '', notify = () => {}, navigate = () => {}, generation = 0;
+const busy = new Set();
+let resumed = false;
 const filter = { text: '', status: '' };
 
 const $ = id => document.getElementById(id);
@@ -67,6 +69,12 @@ function card(w) {
     open.onclick = e => e.stopPropagation();
     actions.append(open);
   }
+  const dep = document.createElement('button');
+  dep.className = 'link';
+  dep.textContent = busy.has(w.id) ? '部署中…' : isDeployed(w) ? '重新部署' : '部署';
+  dep.disabled = busy.has(w.id);
+  dep.onclick = e => { e.stopPropagation(); select(w.id); operate('deploy'); };
+  actions.append(dep);
   const more = document.createElement('button');
   more.className = 'link';
   more.textContent = '详情';
@@ -169,20 +177,29 @@ export async function refresh() {
   workspace = res.workspace || '';
   renderCards();
   updateDetail();
+  if (!resumed) {
+    resumed = true;
+    try {
+      for (const [wf, t] of Object.entries(await api.tasks())) {
+        if (t.state === 'running' && !busy.has(wf)) { selected = wf; operate(t.action, t.id); }
+      }
+    } catch {}
+  }
   const n = all.filter(isDeployed).length;
   $('count-deployed').textContent = n;
   $('count-other').textContent = all.length - n;
 }
 
-async function operate(action) {
+async function operate(action, resumeId) {
   if (!selected) return;
   if (action === 'stop' && !confirm('停止部署 ' + selected + '？')) return;
   const wf = selected;
+  busy.add(wf); renderCards();
   const buttons = ['deploy', 'stop', 'logs-btn'].map($);
   buttons.forEach(x => x.disabled = true);
   log.textContent = '任务已提交，正在等待结果…';
   try {
-    const { id } = await api.operate(wf, action);
+    const id = resumeId || (await api.operate(wf, action)).id;
     for (;;) {
       const t = await api.task(id);
       if (selected === wf) { log.textContent = t.log || t.state; $('task-status').textContent = t.state; }
@@ -196,6 +213,7 @@ async function operate(action) {
   } catch (e) {
     notify(e.message);
   } finally {
+    busy.delete(wf); renderCards();
     buttons.forEach(x => x.disabled = false);
     updateDetail();
   }

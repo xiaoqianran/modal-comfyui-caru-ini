@@ -1,0 +1,30 @@
+{
+  "gpu": "L40S",
+  "models": [
+    {
+      "repo_id": "Comfy-Org/Qwen-Image-2.1",
+      "filename": "diffusion_models/qwen_image_2.1_bf16.safetensors",
+      "model_dir": "diffusion_models"
+    },
+    {
+      "repo_id": "Comfy-Org/Qwen-Image-2.1",
+      "filename": "text_encoders/qwen3vl_8b_bf16.safetensors",
+      "model_dir": "text_encoders"
+    },
+    {
+      "repo_id": "Comfy-Org/Qwen-Image-2.1",
+      "filename": "text_encoders/qwen3.5_9b_qwen_image_2.1_pe_t2i.int8_convrot.safetensors",
+      "model_dir": "text_encoders"
+    },
+    {
+      "repo_id": "Comfy-Org/Qwen-Image-2.1",
+      "filename": "text_encoders/qwen3.5_9b_qwen_image_2.1_pe_i2i.int8_convrot.safetensors",
+      "model_dir": "text_encoders"
+    },
+    {
+      "repo_id": "Comfy-Org/Qwen-Image-2.1",
+      "filename": "vae/qwen_image_2.1_vae_bf16.safetensors",
+      "model_dir": "vae"
+    }
+  ]
+}
