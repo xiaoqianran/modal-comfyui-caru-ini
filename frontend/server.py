@@ -22,6 +22,7 @@ TASKS = {}
 LOCK = threading.Lock()
 RUNNING = set()
 LINKS = {}
+LOG_DIR = Path(__file__).resolve().parent / "logs"
 _WORKSPACE = None
 
 def workspace():

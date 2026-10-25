@@ -1,0 +1,26 @@
+{
+  "models": [
+    {
+      "repo_id": "FastVideo/FastH3-Omni-Comfy",
+      "filename": "diffusion_models/fasth3_omniref_8step_pruned_bf16.safetensors",
+      "model_dir": "diffusion_models"
+    },
+    {
+      "repo_id": "FastVideo/FastH3-Omni-Comfy",
+      "filename": "vae/minimax_h3_audio_vae_fp32.safetensors",
+      "model_dir": "vae"
+    },
+    {
+      "repo_id": "FastVideo/FastH3-Omni-Comfy",
+      "filename": "vae/minimax_h3_video_vae_fp16.safetensors",
+      "model_dir": "vae"
+    },
+    {
+      "repo_id": "FastVideo/FastH3-Omni-Comfy",
+      "filename": "text_encoders/qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+      "model_dir": "text_encoders"
+    }
+  ],
+  "models_ext": [],
+  "gpu": "RTX-PRO-6000"
+}
