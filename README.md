@@ -97,6 +97,99 @@ To deploy a specific workflow (Windows):
 
 Alternatively set `WORKFLOW` in the environment and run `uv run modal deploy comfyui.py`.
 
+
+## Windows / Linux 命令行操作速查
+
+所有命令均在仓库根目录执行。工作流名称是 `workflows/` 下的**目录名**（不是其中的 JSON 文件名）。下面以 `comfyui-pixal3d-trellis2` 为例；社区版可替换为 `community-pixal3d-trellis2-tuning`。
+
+### 0. 环境初始化（两平台通用）
+
+```bash
+uv sync
+uv run modal setup
+uv run modal profile current
+```
+
+在部署前检查 `uv run modal profile current` 的账户与环境；Modal Secrets 属于指定账户和环境（如 `main`），不会跨账户自动共享。将 `.env.example` 复制为 `.env`，填入真实密钥；`.env` 不要提交到 Git。
+
+### 1. 上传 / 初始化 Modal Secrets（只需首次配置）
+
+**Windows（PowerShell）：**
+
+```powershell
+Copy-Item .env.example .env  # 若已有 .env，跳过本行，避免覆盖
+# 编辑 .env，填入密钥
+.\setup-secrets.bat
+uv run modal secret list
+```
+
+**Linux（Bash）：**
+
+```bash
+cp -n .env.example .env    # 若已有 .env，不覆盖
+# 编辑 .env，填入密钥
+bash setup-secrets.sh
+uv run modal secret list
+```
+
+两个脚本只创建缺失的 Secrets，不会覆盖既有云端密钥：
+
+| Modal Secret | 本地 .env 变量 | 说明 |
+| --- | --- | --- |
+| `huggingface-s3` | `HF_S3_ACCESS_KEY_ID`、`HF_S3_SECRET_ACCESS_KEY` | 必需；上传时映射成 `AWS_ACCESS_KEY_ID`、`AWS_SECRET_ACCESS_KEY` |
+| `cloudflare-r2` | `AWS_ACCESS_KEY_ID`、`AWS_SECRET_ACCESS_KEY` | 必需；R2 挂载 |
+| `huggingface-secret` | `HF_TOKEN` | 可选；私有 / gated 模型需要有效授权 |
+| `github` | `GITHUB_TOKEN` | 可选 |
+
+这些 Secrets 创建在 Modal 云端后会保留，**不是每次部署都要重新上传**。更换密钥时需要主动更新云端 Secret，而不是仅修改本地 `.env`。
+
+### 2. 仅下载模型（不部署 ComfyUI）
+
+独立下载入口 `download-models.py` 读取 `workflows/<名称>/models.json`，将 HF 文件和直链文件下载至共享 Modal Volume `modal-comfyui-models`。不会启动 ComfyUI UI，也不部署工作流服务。会产生 Modal CPU 和下载 / 存储费用。下载完成后，正常部署仍需构建镜像和安装节点，但相同模型文件可复用缓存。
+
+**Windows（PowerShell）：**
+
+```powershell
+$env:WORKFLOW = "comfyui-pixal3d-trellis2"
+uv run --env-file .env modal run download-models.py
+```
+
+**Linux（Bash）：**
+
+```bash
+WORKFLOW=comfyui-pixal3d-trellis2 uv run --env-file .env modal run download-models.py
+```
+
+该脚本优先使用云端 `huggingface-secret`，未创建时使用本地 `HF_TOKEN`。针对需要 CivitAI 认证或自定义认证头的直链模型，请先确认授权及下载方式；当前独立下载入口只支持普通 HTTP(S) 直链。模型缓存位于云端 Volume，而不是 Linux/Windows 本地磁盘。
+
+### 3. 部署指定工作流
+
+**Windows（PowerShell）：**
+
+```powershell
+.\deploy-modal.bat comfyui-pixal3d-trellis2
+# 或：
+$env:WORKFLOW = "comfyui-pixal3d-trellis2"
+uv run modal deploy comfyui.py
+```
+
+**Linux（Bash）：**
+
+```bash
+WORKFLOW=comfyui-pixal3d-trellis2 uv run modal deploy comfyui.py
+# 如果 WORKFLOW 已正确写入 .env：
+uv run --env-file .env modal deploy comfyui.py
+```
+
+`MODAL_GPU` 可覆盖该工作流 `models.json` 中的 GPU 设置。在 Linux 的 `.env` 中应写 `WORKFLOW=comfyui-pixal3d-trellis2`，不要写 PowerShell 的 `$env:WORKFLOW=...`。普通 `uv run modal deploy comfyui.py` **不会自动读取 .env**；必须通过 `--env-file .env` 或提前导出变量。部署会使用已创建的云端 Secrets，不会替你上传或更新这些 Secrets。
+
+### 4. 检查部署
+
+```bash
+uv run modal app list
+uv run modal secret list
+```
+
 ## Features
 
 - **Auto-scaling**: Scales down to zero when not in use to save costs.
@@ -142,26 +235,7 @@ Performance improvements/optimizations are very welcome.
 
 ## Separate Modal Secret setup
 
-Keep all three credentials in one local `.env` file (ignored by Git). Configure
-Secrets explicitly, **not** during deployment:
-
-```powershell
-Copy-Item .env.example .env
-# Fill the R2, HF and GitHub credentials in .env
-.\setup-secrets.bat
-```
-
-`setup-secrets.bat` creates missing Modal Secrets: `cloudflare-r2` (required),
-`huggingface-secret` and `github` (optional). Existing Secrets are reused,
-never overwritten. To rotate an existing Secret, update it in Modal Dashboard.
-
-Deploy separately:
-
-```powershell
-.\deploy-modal.bat community-pixal3d-trellis2-tuning
-```
-
-Deployment does not read `.env` or change any Secret.
+参见上文 **Windows / Linux 命令行操作速查 → 1. 上传 / 初始化 Modal Secrets**，分别运行 setup-secrets.bat 或 ash setup-secrets.sh。
 
 ## Preview private R2 GLB files
 
