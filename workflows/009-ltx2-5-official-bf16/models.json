@@ -1,4 +1,5 @@
 {
+  "gpu": "RTX-PRO-6000",
   "models": [
     {
       "repo_id": "Lightricks/LTX-2.5",
