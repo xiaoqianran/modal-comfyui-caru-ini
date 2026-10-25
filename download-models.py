@@ -8,11 +8,9 @@ import modal
 
 ROOT = Path(__file__).parent
 WORKFLOW = os.getenv("WORKFLOW", "comfyui-pixal3d-trellis2")
+# Only the local entrypoint reads the workspace config. Modal imports this
+# module again in the remote container, where workflows/ is not mounted.
 CONFIG = ROOT / "workflows" / WORKFLOW / "models.json"
-if not CONFIG.is_file():
-    raise ValueError(f"Missing workflow models.json: {CONFIG}")
-
-config = json.loads(CONFIG.read_text(encoding="utf-8"))
 volume = modal.Volume.from_name("modal-comfyui-models", create_if_missing=True)
 app = modal.App("modal-model-cache-download")
 try:
@@ -69,6 +67,9 @@ def download_models(config_json: str):
 
 @app.local_entrypoint()
 def main():
+    if not CONFIG.is_file():
+        raise ValueError(f"Missing workflow models.json: {CONFIG}")
+    config = json.loads(CONFIG.read_text(encoding="utf-8"))
     print(f"Workflow: {WORKFLOW}")
     print(f"Models: {len(config.get('models', [])) + len(config.get('models_ext', []))}")
     print("Model cache Volume: modal-comfyui-models")
