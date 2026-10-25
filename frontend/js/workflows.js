@@ -1,12 +1,202 @@
-import{api}from'./api.js';
-let all=[],apps={},links={},selected='',notify=()=>{},navigate=()=>{},generation=0,taskTimer=null;
-const root=document.getElementById('workflow-list'),featured=document.getElementById('featured'),detail=document.getElementById('detail'),log=document.getElementById('log-text');
-const state=w=>{let a=apps[w.app];return String(a?.state||a?.lifecycle?.state||'未部署')};
-function card(w){const b=document.createElement('button');b.className='card';b.dataset.workflow=w.id;const head=document.createElement('div');head.className='card-head';const name=document.createElement('span');name.className='card-name';name.textContent=w.id.replace(/^(comfyui|community|vendor|custom)-/,'').replaceAll('-',' ');const status=document.createElement('span');status.className='status';head.append(name,status);const desc=document.createElement('p');desc.className='card-id';desc.textContent=w.id;const foot=document.createElement('div');foot.className='card-footer';const gpu=document.createElement('span');gpu.textContent='GPU · '+w.gpu;const view=document.createElement('span');view.textContent='查看详情 →';foot.append(gpu,view);b.append(head,desc,foot);b.onclick=()=>select(w.id);return b}
-function sync(){for(const n of document.querySelectorAll('[data-workflow]')){const w=all.find(x=>x.id===n.dataset.workflow);if(!w)continue;const value=state(w),s=n.querySelector('.status');if(s.textContent!==value)s.textContent=value;s.className='status '+(value==='deployed'?'deployed':value==='stopped'?'stopped':'');n.classList.toggle('selected',selected===w.id)}}
-function updateDetail(){const w=all.find(x=>x.id===selected);if(!w)return;document.getElementById('detail-title').textContent=w.id.replaceAll('-',' ');document.getElementById('detail-id').textContent=w.id;document.getElementById('detail-gpu').textContent=w.gpu;document.getElementById('detail-app').textContent=w.app;document.getElementById('detail-status').textContent=state(w);document.getElementById('stop').disabled=state(w)!=='deployed';const a=document.getElementById('app-link');let url=links[w.id];try{if(url){let u=new URL(url);if(u.protocol!=='https:'||!u.hostname.endsWith('.modal.run'))url=null;else{u.pathname='/';u.search='';u.hash='';url=u.toString()}}}catch{url=null}a.hidden=!url;if(url)a.href=url}
-function select(id){selected=id;detail.hidden=false;sync();updateDetail();navigate('workflows');detail.scrollIntoView({block:'nearest'})}
-export function init(notice,go){notify=notice;navigate=go;document.getElementById('deploy').onclick=()=>operate('deploy');document.getElementById('stop').onclick=()=>operate('stop');document.getElementById('logs-btn').onclick=async()=>{if(!selected)return;log.textContent='正在获取日志…';try{let result=await api.logs(selected);log.textContent=result.log||'暂无日志'}catch(e){log.textContent=e.message}}}
-export async function load(){all=await api.workflows();root.replaceChildren(...all.map(card));featured.replaceChildren(...all.slice(0,6).map(card));document.getElementById('count-all').textContent=all.length;document.getElementById('wf-count').textContent=all.length+' 个工作流';const choose=document.getElementById('asset-workflow');choose.replaceChildren(new Option('全部工作流',''),...all.map(w=>new Option(w.id,w.id)))}
-export async function refresh(){const token=++generation;const res=await api.status();if(token!==generation)return;apps=res.apps||{};links=res.links||{};sync();updateDetail();const deployed=all.filter(w=>state(w)==='deployed').length;document.getElementById('count-deployed').textContent=deployed;document.getElementById('count-other').textContent=all.length-deployed}
-async function operate(action){if(!selected)return;if(action==='stop'&&!confirm('停止部署 '+selected+'？'))return;const wf=selected;const buttons=['deploy','stop','logs-btn'].map(id=>document.getElementById(id));buttons.forEach(x=>x.disabled=true);log.textContent='任务已提交，正在等待结果…';try{const res=await api.operate(wf,action);let done=false;const poll=async()=>{try{const t=await api.task(res.id);if(selected===wf){log.textContent=t.log||t.state;document.getElementById('task-status').textContent=t.state}if(t.state==='running'){taskTimer=setTimeout(poll,1600)}else{done=true;notify(t.state==='success'?'操作完成':'操作失败');await refresh()}}catch(e){done=true;notify(e.message)}finally{if(done){buttons.forEach(x=>x.disabled=false);updateDetail()}}};await poll()}catch(e){notify(e.message);buttons.forEach(x=>x.disabled=false);updateDetail()}}
+import { api } from './api.js';
+
+// Region suffix of the Modal web URL. A URL parsed from a deploy log
+// (server.py LINKS) takes precedence over this composed one.
+const REGION = 'us-east';
+const MAX_LABEL = 63;
+
+let all = [], apps = {}, links = {}, workspace = '';
+let selected = '', notify = () => {}, navigate = () => {}, generation = 0;
+const filter = { text: '', status: '' };
+
+const $ = id => document.getElementById(id);
+const root = $('workflow-list'), featured = $('featured'), detail = $('detail'), log = $('log-text');
+
+const stateOf = w => String(apps[w.app]?.state || apps[w.app]?.lifecycle?.state || '未部署');
+const isDeployed = w => stateOf(w) === 'deployed';
+const shortName = w => w.id.replace(/^(comfyui|community|vendor|custom)-/, '').replaceAll('-', ' ');
+const STATE_TEXT = { deployed: '已部署', stopped: '已停止' };
+
+// https://<workspace>--<app>-comfyui-ui.<region>.modal.run
+function urlFor(w) {
+  if (links[w.id]) return { url: links[w.id], exact: true };
+  if (!workspace) return { url: '', exact: false };
+  const label = `${workspace}--${w.app}-comfyui-ui`;
+  return { url: `https://${label}.${REGION}.modal.run/`, exact: label.length <= MAX_LABEL };
+}
+
+function badge(w) {
+  const s = stateOf(w), el = document.createElement('span');
+  el.className = 'badge ' + (s === 'deployed' ? 'ok' : s === 'stopped' ? 'warn' : '');
+  el.textContent = STATE_TEXT[s] || s;
+  return el;
+}
+
+function card(w) {
+  const el = document.createElement('article');
+  el.className = 'card';
+  el.dataset.workflow = w.id;
+  el.classList.toggle('selected', selected === w.id);
+
+  const head = document.createElement('div');
+  head.className = 'card-head';
+  const name = document.createElement('span');
+  name.className = 'card-name';
+  name.textContent = shortName(w);
+  head.append(name, badge(w));
+
+  const id = document.createElement('p');
+  id.className = 'card-id';
+  id.textContent = w.id;
+
+  const foot = document.createElement('div');
+  foot.className = 'card-footer';
+  const gpu = document.createElement('span');
+  gpu.className = 'chip';
+  gpu.textContent = w.gpu;
+  const actions = document.createElement('span');
+  actions.className = 'card-actions';
+  const { url } = urlFor(w);
+  if (isDeployed(w) && url) {
+    const open = document.createElement('a');
+    open.className = 'link';
+    open.href = url;
+    open.target = '_blank';
+    open.rel = 'noopener noreferrer';
+    open.textContent = '打开 ↗';
+    open.onclick = e => e.stopPropagation();
+    actions.append(open);
+  }
+  const more = document.createElement('button');
+  more.className = 'link';
+  more.textContent = '详情';
+  more.onclick = e => { e.stopPropagation(); select(w.id); };
+  actions.append(more);
+  foot.append(gpu, actions);
+
+  el.append(head, id, foot);
+  el.onclick = () => select(w.id);
+  return el;
+}
+
+function matches(w) {
+  const q = filter.text.trim().toLowerCase();
+  if (q && !(w.id + ' ' + w.gpu).toLowerCase().includes(q)) return false;
+  if (filter.status === 'deployed') return isDeployed(w);
+  if (filter.status === 'other') return !isDeployed(w);
+  return true;
+}
+
+function emptyNote(text) {
+  const n = document.createElement('div');
+  n.className = 'empty';
+  n.textContent = text;
+  return n;
+}
+
+function renderCards() {
+  const list = all.filter(matches);
+  root.replaceChildren(...(list.length ? list.map(card) : [emptyNote('没有匹配的工作流')]));
+  $('wf-count').textContent = `${list.length} / ${all.length} 个工作流`;
+  const live = all.filter(isDeployed);
+  featured.replaceChildren(...(live.length ? live.map(card) : [emptyNote('暂无已部署的工作流，前往「工作流」页部署')]));
+}
+
+function updateDetail() {
+  const w = all.find(x => x.id === selected);
+  if (!w) return;
+  $('detail-title').textContent = shortName(w);
+  $('detail-id').textContent = w.id;
+  $('detail-gpu').textContent = w.gpu;
+  $('detail-app').textContent = w.app;
+  const b = $('detail-status'), nb = badge(w);
+  b.className = nb.className;
+  b.textContent = nb.textContent;
+  $('stop').disabled = !isDeployed(w);
+
+  const { url, exact } = urlFor(w), link = $('app-link');
+  $('url-text').textContent = url || '读取 Modal 账号信息中…';
+  link.hidden = !url;
+  if (url) link.href = url;
+  $('copy-url').disabled = !url;
+  $('url-hint').textContent = !isDeployed(w)
+    ? '尚未部署：部署完成后该地址才可访问。'
+    : exact ? '首次访问会冷启动 GPU，需等待片刻。'
+            : '应用名较长，Modal 可能截断域名；若打不开请到 Modal Dashboard 核对。';
+}
+
+function select(id) {
+  selected = id;
+  detail.hidden = false;
+  renderCards();
+  updateDetail();
+  navigate('workflows');
+  detail.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
+
+export function init(notice, go) {
+  notify = notice;
+  navigate = go;
+  $('deploy').onclick = () => operate('deploy');
+  $('stop').onclick = () => operate('stop');
+  $('wf-search').oninput = e => { filter.text = e.target.value; renderCards(); };
+  $('wf-status').onchange = e => { filter.status = e.target.value; renderCards(); };
+  $('copy-url').onclick = async () => {
+    try { await navigator.clipboard.writeText($('url-text').textContent); notify('地址已复制'); }
+    catch { notify('复制失败，请手动选择地址'); }
+  };
+  $('logs-btn').onclick = async () => {
+    if (!selected) return;
+    log.textContent = '正在获取日志…';
+    try { log.textContent = (await api.logs(selected)).log || '暂无日志'; }
+    catch (e) { log.textContent = e.message; }
+  };
+}
+
+export async function load() {
+  all = await api.workflows();
+  renderCards();
+  $('count-all').textContent = all.length;
+  $('asset-workflow').replaceChildren(new Option('全部工作流', ''), ...all.map(w => new Option(w.id, w.id)));
+}
+
+export async function refresh() {
+  const token = ++generation;
+  const res = await api.status();
+  if (token !== generation) return;
+  apps = res.apps || {};
+  links = res.links || {};
+  workspace = res.workspace || '';
+  renderCards();
+  updateDetail();
+  const n = all.filter(isDeployed).length;
+  $('count-deployed').textContent = n;
+  $('count-other').textContent = all.length - n;
+}
+
+async function operate(action) {
+  if (!selected) return;
+  if (action === 'stop' && !confirm('停止部署 ' + selected + '？')) return;
+  const wf = selected;
+  const buttons = ['deploy', 'stop', 'logs-btn'].map($);
+  buttons.forEach(x => x.disabled = true);
+  log.textContent = '任务已提交，正在等待结果…';
+  try {
+    const { id } = await api.operate(wf, action);
+    for (;;) {
+      const t = await api.task(id);
+      if (selected === wf) { log.textContent = t.log || t.state; $('task-status').textContent = t.state; }
+      if (t.state !== 'running') {
+        notify(t.state === 'success' ? '操作完成' : '操作失败');
+        await refresh();
+        break;
+      }
+      await new Promise(r => setTimeout(r, 1600));
+    }
+  } catch (e) {
+    notify(e.message);
+  } finally {
+    buttons.forEach(x => x.disabled = false);
+    updateDetail();
+  }
+}

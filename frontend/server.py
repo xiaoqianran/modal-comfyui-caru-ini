@@ -22,6 +22,17 @@ TASKS = {}
 LOCK = threading.Lock()
 RUNNING = set()
 LINKS = {}
+_WORKSPACE = None
+
+def workspace():
+    """Active Modal workspace name; the frontend composes ComfyUI URLs from it."""
+    global _WORKSPACE
+    if _WORKSPACE is None:
+        p = command(["profile","list","--json"],timeout=30)
+        if p.returncode != 0:
+            raise RuntimeError(p.stderr[-300:])
+        _WORKSPACE = next((x["workspace"] for x in json.loads(p.stdout) if x.get("active")), "")
+    return _WORKSPACE
 
 def workflows():
     items = []
@@ -122,7 +133,7 @@ class Handler(BaseHTTPRequestHandler):
             if path.path == "/api/workflows":
                 return self.send_data(workflows())
             if path.path == "/api/status":
-                return self.send_data({"apps":statuses(),"links":LINKS})
+                return self.send_data({"apps":statuses(),"links":LINKS,"workspace":workspace()})
             if path.path.startswith("/api/task/"):
                 return self.send_data(TASKS.get(path.path.rsplit("/",1)[-1],{"state":"not_found"}))
             if path.path == "/api/logs":

@@ -481,15 +481,3 @@ class ComfyUI:
             except (ProcessLookupError, OSError):
                 pass
         print("App CleanUp!")
-
-# Expose a first-class Web Function on Modal Dashboard. It redirects browsers
-# to the existing GPU-backed Class Web URL without starting another GPU.
-# Keep this function in an independent module: the small CPU container must
-# not import this heavy ComfyUI deployment module or rebuild its image.
-from dashboard_endpoint import open_comfyui as _open_comfyui
-
-open_comfyui = app.function(
-    image=modal.Image.debian_slim(python_version="3.11").pip_install("fastapi>=0.110"),
-    env={"COMFYUI_APP_NAME": f"modal-{WORKFLOW}"},
-    scaledown_window=60,
-)(modal.fastapi_endpoint(method="GET")(_open_comfyui))

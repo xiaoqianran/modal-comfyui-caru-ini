@@ -183,26 +183,15 @@ uv run --env-file .env modal deploy comfyui.py
 
 `MODAL_GPU` 可覆盖该工作流 `models.json` 中的 GPU 设置。在 Linux 的 `.env` 中应写 `WORKFLOW=comfyui-pixal3d-trellis2`，不要写 PowerShell 的 `$env:WORKFLOW=...`。普通 `uv run modal deploy comfyui.py` **不会自动读取 .env**；必须通过 `--env-file .env` 或提前导出变量。部署会使用已创建的云端 Secrets，不会替你上传或更新这些 Secrets。
 
-### 4. 在 Modal Dashboard 中直接打开 ComfyUI
+### 4. 获取 ComfyUI 访问地址
 
-部署后，App 额外提供一个 CPU 运行的顶层 **`open_comfyui` Web Function**。在 Modal Dashboard → App → Functions 中找到它的 HTTP URL。点击后会以 307 重定向至原来的 `ComfyUI.ui` URL。
+`ComfyUI.ui` 是 Modal Class 的 Web 方法，Modal Dashboard 的 App 概览不会显示它的 URL（这不是部署失败）。地址格式固定：
 
-- **原有 ComfyUI URL 不改变**：原入口可以继续用于浏览器、HTTP API 及 WebSocket。
-- **Dashboard 上新增的是跳转 URL**：不是原 URL 本身，不要用于 ComfyUI API/WebSocket 长连接。
-- 新入口仅需 CPU，不启动第二个 GPU；GPU、模型缓存、R2/HF 存储、快照、清理逻辑均沿用原 Class。
-- 不再需要手工执行 `show-web-url.py` 查询。
-
-Windows：
-```powershell
-.\deploy-modal.bat comfyui-qwen-image-2-1
+```
+https://<workspace>--modal-<workflow>-comfyui-ui.<region>.modal.run/
 ```
 
-Linux：
-```bash
-bash deploy-modal.sh comfyui-qwen-image-2-1
-```
-
-**注意：** 如果要求 Dashboard 所展示的 HTTP URL 与旧的 Class 方法 URL 完全一致，必须改变原服务的入口结构。本方案优先保留原 URL 和生命周期，增加可点击的 App Web Function 入口。
+本地控制台（`start-frontend.bat`）会读取当前 Modal profile 的 workspace，在「工作流」页自动拼出该地址，并提供「打开」和「复制」按钮。域名标签超过 63 个字符时 Modal 会截断，此时页面会提示核对 Dashboard。
 
 ### 5. 检查部署
 
