@@ -23,7 +23,3 @@ fi
 
 echo "Deploying Modal ComfyUI workflow: $WORKFLOW"
 uv run modal deploy comfyui.py
-echo
-if ! uv run python show-web-url.py --workflow "$WORKFLOW"; then
-  echo "WARNING: Deployment succeeded, but URL lookup failed." >&2
-fi

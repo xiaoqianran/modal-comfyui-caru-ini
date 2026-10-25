@@ -31,8 +31,4 @@ echo Deploying Modal ComfyUI using workflow: %WORKFLOW%
 echo GPU comes from workflows\%WORKFLOW%\models.json unless MODAL_GPU overrides it.
 set "WORKFLOW=%WORKFLOW%"
 uv run modal deploy comfyui.py
-if errorlevel 1 exit /b %ERRORLEVEL%
-echo.
-uv run python show-web-url.py --workflow "%WORKFLOW%"
-if errorlevel 1 echo WARNING: Deployment completed, but URL lookup failed.
-exit /b 0
+exit /b %ERRORLEVEL%
