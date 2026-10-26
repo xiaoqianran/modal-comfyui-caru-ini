@@ -45,6 +45,34 @@ COMFY_MODELS_ROOT = Path("/root/comfy/ComfyUI/models")
 GPU_TYPE = os.getenv("MODAL_GPU") or model_config.get("gpu", "L40S")
 COMFY_VER = os.getenv("COMFY_VER")
 
+# ----------------------------------------------------------------------------
+# 模型下载资源（动态调配）：部署时用环境变量改，不用改代码，例如
+#   $env:MODEL_DOWNLOAD_CPU="16"; $env:MODEL_DOWNLOAD_MEMORY="32768"
+#   $env:MODEL_DOWNLOAD_WORKERS="10"; .\deploy-modal.bat community-minimaxh3-studio
+# 只影响构建期下载模型的那个容器，不影响 ComfyUI GPU 运行容器的资源。
+# MODEL_DOWNLOAD_WORKERS=0（默认）为自适应：min(模型文件数, CPU 核数)。
+# 这三个值会通过 run_function 的 env 参数原样传进远程构建容器，保证本地
+# 解析值与远程 download_all() 重导入时读到的值一致；download_all() 直接
+# 引用这些全局变量，改动它们也会触发 Modal 重建下载层。
+# ----------------------------------------------------------------------------
+def _env_number(name: str, default, lo, hi, cast):
+    raw = os.getenv(name, "").strip()
+    if not raw:
+        return cast(default)
+    try:
+        value = cast(raw)
+    except ValueError:
+        raise ValueError(f"{name} must be a number, got {raw!r}") from None
+    if not lo <= value <= hi:
+        raise ValueError(f"{name} must be between {lo} and {hi}, got {value}")
+    return value
+
+
+DOWNLOAD_CPU = _env_number("MODEL_DOWNLOAD_CPU", 8.0, 0.25, 128, float)
+DOWNLOAD_MEMORY = _env_number("MODEL_DOWNLOAD_MEMORY", 16384, 512, 1048576, int)
+DOWNLOAD_WORKERS = _env_number("MODEL_DOWNLOAD_WORKERS", 0, 0, 32, int)
+DOWNLOAD_TIMEOUT = _env_number("MODEL_DOWNLOAD_TIMEOUT", 7200, 60, 86400, int)
+
 # ============================================================================
 # 2. 准备模型下载函数：定位目标目录，从 HF / 外部地址下载并建立链接
 #    这里定义函数；实际下载在第 4 阶段构建镜像时执行。
@@ -141,7 +169,7 @@ def download_external_model(url: str, filename: str, model_dir: str):
 
 def download_all():
     from concurrent.futures import ThreadPoolExecutor
-    from time import sleep
+    from time import sleep, time
 
     def fetch(item):
         kind, model = item
@@ -159,11 +187,21 @@ def download_all():
 
     items = [("hf", model) for model in models]
     items += [("external", model) for model in models_ext]
-    workers = int(os.getenv("MODEL_DOWNLOAD_WORKERS", "4"))
-    if not 1 <= workers <= 6:
-        raise ValueError("MODEL_DOWNLOAD_WORKERS must be between 1 and 6")
-    with ThreadPoolExecutor(max_workers=min(workers, len(items) or 1)) as pool:
+    # 动态线程数：显式设置 MODEL_DOWNLOAD_WORKERS 时用设置值（1-32）；
+    # 为 0 时自适应为 min(文件数, CPU 核数)，且永远不超过文件数。
+    if DOWNLOAD_WORKERS > 0:
+        workers = DOWNLOAD_WORKERS
+    else:
+        workers = min(len(items) or 1, max(1, int(DOWNLOAD_CPU)))
+    workers = min(workers, len(items) or 1)
+    print(
+        f"Downloading {len(items)} model files: workers={workers}, "
+        f"cpu={DOWNLOAD_CPU}, memory={DOWNLOAD_MEMORY} MiB"
+    )
+    started = time()
+    with ThreadPoolExecutor(max_workers=workers) as pool:
         list(pool.map(fetch, items))
+    print(f"All model downloads finished in {time() - started:.1f}s")
 
 
 # ============================================================================
@@ -218,7 +256,20 @@ for filename in ("models.json", "plugins.json"):
     )
 image = image.env(
     {"HF_HUB_ENABLE_HF_TRANSFER": "1", "HF_XET_HIGH_PERFORMANCE": "1", "WORKFLOW": WORKFLOW}
-).run_function(download_all, volumes={"/cache": vol}, secrets=_hf_secrets())
+).run_function(
+    download_all,
+    cpu=DOWNLOAD_CPU,
+    memory=DOWNLOAD_MEMORY,
+    timeout=DOWNLOAD_TIMEOUT,
+    env={
+        "MODEL_DOWNLOAD_CPU": str(DOWNLOAD_CPU),
+        "MODEL_DOWNLOAD_MEMORY": str(DOWNLOAD_MEMORY),
+        "MODEL_DOWNLOAD_WORKERS": str(DOWNLOAD_WORKERS),
+        "MODEL_DOWNLOAD_TIMEOUT": str(DOWNLOAD_TIMEOUT),
+    },
+    volumes={"/cache": vol},
+    secrets=_hf_secrets(),
+)
 
 
 # ============================================================================
