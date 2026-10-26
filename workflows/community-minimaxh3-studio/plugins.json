@@ -1,0 +1,9 @@
+{
+  "comfy_plugins": [],
+  "comfy_plugins_ext": [
+    {
+      "url": "https://github.com/rookiestar28/MiniMaxH3-Studio",
+      "commit": "e3389d4e76dd276eeea965b14ceca78626d59bea"
+    }
+  ]
+}
