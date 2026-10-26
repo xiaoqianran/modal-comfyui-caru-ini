@@ -74,3 +74,34 @@ or
 ```bash
 WORKFLOW=community-minimaxh3-studio uv run modal deploy comfyui.py
 ```
+
+## Faster first download (dynamic resources)
+
+The 10 merged models total roughly 164 GB (the two BF16 diffusion
+checkpoints are ~66 GB each), so the first build's download step is the
+slow part. `comfyui.py` downloads files in parallel threads inside a
+single build container, and that container's resources are adjustable
+at deploy time through environment variables — no code edits needed.
+They only affect the build-time download container, not the GPU
+runtime container:
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `MODEL_DOWNLOAD_CPU` | `8` | CPU cores requested for the download container (0.25–128) |
+| `MODEL_DOWNLOAD_MEMORY` | `16384` | Memory request in MiB |
+| `MODEL_DOWNLOAD_WORKERS` | `0` = adaptive | Parallel file threads (1–32); `0` means `min(file count, CPU cores)` |
+| `MODEL_DOWNLOAD_TIMEOUT` | `7200` | Download build-step timeout in seconds |
+
+For a faster first build of this workflow, for example:
+
+```powershell
+$env:MODEL_DOWNLOAD_CPU="16"; $env:MODEL_DOWNLOAD_MEMORY="32768"; $env:MODEL_DOWNLOAD_WORKERS="10"
+.\deploy-modal.bat community-minimaxh3-studio
+```
+
+The build log prints the effective settings
+(`Downloading 10 model files: workers=..., cpu=..., memory=... MiB`)
+and the total download time when it finishes. Note that more threads
+is not always faster: the two ~66 GB checkpoints dominate, and a
+single file is already split into parallel chunks by Hugging Face
+Xet/hf_transfer, so bandwidth and Volume write speed cap the total.
