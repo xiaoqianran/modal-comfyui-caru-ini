@@ -1,0 +1,20 @@
+{
+  "gpu": "RTX-PRO-6000",
+  "models": [
+    {
+      "filename": "diffusion_models/moss_image_sft_int8_convrot.safetensors",
+      "repo_id": "Comfy-Org/MOSS-Image",
+      "model_dir": "diffusion_models"
+    },
+    {
+      "filename": "text_encoders/qwen3.5_9b_w4a8_gptq.safetensors",
+      "repo_id": "Comfy-Org/MOSS-Image",
+      "model_dir": "text_encoders"
+    },
+    {
+      "filename": "vae/flux2-vae_small.safetensors",
+      "repo_id": "Comfy-Org/MOSS-Image",
+      "model_dir": "vae"
+    }
+  ]
+}
