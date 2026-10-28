@@ -74,12 +74,16 @@ def fetch_manifest(config_json: str) -> list[dict]:
     data = json.loads(config_json)
     token = os.environ.get("HF_TOKEN") or None
     repo_sizes: dict[str, dict[str, int]] = {}
+    repo_revisions: dict[str, str] = {}
     api = HfApi(token=token)
     for repo_id in sorted({m["repo_id"] for m in data.get("models", [])}):
         info = api.model_info(repo_id, files_metadata=True)
         repo_sizes[repo_id] = {
             s.rfilename: int(s.size or 0) for s in (info.siblings or []) if s.size
         }
+        # Pin the exact commit so downloads/verifies cannot drift if the
+        # repo is updated between the manifest lookup and the downloads.
+        repo_revisions[repo_id] = info.sha
 
     items: list[dict] = []
     for m in data.get("models", []):
@@ -87,6 +91,7 @@ def fetch_manifest(config_json: str) -> list[dict]:
             "kind": "hf",
             "repo_id": m["repo_id"],
             "filename": m["filename"],
+            "revision": repo_revisions.get(m["repo_id"]),
             "size": repo_sizes.get(m["repo_id"], {}).get(m["filename"], 0),
         })
     for m in data.get("models_ext", []):
@@ -116,9 +121,11 @@ def download_shard(payload: dict) -> dict:
 
     shard_id = int(payload["shard_id"])
     items = payload["items"]
-    shard_cache = f"{SHARD_ROOT}/shard-{shard_id}"
+    shard_cache = f"{SHARD_ROOT}/{payload['run_id']}/shard-{shard_id}"
     token = os.environ.get("HF_TOKEN") or None
-    workers = _env_int("MODEL_DOWNLOAD_WORKERS", 4, 1, 8)
+    # Read in the local entrypoint and passed via the payload: environment
+    # variables set on the caller's machine do NOT reach remote containers.
+    workers = max(1, min(8, int(payload.get("workers") or 4)))
     started = time.time()
     errors: list[str] = []
 
@@ -126,7 +133,7 @@ def download_shard(payload: dict) -> dict:
         kind = item["kind"]
         if kind == "hf":
             hf_hub_download(repo_id=item["repo_id"], filename=item["filename"],
-                            cache_dir=shard_cache, token=token)
+                            cache_dir=shard_cache, token=token, revision=item.get("revision"))
             print("CACHED HF", item["repo_id"], item["filename"], flush=True)
         else:
             target = Path(CACHE_DIR) / item["filename"]
@@ -165,7 +172,8 @@ def download_shard(payload: dict) -> dict:
             if item["kind"] == "hf":
                 try:
                     hf_hub_download(repo_id=item["repo_id"], filename=item["filename"],
-                                    cache_dir=shard_cache, token=token, local_files_only=True)
+                                    cache_dir=shard_cache, token=token, revision=item.get("revision"),
+                                    local_files_only=True)
                 except Exception as exc:
                     errors.append(f"verify {item['repo_id']}/{item['filename']}: {exc}")
     volume.commit()
@@ -188,7 +196,7 @@ def merge_shards(payload: dict) -> dict:
 
     volume.reload()
     items = payload["items"]
-    shard_root = Path(SHARD_ROOT)
+    shard_root = Path(SHARD_ROOT) / str(payload["run_id"])
     main_cache = Path(CACHE_DIR)
     moved = 0
 
@@ -200,6 +208,8 @@ def merge_shards(payload: dict) -> dict:
         # destinations are skipped; the shard copy is discarded.
         nonlocal moved
         for src in sorted(src_root.rglob("*")):
+            if ".locks" in src.parts or src.name.endswith(".incomplete"):
+                continue
             rel = src.relative_to(src_root)
             dest = dst_root / rel
             if src.is_symlink():
@@ -221,7 +231,6 @@ def merge_shards(payload: dict) -> dict:
         for shard_dir in sorted(shard_root.glob("shard-*")):
             if shard_dir.is_dir():
                 merge_tree(shard_dir, main_cache)
-        shutil.rmtree(shard_root, ignore_errors=True)
 
     missing: list[str] = []
     token = os.environ.get("HF_TOKEN") or None
@@ -229,20 +238,35 @@ def merge_shards(payload: dict) -> dict:
         if item["kind"] == "hf":
             try:
                 hf_hub_download(repo_id=item["repo_id"], filename=item["filename"],
-                                cache_dir=CACHE_DIR, token=token, local_files_only=True)
+                                cache_dir=CACHE_DIR, token=token, revision=item.get("revision"),
+                                local_files_only=True)
             except Exception as exc:
                 missing.append(f"{item['repo_id']}/{item['filename']}: {exc}")
         else:
             target = main_cache / item["filename"]
             if not (target.exists() and target.stat().st_size):
                 missing.append(f"external {item['filename']} missing after merge")
+    if missing:
+        # Keep the shard caches and skip the commit: a re-run can resume and
+        # retry the merge instead of losing the only other copy.
+        print(f"MERGE verification failed: moved {moved} entries, missing={len(missing)}; "
+              "shard caches kept, nothing committed", flush=True)
+        return {"ok": False, "missing": missing, "moved_entries": moved}
+    # Verified: only now is it safe to drop this run's shard directories.
+    if shard_root.is_dir():
+        shutil.rmtree(shard_root)
+    try:
+        Path(SHARD_ROOT).rmdir()  # succeeds only when no other run is stored
+    except OSError:
+        pass
     volume.commit()
-    print(f"MERGE done: moved {moved} entries, missing={len(missing)}", flush=True)
-    return {"ok": not missing, "missing": missing, "moved_entries": moved}
+    print(f"MERGE done: moved {moved} entries, verified, shard caches cleaned", flush=True)
+    return {"ok": True, "missing": [], "moved_entries": moved}
 
 
 @app.local_entrypoint()
 def main():
+    import hashlib
     import time
 
     if not CONFIG.is_file():
@@ -253,6 +277,14 @@ def main():
 
     t0 = time.time()
     items = fetch_manifest.remote(config_json)
+    # Same manifest (files + pinned revisions) -> same run id, so a re-run
+    # resumes into the same shard dirs; a different manifest is isolated.
+    fingerprint = json.dumps(
+        [{k: it.get(k) for k in ("kind", "repo_id", "filename", "revision", "url")} for it in items],
+        sort_keys=True)
+    run_id = hashlib.sha256(fingerprint.encode()).hexdigest()[:12]
+    print(f"Run id: {run_id}")
+    workers = _env_int("MODEL_DOWNLOAD_WORKERS", 4, 1, 8)
     total = sum(int(it.get("size") or 0) for it in items)
     target_gb = _env_int("MODEL_DOWNLOAD_SHARD_TARGET_GB", 64, 1, 1024)
     forced = _env_int("MODEL_DOWNLOAD_SHARDS", 0, 0, MAX_SHARDS)
@@ -266,7 +298,7 @@ def main():
     for i, shard in enumerate(shards):
         shard_bytes = sum(int(it.get("size") or 0) for it in shard)
         print(f"  shard {i}: {len(shard)} files, {shard_bytes / 1e9:.1f} GB")
-        payloads.append({"shard_id": i, "items": shard})
+        payloads.append({"shard_id": i, "items": shard, "run_id": run_id, "workers": workers})
 
     results = list(download_shard.map(payloads))
     failed = [r for r in results if not r["ok"]]
@@ -279,7 +311,7 @@ def main():
             "Some shards failed; shard caches are kept on the volume, fix the "
             "cause and re-run — finished files resume instead of restarting.")
 
-    merged = merge_shards.remote({"items": items})
+    merged = merge_shards.remote({"items": items, "run_id": run_id})
     if not merged["ok"]:
         for m in merged["missing"]:
             print("MISSING after merge:", m)
