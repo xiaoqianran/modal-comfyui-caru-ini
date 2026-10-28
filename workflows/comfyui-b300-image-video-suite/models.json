@@ -1,0 +1,110 @@
+{
+  "gpu": "B300",
+  "models": [
+    {
+      "repo_id": "Comfy-Org/Qwen-Image-2.1",
+      "filename": "diffusion_models/qwen_image_2.1_bf16.safetensors",
+      "model_dir": "diffusion_models"
+    },
+    {
+      "repo_id": "Comfy-Org/Qwen-Image-2.1",
+      "filename": "text_encoders/qwen3vl_8b_bf16.safetensors",
+      "model_dir": "text_encoders"
+    },
+    {
+      "repo_id": "Comfy-Org/Qwen-Image-2.1",
+      "filename": "text_encoders/qwen3.5_9b_qwen_image_2.1_pe_t2i.int8_convrot.safetensors",
+      "model_dir": "text_encoders"
+    },
+    {
+      "repo_id": "Comfy-Org/Qwen-Image-2.1",
+      "filename": "text_encoders/qwen3.5_9b_qwen_image_2.1_pe_i2i.int8_convrot.safetensors",
+      "model_dir": "text_encoders"
+    },
+    {
+      "repo_id": "Comfy-Org/Qwen-Image-2.1",
+      "filename": "vae/qwen_image_2.1_vae_bf16.safetensors",
+      "model_dir": "vae"
+    },
+    {
+      "repo_id": "Comfy-Org/MiniMax-H3",
+      "filename": "vae/minimax_h3_audio_vae_fp32.safetensors",
+      "model_dir": "vae"
+    },
+    {
+      "repo_id": "Comfy-Org/MiniMax-H3",
+      "filename": "loras/minimax_h3_fl2v_turbo_8step_v1.0_comfyui_bf16.safetensors",
+      "model_dir": "loras"
+    },
+    {
+      "repo_id": "Comfy-Org/MiniMax-H3",
+      "filename": "diffusion_models/minimax_h3_fl2va_bf16.safetensors",
+      "model_dir": "diffusion_models"
+    },
+    {
+      "repo_id": "Comfy-Org/MiniMax-H3",
+      "filename": "vae/minimax_h3_video_vae_fp16.safetensors",
+      "model_dir": "vae"
+    },
+    {
+      "repo_id": "Comfy-Org/MiniMax-H3",
+      "filename": "text_encoders/qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+      "model_dir": "text_encoders"
+    },
+    {
+      "repo_id": "Comfy-Org/MiniMax-H3",
+      "filename": "model_patches/minimax_h3_fun_controlnet_union_pruned_bf16.safetensors",
+      "model_dir": "model_patches"
+    },
+    {
+      "repo_id": "Comfy-Org/MiniMax-H3",
+      "filename": "loras/minimax_h3_ref2v_turbo_4step_v0.1_comfyui_bf16.safetensors",
+      "model_dir": "loras"
+    },
+    {
+      "repo_id": "Comfy-Org/MiniMax-H3",
+      "filename": "diffusion_models/minimax_h3_ref2va_bf16.safetensors",
+      "model_dir": "diffusion_models"
+    },
+    {
+      "repo_id": "Comfy-Org/SDPose",
+      "filename": "diffusion_models/rt_detr_v4-x-hgnet_fp16.safetensors",
+      "model_dir": "diffusion_models"
+    },
+    {
+      "repo_id": "Comfy-Org/SDPose",
+      "filename": "checkpoints/sdpose_wholebody_fp16.safetensors",
+      "model_dir": "checkpoints"
+    },
+    {
+      "repo_id": "Lightricks/LTX-2.5",
+      "filename": "text_encoders/gemma4-12b-with-proj-ltx-2.5-bf16.safetensors",
+      "model_dir": "text_encoders"
+    },
+    {
+      "repo_id": "Lightricks/LTX-2.5",
+      "filename": "diffusion_models/ltx-2.5-22b-distilled-transformer-bf16.safetensors",
+      "model_dir": "diffusion_models"
+    },
+    {
+      "repo_id": "Lightricks/LTX-2.5",
+      "filename": "vae/ltx-2.5-video-vae-bf16.safetensors",
+      "model_dir": "vae"
+    },
+    {
+      "repo_id": "Lightricks/LTX-2.5",
+      "filename": "vae/ltx-2.5-audio-vae-bf16.safetensors",
+      "model_dir": "vae"
+    },
+    {
+      "repo_id": "Lightricks/LTX-2.5",
+      "filename": "latent_upscale_models/ltx-2.5-latent-spatial-upscaler-x2-bf16-1.0.safetensors",
+      "model_dir": "latent_upscale_models"
+    },
+    {
+      "repo_id": "Comfy-Org/gemma-4",
+      "filename": "text_encoders/gemma4_e2b_it_bf16.safetensors",
+      "model_dir": "text_encoders"
+    }
+  ]
+}

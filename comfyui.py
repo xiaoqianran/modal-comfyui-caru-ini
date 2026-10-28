@@ -426,7 +426,7 @@ image = image.add_local_dir(
 
 # ============================================================================
 # Qwen-Image-2.1: fix missing os.memfd_create in ComfyUI only, without PYTHONPATH overrides.
-if WORKFLOW == "comfyui-qwen-image-2-1":
+if WORKFLOW in {"comfyui-qwen-image-2-1", "comfyui-b300-image-video-suite"}:
     image = image.add_local_file(
         root_dir / "testing" / "qwen21_patch_memfd.py",
         "/root/qwen21_patch_memfd.py",
@@ -492,7 +492,8 @@ app = modal.App(name=f"modal-{WORKFLOW}", image=image)
         "/r2-previews": preview_mount,
     },
     secrets=[modal.Secret.from_name("huggingface-s3")],
-    scaledown_window=60,  # idle 1 minutes to shutdown
+    min_containers=1 if WORKFLOW == "comfyui-b300-image-video-suite" else 0,
+    scaledown_window=3600 if WORKFLOW == "comfyui-b300-image-video-suite" else 60,
     enable_memory_snapshot=True,
     experimental_options={"enable_gpu_snapshot": True},
 )
@@ -504,7 +505,9 @@ class ComfyUI:
     @modal.enter(snap=True)
     def start_checkpoint(self):
         self.proc = subprocess.Popen(
-            f"comfy launch --background -- --listen 0.0.0.0 --port 8000 --output-directory /outputs/{WORKFLOW}", shell=True
+            f"comfy launch --background -- --listen 0.0.0.0 --port 8000 "
+            f"--output-directory /outputs/{WORKFLOW}"
+            f"{' --highvram' if WORKFLOW == 'comfyui-b300-image-video-suite' else ''}", shell=True
         )
         # Block here — snapshot is taken only after this returns
         wait_for_port(8000, timeout=300)
