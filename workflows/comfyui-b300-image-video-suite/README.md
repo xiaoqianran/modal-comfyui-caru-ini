@@ -15,8 +15,8 @@ The models.json contains **21 deduplicated files**. All workflow JSONs are mount
 
 ## Residency and charges
 
-- This deployment uses `gpu="B300"`, `min_containers=1` and the ComfyUI `--highvram` option.
-- All models are downloaded to persistent storage during image construction; this does **not** preload them into VRAM.
+- This deployment uses `gpu="B300"` and ComfyUI `--highvram`. `min_containers=0` by default, to prevent `modal run comfyui.py::download_models` from automatically starting a GPU container. Set `MODAL_PREWARM=1` **only when deploying after the model download finishes** to keep one GPU container warm.
+- Models are initialized separately via `modal run comfyui.py::download_models` and stored in a persistent Volume. Image builds do not download model weights. This does **not** preload them into VRAM.
 - Load each model once by running its workflow. `--highvram` tries to retain previously loaded weights in VRAM when capacity allows. ComfyUI may still evict weights under memory pressure; this is **not a strict all-weights-pinned implementation**.
 - A minimum container incurs charges continuously even when the UI is idle. Stop the deployed app when no longer needed.
 - True preloading and full simultaneous residency require workload-specific startup warmups, instrumentation of loaded models, and tests on an actual B300. GPU snapshots alone do not prove residency.

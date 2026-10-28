@@ -140,12 +140,14 @@ def download_external_model(url: str, filename: str, model_dir: str):
                 query.setdefault("token", token)
                 download_url = urlunsplit(parts._replace(query=urlencode(query)))
 
+        temporary_path = cached_path.with_name(cached_path.name + ".part")
+        temporary_path.unlink(missing_ok=True)
         try:
             _ = subprocess.run(
                 [
                     "axel",
                     "-n", "16",
-                    "-o", cached_path,
+                    "-o", temporary_path,
                     download_url,
                 ],
                 check=True,
@@ -154,8 +156,12 @@ def download_external_model(url: str, filename: str, model_dir: str):
                 text=True,
             )
         except subprocess.CalledProcessError as e:
+            temporary_path.unlink(missing_ok=True)
             print("STDERR:", e.stderr)
             raise
+        if not temporary_path.is_file() or temporary_path.stat().st_size == 0:
+            raise RuntimeError(f"External model download is empty: {filename}")
+        temporary_path.replace(cached_path)
         print(f"DOWNLOADED {filename}")
     else:
         print(f"CACHE HIT {filename}")
@@ -529,7 +535,9 @@ def download_models():
         "/r2-previews": preview_mount,
     },
     secrets=[modal.Secret.from_name("huggingface-s3")],
-    min_containers=1 if WORKFLOW == "comfyui-b300-image-video-suite" else 0,
+    # 默认不预热：modal run download_models 时不能自动启动 GPU ComfyUI。
+    # 模型下载完成后，部署时可显式设置 MODAL_PREWARM=1 保持一个热容器。
+    min_containers=1 if os.getenv("MODAL_PREWARM", "0") == "1" else 0,
     scaledown_window=3600 if WORKFLOW == "comfyui-b300-image-video-suite" else 60,
     enable_memory_snapshot=True,
     experimental_options={"enable_gpu_snapshot": True},
