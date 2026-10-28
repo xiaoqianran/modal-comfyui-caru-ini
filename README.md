@@ -145,7 +145,7 @@ uv run modal secret list
 
 ### 2. 仅下载模型（不部署 ComfyUI）
 
-独立下载入口 `download-models.py` 读取 `workflows/<名称>/models.json`，将 HF 文件和直链文件下载至共享 Modal Volume `modal-comfyui-models`。不会启动 ComfyUI UI，也不部署工作流服务。会产生 Modal CPU 和下载 / 存储费用。下载完成后，正常部署仍需构建镜像和安装节点，但相同模型文件可复用缓存。
+独立下载入口 `download-models.py` 读取 `workflows/<名称>/models.json`，将 HF 文件和直链文件下载至共享 Modal Volume `modal-comfyui-models-v2`（Volumes v2；旧 v1 卷 `modal-comfyui-models` 不能原地升级，已弃用）。不会启动 ComfyUI UI，也不部署工作流服务。会产生 Modal CPU 和下载 / 存储费用。下载完成后，正常部署仍需构建镜像和安装节点，但相同模型文件可复用缓存。
 
 **Windows（PowerShell）：**
 

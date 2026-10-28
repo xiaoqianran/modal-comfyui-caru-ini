@@ -87,15 +87,17 @@ runtime container:
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
-| `MODEL_DOWNLOAD_CPU` | `8` | CPU cores requested for the download container (0.25–128) |
-| `MODEL_DOWNLOAD_MEMORY` | `16384` | Memory request in MiB |
+| `MODEL_DOWNLOAD_CPU` | `16` | CPU cores requested for the download container (0.25–128) |
+| `MODEL_DOWNLOAD_MEMORY` | `32768` | Memory request in MiB |
 | `MODEL_DOWNLOAD_WORKERS` | `0` = adaptive | Parallel file threads (1–32); `0` means `min(file count, CPU cores)` |
 | `MODEL_DOWNLOAD_TIMEOUT` | `7200` | Download build-step timeout in seconds |
 
-For a faster first build of this workflow, for example:
+The defaults are already the fast tier (CPU 16 / memory 32768 MiB), so a
+plain deploy runs at that speed with no setup. To push even higher, for
+example:
 
 ```powershell
-$env:MODEL_DOWNLOAD_CPU="16"; $env:MODEL_DOWNLOAD_MEMORY="32768"; $env:MODEL_DOWNLOAD_WORKERS="10"
+$env:MODEL_DOWNLOAD_CPU="32"; $env:MODEL_DOWNLOAD_MEMORY="65536"; $env:MODEL_DOWNLOAD_WORKERS="10"
 .\deploy-modal.bat community-minimaxh3-studio
 ```
 
@@ -104,4 +106,5 @@ The build log prints the effective settings
 and the total download time when it finishes. Note that more threads
 is not always faster: the two ~66 GB checkpoints dominate, and a
 single file is already split into parallel chunks by Hugging Face
-Xet/hf_transfer, so bandwidth and Volume write speed cap the total.
+Xet, so bandwidth and Volume write speed cap the total. Model files are
+cached in the Volumes v2 volume `modal-comfyui-models-v2`.

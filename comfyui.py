@@ -46,8 +46,9 @@ GPU_TYPE = os.getenv("MODAL_GPU") or model_config.get("gpu", "L40S")
 COMFY_VER = os.getenv("COMFY_VER")
 
 # ----------------------------------------------------------------------------
-# 模型下载资源（动态调配）：部署时用环境变量改，不用改代码，例如
-#   $env:MODEL_DOWNLOAD_CPU="16"; $env:MODEL_DOWNLOAD_MEMORY="32768"
+# 模型下载资源（动态调配）：默认就是快档 CPU=16 / MEMORY=32768 MiB，
+# 不设环境变量直接部署即按快档跑；仍可用环境变量继续调高/调低，例如
+#   $env:MODEL_DOWNLOAD_CPU="32"; $env:MODEL_DOWNLOAD_MEMORY="65536"
 #   $env:MODEL_DOWNLOAD_WORKERS="10"; .\deploy-modal.bat community-minimaxh3-studio
 # 只影响构建期下载模型的那个容器，不影响 ComfyUI GPU 运行容器的资源。
 # MODEL_DOWNLOAD_WORKERS=0（默认）为自适应：min(模型文件数, CPU 核数)。
@@ -68,8 +69,8 @@ def _env_number(name: str, default, lo, hi, cast):
     return value
 
 
-DOWNLOAD_CPU = _env_number("MODEL_DOWNLOAD_CPU", 8.0, 0.25, 128, float)
-DOWNLOAD_MEMORY = _env_number("MODEL_DOWNLOAD_MEMORY", 16384, 512, 1048576, int)
+DOWNLOAD_CPU = _env_number("MODEL_DOWNLOAD_CPU", 16.0, 0.25, 128, float)
+DOWNLOAD_MEMORY = _env_number("MODEL_DOWNLOAD_MEMORY", 32768, 512, 1048576, int)
 DOWNLOAD_WORKERS = _env_number("MODEL_DOWNLOAD_WORKERS", 0, 0, 32, int)
 DOWNLOAD_TIMEOUT = _env_number("MODEL_DOWNLOAD_TIMEOUT", 7200, 60, 86400, int)
 
@@ -208,7 +209,12 @@ def download_all():
 # 3. 构建 Modal 基础镜像：选择 CUDA / Python，安装系统依赖与 ComfyUI
 #    模型与插件暂不在此层加入，便于复用基础镜像缓存。
 # ============================================================================
-vol = modal.Volume.from_name("modal-comfyui-models", create_if_missing=True)
+# 模型缓存卷用 Volumes v2（官方推荐：吞吐更高、并发写更好）。
+# 注意：已有的 v1 卷 "modal-comfyui-models" 不能原地升级，且 from_name 的
+# version 必须与已有卷一致、同名传 version=2 会直接报错，所以 v2 用新卷名
+# "modal-comfyui-models-v2"；切换后首次部署会重新下载一次模型（旧 v1 卷
+# 数据保留不动，确认无用后可自行在 Modal 控制台删除）。
+vol = modal.Volume.from_name("modal-comfyui-models-v2", create_if_missing=True, version=2)
 
 # construct images and install deps/custom nodes
 VERSION = f"--version {COMFY_VER}" if COMFY_VER else ""
@@ -254,8 +260,10 @@ for filename in ("models.json", "plugins.json"):
     image = image.add_local_file(
         WORKFLOW_DIR / filename, f"/root/workflows/{WORKFLOW}/{filename}", copy=True
     )
+# 只开 Xet 高性能模式：HF_HUB_ENABLE_HF_TRANSFER 已被 Hugging Face 废弃
+# （hf_transfer 不再可用），不要再设置它，避免下载路径含糊。
 image = image.env(
-    {"HF_HUB_ENABLE_HF_TRANSFER": "1", "HF_XET_HIGH_PERFORMANCE": "1", "WORKFLOW": WORKFLOW}
+    {"HF_XET_HIGH_PERFORMANCE": "1", "WORKFLOW": WORKFLOW}
 ).run_function(
     download_all,
     cpu=DOWNLOAD_CPU,

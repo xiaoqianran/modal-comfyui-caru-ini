@@ -11,16 +11,23 @@ WORKFLOW = os.getenv("WORKFLOW", "comfyui-pixal3d-trellis2")
 # Only the local entrypoint reads the workspace config. Modal imports this
 # module again in the remote container, where workflows/ is not mounted.
 CONFIG = ROOT / "workflows" / WORKFLOW / "models.json"
-volume = modal.Volume.from_name("modal-comfyui-models", create_if_missing=True)
+# 与 comfyui.py 共用同一个模型缓存卷：Volumes v2，新卷名（v1 卷不能原地升级）。
+volume = modal.Volume.from_name("modal-comfyui-models-v2", create_if_missing=True, version=2)
 app = modal.App("modal-model-cache-download")
 try:
     hf_secret = modal.Secret.from_name("huggingface-secret")
     hf_secret.hydrate()
 except modal.exception.NotFoundError:
     hf_secret = modal.Secret.from_dict({"HF_TOKEN": os.getenv("HF_TOKEN", "")})
-image = modal.Image.debian_slim(python_version="3.11").pip_install("huggingface_hub>=0.30,<2", "hf_xet", "httpx")
+image = (
+    modal.Image.debian_slim(python_version="3.11")
+    .pip_install("huggingface_hub>=0.30,<2", "hf_xet", "httpx")
+    # 只开 Xet 高性能模式；HF_HUB_ENABLE_HF_TRANSFER 已废弃，不要再设置。
+    .env({"HF_XET_HIGH_PERFORMANCE": "1"})
+)
 
-@app.function(image=image, volumes={"/cache": volume}, timeout=86400, secrets=[hf_secret])
+# 与 comfyui.py 构建期下载相同的快档资源：CPU=16 / MEMORY=32768 MiB。
+@app.function(image=image, volumes={"/cache": volume}, timeout=86400, secrets=[hf_secret], cpu=16.0, memory=32768)
 def download_models(config_json: str):
     import concurrent.futures
     import hashlib
@@ -72,5 +79,5 @@ def main():
     config = json.loads(CONFIG.read_text(encoding="utf-8"))
     print(f"Workflow: {WORKFLOW}")
     print(f"Models: {len(config.get('models', [])) + len(config.get('models_ext', []))}")
-    print("Model cache Volume: modal-comfyui-models")
+    print("Model cache Volume: modal-comfyui-models-v2 (Volumes v2)")
     print("Downloaded:", download_models.remote(json.dumps(config)))
