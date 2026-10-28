@@ -21,3 +21,18 @@ The models.json contains **21 deduplicated files**. All workflow JSONs are mount
 - A minimum container incurs charges continuously even when the UI is idle. Stop the deployed app when no longer needed.
 - True preloading and full simultaneous residency require workload-specific startup warmups, instrumentation of loaded models, and tests on an actual B300. GPU snapshots alone do not prove residency.
 - The existing volume and outputs are shared with other workflows; do not delete these volumes while using other deployments.
+# 独立模型缓存初始化（Linux）
+
+模型权重保存在 `modal-comfyui-models-v2` Volume 中，**不在镜像构建阶段下载**。
+首次使用某个 Modal 账号 / Environment，或者更新 `models.json` 后执行：
+
+```bash
+export WORKFLOW=comfyui-b300-image-video-suite
+export MODAL_GPU=B300
+uv run modal run comfyui.py::download_models
+uv run modal deploy comfyui.py
+```
+
+后续仅修改插件或 ComfyUI 代码时，直接运行 `uv run modal deploy comfyui.py`，无需重新下载模型。
+下载任务会打印 `CACHE HIT` / `DOWNLOADED`；ComfyUI 启动时仅从 Volume 离线建立模型链接。
+如果 Volume 缺少文件，服务启动会明确提示先执行 `download_models`，不会自动在 GPU 容器上下载。

@@ -13,7 +13,7 @@ import json
 
 # Modal 镜像构建与应用声明顺序（必须保持）：
 # 1. 安装 ComfyUI。
-# 2. 下载模型（构建时使用 models.json / plugins.json）。
+# 2. 模型通过独立 Modal Function 下载到持久化 Volume，不参与镜像构建。
 # 3. 安装工作流插件。
 # 4. 编译所需的 CUDA 扩展。
 # 5. 安装其余依赖并完成所有镜像构建步骤。
@@ -28,11 +28,14 @@ import json
 root_dir = Path(__file__).parent
 WORKFLOW = os.getenv("WORKFLOW", "comfyui-pixal3d-trellis2")
 WORKFLOW_DIR = root_dir / "workflows" / WORKFLOW
-if WORKFLOW not in {p.name for p in (root_dir / "workflows").iterdir() if p.is_dir()}:
+REMOTE_WORKFLOW_DIR = Path("/root/workflows") / WORKFLOW
+config_dir = WORKFLOW_DIR if (WORKFLOW_DIR / "models.json").exists() else REMOTE_WORKFLOW_DIR
+if not (config_dir / "models.json").exists():
     raise ValueError(f"Unknown workflow: {WORKFLOW}")
 
-model_config = json.loads((WORKFLOW_DIR / "models.json").read_text(encoding="utf-8"))
-plugin_config = json.loads((WORKFLOW_DIR / "plugins.json").read_text(encoding="utf-8"))
+model_config = json.loads((config_dir / "models.json").read_text(encoding="utf-8"))
+plugin_config_path = config_dir / "plugins.json"
+plugin_config = json.loads(plugin_config_path.read_text(encoding="utf-8")) if plugin_config_path.exists() else {}
 models = model_config["models"]
 models_ext = model_config.get("models_ext", [])
 comfy_plugins = plugin_config.get("comfy_plugins", [])
@@ -52,11 +55,9 @@ COMFY_VER = os.getenv("COMFY_VER")
 # 不设环境变量直接部署即按快档跑；仍可用环境变量继续调高/调低，例如
 #   $env:MODEL_DOWNLOAD_CPU="32"; $env:MODEL_DOWNLOAD_MEMORY="65536"
 #   $env:MODEL_DOWNLOAD_WORKERS="10"; .\deploy-modal.bat community-minimaxh3-studio
-# 只影响构建期下载模型的那个容器，不影响 ComfyUI GPU 运行容器的资源。
+# 只影响独立 download_models CPU 容器，不影响 ComfyUI GPU 运行容器。
 # MODEL_DOWNLOAD_WORKERS=0（默认）为自适应：min(模型文件数, CPU 核数)。
-# 这三个值会通过 run_function 的 env 参数原样传进远程构建容器，保证本地
-# 解析值与远程 download_all() 重导入时读到的值一致；download_all() 直接
-# 引用这些全局变量，改动它们也会触发 Modal 重建下载层。
+# 下载资源参数只控制独立初始化任务，不触发插件镜像重建。
 # ----------------------------------------------------------------------------
 def _env_number(name: str, default, lo, hi, cast):
     raw = os.getenv(name, "").strip()
@@ -78,7 +79,7 @@ DOWNLOAD_TIMEOUT = _env_number("MODEL_DOWNLOAD_TIMEOUT", 7200, 60, 86400, int)
 
 # ============================================================================
 # 2. 准备模型下载函数：定位目标目录，从 HF / 外部地址下载并建立链接
-#    这里定义函数；实际下载在第 4 阶段构建镜像时执行。
+#    下载由独立 download_models 函数执行；服务启动只读取本地缓存。
 # ============================================================================
 def resolve_model_dir(model_dir: str) -> Path:
     """Resolve model_dir: absolute paths are used as-is, relative paths are
@@ -92,18 +93,17 @@ def hf_download(
     filename: str,
     model_dir: str = "checkpoints",
 ):
-    import os
-    import subprocess
-
-    # Download model from Hugging Face
     from huggingface_hub import hf_hub_download
+    from huggingface_hub.errors import LocalEntryNotFoundError
 
-    model = hf_hub_download(
-        repo_id=repo_id,
-        filename=filename,
-        cache_dir="/cache",
-        token=os.environ.get("HF_TOKEN"),
-    )
+    try:
+        model = hf_hub_download(repo_id=repo_id, filename=filename,
+                                cache_dir="/cache", local_files_only=True)
+        status = "CACHE HIT"
+    except LocalEntryNotFoundError:
+        model = hf_hub_download(repo_id=repo_id, filename=filename,
+                                cache_dir="/cache", token=os.environ.get("HF_TOKEN"))
+        status = "DOWNLOADED"
 
     target_dir = resolve_model_dir(model_dir)
     target_dir.mkdir(parents=True, exist_ok=True)
@@ -116,7 +116,7 @@ def hf_download(
 
     # Create symlink
     target_path.symlink_to(model)
-    print(f"Downloaded {repo_id}/{filename} to {target_path}")
+    print(f"{status} {repo_id}/{filename} -> {target_path}")
 
 
 def download_external_model(url: str, filename: str, model_dir: str):
@@ -126,7 +126,7 @@ def download_external_model(url: str, filename: str, model_dir: str):
     Path(cache_dir).mkdir(parents=True, exist_ok=True)
 
     cached_path = Path(cache_dir) / filename
-    if not cached_path.exists():
+    if not cached_path.is_file() or cached_path.stat().st_size == 0:
         print(f"Downloading {filename} from {url}...")
         # Pass the CivitAI token as a query param rather than an Authorization
         # header: axel re-sends -H headers to the redirect target (an R2
@@ -156,6 +156,9 @@ def download_external_model(url: str, filename: str, model_dir: str):
         except subprocess.CalledProcessError as e:
             print("STDERR:", e.stderr)
             raise
+        print(f"DOWNLOADED {filename}")
+    else:
+        print(f"CACHE HIT {filename}")
 
     target_dir = resolve_model_dir(model_dir)
     target_dir.mkdir(parents=True, exist_ok=True)
@@ -207,6 +210,39 @@ def download_all():
     print(f"All model downloads finished in {time() - started:.1f}s")
 
 
+def link_cached_models():
+    """Attach persisted model weights to ComfyUI without network or downloads."""
+    from huggingface_hub import hf_hub_download
+    from huggingface_hub.errors import LocalEntryNotFoundError
+
+    for model in models:
+        try:
+            cached = hf_hub_download(repo_id=model["repo_id"], filename=model["filename"],
+                                     cache_dir="/cache", local_files_only=True)
+        except LocalEntryNotFoundError as exc:
+            raise RuntimeError(
+                f"Model missing: {model['repo_id']}/{model['filename']}. "
+                "Run: uv run modal run comfyui.py::download_models"
+            ) from exc
+        name = model.get("local_filename") or Path(model["filename"]).name
+        target = resolve_model_dir(model["model_dir"]) / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        if target.is_symlink() or target.exists():
+            target.unlink()
+        target.symlink_to(cached)
+        print(f"CACHE HIT {model['repo_id']}/{model['filename']}")
+    for model in models_ext:
+        cached = Path("/cache") / model["filename"]
+        if not cached.is_file() or cached.stat().st_size == 0:
+            raise RuntimeError(f"Model missing: {cached}. Run: uv run modal run comfyui.py::download_models")
+        target = resolve_model_dir(model["model_dir"]) / model["filename"]
+        target.parent.mkdir(parents=True, exist_ok=True)
+        if target.is_symlink() or target.exists():
+            target.unlink()
+        target.symlink_to(cached)
+        print(f"CACHE HIT {model['filename']}")
+
+
 # ============================================================================
 # 3. 构建 Modal 基础镜像：选择 CUDA / Python，安装系统依赖与 ComfyUI
 #    模型与插件暂不在此层加入，便于复用基础镜像缓存。
@@ -235,7 +271,7 @@ image = (
     .run_commands("git lfs install")
 )
 # ============================================================================
-# 4. 下载模型权重：获取 HF 凭据，在构建阶段写入共享 Volume 并建立链接
+# 4. 独立下载镜像：不依赖插件镜像，不参与插件构建缓存
 # ============================================================================
 def _hf_secrets() -> list[modal.Secret]:
     """Prefer Modal Secret 'huggingface-secret'; fall back to local HF_TOKEN
@@ -255,30 +291,9 @@ def _hf_secrets() -> list[modal.Secret]:
             )
         return [modal.Secret.from_dict({"HF_TOKEN": hf_token, "CIVITAI_TOKEN": civ_token})]
 
-# download models
-# run_function imports comfyui.py inside the image: its selected Workflow
-# config must already exist there (without copying unrelated workflows).
-for filename in ("models.json", "plugins.json"):
-    image = image.add_local_file(
-        WORKFLOW_DIR / filename, f"/root/workflows/{WORKFLOW}/{filename}", copy=True
-    )
-# 只开 Xet 高性能模式：HF_HUB_ENABLE_HF_TRANSFER 已被 Hugging Face 废弃
-# （hf_transfer 不再可用），不要再设置它，避免下载路径含糊。
-image = image.env(
-    {"HF_XET_HIGH_PERFORMANCE": "1", "WORKFLOW": WORKFLOW}
-).run_function(
-    download_all,
-    cpu=DOWNLOAD_CPU,
-    memory=DOWNLOAD_MEMORY,
-    timeout=DOWNLOAD_TIMEOUT,
-    env={
-        "MODEL_DOWNLOAD_CPU": str(DOWNLOAD_CPU),
-        "MODEL_DOWNLOAD_MEMORY": str(DOWNLOAD_MEMORY),
-        "MODEL_DOWNLOAD_WORKERS": str(DOWNLOAD_WORKERS),
-        "MODEL_DOWNLOAD_TIMEOUT": str(DOWNLOAD_TIMEOUT),
-    },
-    volumes={"/cache": vol},
-    secrets=_hf_secrets(),
+# 独立下载镜像只挂载 models.json；修改插件不会让下载任务镜像失效。
+download_image = image.env({"HF_XET_HIGH_PERFORMANCE": "1", "WORKFLOW": WORKFLOW}).add_local_file(
+    WORKFLOW_DIR / "models.json", f"/root/workflows/{WORKFLOW}/models.json", copy=True
 )
 
 
@@ -466,6 +481,12 @@ preview_mount = modal.CloudBucketMount(
 )
 image = image.pip_install("boto3", "imageio-ffmpeg").add_local_file(
     root_dir / "storage" / "hf_sync.py", "/root/hf_sync.py", copy=True
+).env({"WORKFLOW": WORKFLOW})
+
+# Runtime configuration is mounted after builds; editing models.json cannot
+# invalidate the plugin installation image layers.
+image = image.add_local_file(
+    WORKFLOW_DIR / "models.json", f"/root/workflows/{WORKFLOW}/models.json", copy=False
 )
 
 # Mount workflow JSONs last: copy=False mounts cannot precede image build steps.
@@ -483,6 +504,20 @@ for workflow_json in sorted(WORKFLOW_DIR.rglob("*.json")):
 # 7. 声明 Modal App：为每个 Workflow 分配独立应用、GPU、Volume 和 Secret
 # ============================================================================
 app = modal.App(name=f"modal-{WORKFLOW}", image=image)
+
+
+@app.function(
+    image=download_image,
+    cpu=DOWNLOAD_CPU,
+    memory=DOWNLOAD_MEMORY,
+    timeout=DOWNLOAD_TIMEOUT,
+    volumes={"/cache": vol},
+    secrets=_hf_secrets(),
+)
+def download_models():
+    """Explicit model initialization: run separately from deploy/build."""
+    download_all()
+    vol.commit()
 
 
 @app.cls(
@@ -506,6 +541,7 @@ app = modal.App(name=f"modal-{WORKFLOW}", image=image)
 class ComfyUI:
     @modal.enter(snap=True)
     def start_checkpoint(self):
+        link_cached_models()
         self.proc = subprocess.Popen(
             f"comfy launch --background -- --listen 0.0.0.0 --port 8000 "
             f"--output-directory /outputs/{WORKFLOW}"
