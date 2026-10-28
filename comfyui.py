@@ -361,11 +361,11 @@ def install_ext_plugin(image: modal.Image, plugin: dict) -> modal.Image:
             image = image.run_commands(
                 "python -c "
                 + shlex.quote(
-                    "from importlib.metadata import version, PackageNotFoundError; "
+                    "from importlib.metadata import distributions; "
                     "from pathlib import Path; "
                     "packages=('torch','torchvision','torchaudio'); "
-                    "installed=[(p, version(p)) for p in packages]; "
-                    f"Path('{constraints}').write_text(''.join(p+'=='+v+chr(10) for p,v in installed))"
+                    "installed={d.metadata['Name'].lower():d.version for d in distributions()}; "
+                    f"Path('{constraints}').write_text(''.join(p+'=='+installed[p]+chr(10) for p in packages if p in installed))"
                 )
             )
             dep_flags = f"--constraint {constraints}"

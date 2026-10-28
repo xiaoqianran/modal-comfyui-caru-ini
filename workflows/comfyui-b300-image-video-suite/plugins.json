@@ -1,4 +1,10 @@
 {
   "comfy_plugins": [],
-  "comfy_plugins_ext": []
+  "comfy_plugins_ext": [
+    {
+      "url": "https://github.com/filliptm/ComfyUI_Fill-Nodes.git",
+      "requirements": ["requirements.txt"],
+      "resolve_dependencies": true
+    }
+  ]
 }
