@@ -43,6 +43,8 @@ comfy_plugins_ext = plugin_config.get("comfy_plugins_ext", [])
 COMFY_MODELS_ROOT = Path("/root/comfy/ComfyUI/models")
 
 GPU_TYPE = os.getenv("MODAL_GPU") or model_config.get("gpu", "L40S")
+# 根据最终 GPU 配置（包含 MODAL_GPU 覆盖）自动决定高显存模式。
+HIGH_VRAM = GPU_TYPE.strip().upper() == "B300"
 COMFY_VER = os.getenv("COMFY_VER")
 
 # ----------------------------------------------------------------------------
@@ -507,7 +509,7 @@ class ComfyUI:
         self.proc = subprocess.Popen(
             f"comfy launch --background -- --listen 0.0.0.0 --port 8000 "
             f"--output-directory /outputs/{WORKFLOW}"
-            f"{' --highvram' if WORKFLOW == 'comfyui-b300-image-video-suite' else ''}", shell=True
+            f"{' --highvram' if HIGH_VRAM else ''}", shell=True
         )
         # Block here — snapshot is taken only after this returns
         wait_for_port(8000, timeout=300)
