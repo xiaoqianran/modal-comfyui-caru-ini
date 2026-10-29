@@ -145,6 +145,8 @@ uv run modal secret list
 
 ### 2. 仅下载模型（不部署 ComfyUI）
 
+两个入口 `download-models.py` 与 `comfyui.py::download_models` 使用同一个分片下载实现，默认 16 GB/片、最多 16 容器、每容器 4 CPU / 4 GiB / 2 线程，关闭 Xet 高性能模式。`comfyui.py::download_models` 是本地入口，委托运行 `download-models.py`，不构建或启动 GPU 推理服务。
+
 独立下载入口 `download-models.py` 读取 `workflows/<名称>/models.json`，将 HF 文件和直链文件下载至共享 Modal Volume `modal-comfyui-models-v2`（Volumes v2；旧 v1 卷 `modal-comfyui-models` 不能原地升级，已弃用）。不会启动 ComfyUI UI，也不部署工作流服务。会产生 Modal CPU 和下载 / 存储费用。下载完成后，正常部署仍需构建镜像和安装节点，但相同模型文件可复用缓存。
 
 **Windows（PowerShell）：**

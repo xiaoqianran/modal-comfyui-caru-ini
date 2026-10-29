@@ -5,7 +5,7 @@ import re
 import shlex
 import subprocess
 from pathlib import Path
-from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+from urllib.parse import urlsplit
 
 import modal
 
@@ -41,7 +41,7 @@ models_ext = model_config.get("models_ext", [])
 comfy_plugins = plugin_config.get("comfy_plugins", [])
 comfy_plugins_ext = plugin_config.get("comfy_plugins_ext", [])
 # Workflow files are intentionally not validated at module import time:
-# Modal re-imports this module during download_all before workflow mounts exist.
+# Modal may import the module in a remote container where workflow mounts differ.
 
 COMFY_MODELS_ROOT = Path("/root/comfy/ComfyUI/models")
 
@@ -50,170 +50,14 @@ GPU_TYPE = os.getenv("MODAL_GPU") or model_config.get("gpu", "L40S")
 HIGH_VRAM = GPU_TYPE.strip().upper() == "B300"
 COMFY_VER = os.getenv("COMFY_VER")
 
-# ----------------------------------------------------------------------------
-# 模型下载资源（动态调配）：默认就是快档 CPU=16 / MEMORY=32768 MiB，
-# 不设环境变量直接部署即按快档跑；仍可用环境变量继续调高/调低，例如
-#   $env:MODEL_DOWNLOAD_CPU="32"; $env:MODEL_DOWNLOAD_MEMORY="65536"
-#   $env:MODEL_DOWNLOAD_WORKERS="10"; .\deploy-modal.bat community-minimaxh3-studio
-# 只影响独立 download_models CPU 容器，不影响 ComfyUI GPU 运行容器。
-# MODEL_DOWNLOAD_WORKERS=0（默认）为自适应：min(模型文件数, CPU 核数)。
-# 下载资源参数只控制独立初始化任务，不触发插件镜像重建。
-# ----------------------------------------------------------------------------
-def _env_number(name: str, default, lo, hi, cast):
-    raw = os.getenv(name, "").strip()
-    if not raw:
-        return cast(default)
-    try:
-        value = cast(raw)
-    except ValueError:
-        raise ValueError(f"{name} must be a number, got {raw!r}") from None
-    if not lo <= value <= hi:
-        raise ValueError(f"{name} must be between {lo} and {hi}, got {value}")
-    return value
-
-
-DOWNLOAD_CPU = _env_number("MODEL_DOWNLOAD_CPU", 16.0, 0.25, 128, float)
-DOWNLOAD_MEMORY = _env_number("MODEL_DOWNLOAD_MEMORY", 32768, 512, 1048576, int)
-DOWNLOAD_WORKERS = _env_number("MODEL_DOWNLOAD_WORKERS", 0, 0, 32, int)
-DOWNLOAD_TIMEOUT = _env_number("MODEL_DOWNLOAD_TIMEOUT", 7200, 60, 86400, int)
-
 # ============================================================================
-# 2. 准备模型下载函数：定位目标目录，从 HF / 外部地址下载并建立链接
-#    下载由独立 download_models 函数执行；服务启动只读取本地缓存。
+# 2. 运行时模型链接：下载统一由 download-models.py 并行分片完成；GPU 端仅读缓存。
 # ============================================================================
 def resolve_model_dir(model_dir: str) -> Path:
     """Resolve model_dir: absolute paths are used as-is, relative paths are
     placed under /root/comfy/ComfyUI/models/ (e.g. "checkpoints")."""
     p = Path(model_dir)
     return p if p.is_absolute() else COMFY_MODELS_ROOT / p
-
-
-def hf_download(
-    repo_id: str,
-    filename: str,
-    model_dir: str = "checkpoints",
-):
-    from huggingface_hub import hf_hub_download
-    from huggingface_hub.errors import LocalEntryNotFoundError
-
-    try:
-        model = hf_hub_download(repo_id=repo_id, filename=filename,
-                                cache_dir="/cache", local_files_only=True)
-        status = "CACHE HIT"
-    except LocalEntryNotFoundError:
-        model = hf_hub_download(repo_id=repo_id, filename=filename,
-                                cache_dir="/cache", token=os.environ.get("HF_TOKEN"))
-        status = "DOWNLOADED"
-
-    target_dir = resolve_model_dir(model_dir)
-    target_dir.mkdir(parents=True, exist_ok=True)
-    local_filename = next((m.get("local_filename") for m in models if m["repo_id"] == repo_id and m["filename"] == filename), None) or Path(filename).name
-    target_path = target_dir / local_filename
-
-    # Remove existing file/link if it exists to ensure fresh link
-    if target_path.exists() or target_path.is_symlink():
-        target_path.unlink()
-
-    # Create symlink
-    target_path.symlink_to(model)
-    print(f"{status} {repo_id}/{filename} -> {target_path}")
-
-
-def download_external_model(url: str, filename: str, model_dir: str):
-    import subprocess
-
-    cache_dir = "/cache"
-    Path(cache_dir).mkdir(parents=True, exist_ok=True)
-
-    cached_path = Path(cache_dir) / filename
-    if not cached_path.is_file() or cached_path.stat().st_size == 0:
-        print(f"Downloading {filename} from {url}...")
-        # Pass the CivitAI token as a query param rather than an Authorization
-        # header: axel re-sends -H headers to the redirect target (an R2
-        # presigned URL), which rejects them with 400.
-        download_url = url
-        if url.startswith(("https://civitai.com/", "https://civitai.red/")):
-            token = os.environ.get("CIVITAI_TOKEN", "")
-            if token:
-                parts = urlsplit(url)
-                query = dict(parse_qsl(parts.query))
-                query.setdefault("token", token)
-                download_url = urlunsplit(parts._replace(query=urlencode(query)))
-
-        temporary_path = cached_path.with_name(cached_path.name + ".part")
-        temporary_path.unlink(missing_ok=True)
-        try:
-            _ = subprocess.run(
-                [
-                    "axel",
-                    "-n", "16",
-                    "-o", temporary_path,
-                    download_url,
-                ],
-                check=True,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.PIPE,
-                text=True,
-            )
-        except subprocess.CalledProcessError as e:
-            temporary_path.unlink(missing_ok=True)
-            print("STDERR:", e.stderr)
-            raise
-        if not temporary_path.is_file() or temporary_path.stat().st_size == 0:
-            raise RuntimeError(f"External model download is empty: {filename}")
-        temporary_path.replace(cached_path)
-        print(f"DOWNLOADED {filename}")
-    else:
-        print(f"CACHE HIT {filename}")
-
-    target_dir = resolve_model_dir(model_dir)
-    target_dir.mkdir(parents=True, exist_ok=True)
-    target_path = target_dir / filename
-
-    # Remove existing file/link if it exists to ensure fresh link
-    if target_path.exists() or target_path.is_symlink():
-        target_path.unlink()
-
-    # Create symlink
-    target_path.symlink_to(cached_path)
-    print(f"Linked {filename} to {target_path}")
-
-
-def download_all():
-    from concurrent.futures import ThreadPoolExecutor
-    from time import sleep, time
-
-    def fetch(item):
-        kind, model = item
-        for attempt in range(3):
-            try:
-                if kind == "hf":
-                    hf_download(model["repo_id"], model["filename"], model["model_dir"])
-                else:
-                    download_external_model(model["url"], model["filename"], model["model_dir"])
-                return
-            except Exception:
-                if attempt == 2:
-                    raise
-                sleep(2 ** attempt)
-
-    items = [("hf", model) for model in models]
-    items += [("external", model) for model in models_ext]
-    # 动态线程数：显式设置 MODEL_DOWNLOAD_WORKERS 时用设置值（1-32）；
-    # 为 0 时自适应为 min(文件数, CPU 核数)，且永远不超过文件数。
-    if DOWNLOAD_WORKERS > 0:
-        workers = DOWNLOAD_WORKERS
-    else:
-        workers = min(len(items) or 1, max(1, int(DOWNLOAD_CPU)))
-    workers = min(workers, len(items) or 1)
-    print(
-        f"Downloading {len(items)} model files: workers={workers}, "
-        f"cpu={DOWNLOAD_CPU}, memory={DOWNLOAD_MEMORY} MiB"
-    )
-    started = time()
-    with ThreadPoolExecutor(max_workers=workers) as pool:
-        list(pool.map(fetch, items))
-    print(f"All model downloads finished in {time() - started:.1f}s")
 
 
 def link_cached_models():
@@ -279,30 +123,6 @@ image = (
 # ============================================================================
 # 4. 独立下载镜像：不依赖插件镜像，不参与插件构建缓存
 # ============================================================================
-def _hf_secrets() -> list[modal.Secret]:
-    """Prefer Modal Secret 'huggingface-secret'; fall back to local HF_TOKEN
-    env. Public models work even when both are absent (warned)."""
-    try:
-        s = modal.Secret.from_name("huggingface-secret")
-        s.hydrate()  # from_name is lazy, force the existence check here
-        return [s]
-    except modal.exception.NotFoundError:
-        hf_token = os.environ.get("HF_TOKEN", "")
-        civ_token = os.environ.get("CIVITAI_TOKEN", "")
-        if not hf_token:
-            print(
-                "Warning: no Modal Secret 'huggingface-secret' and no HF_TOKEN env. "
-                "Public models will download with throttled bandwidth; "
-                "gated models will fail."
-            )
-        return [modal.Secret.from_dict({"HF_TOKEN": hf_token, "CIVITAI_TOKEN": civ_token})]
-
-# 独立下载镜像只挂载 models.json；修改插件不会让下载任务镜像失效。
-download_image = image.env({"HF_XET_HIGH_PERFORMANCE": "1", "WORKFLOW": WORKFLOW}).add_local_file(
-    WORKFLOW_DIR / "models.json", f"/root/workflows/{WORKFLOW}/models.json", copy=True
-)
-
-
 # ============================================================================
 # 5. 插件由 plugins.json 声明；工作流在全部构建步骤完成后挂载
 # ============================================================================
@@ -474,7 +294,7 @@ def wait_for_port(port: int, timeout: int = 60):
     raise TimeoutError(f"ComfyUI never became ready on port {port}")
     
 # Generated files stay in a persistent staging Volume until HF archive succeeds.
-output_volume = modal.Volume.from_name("modal-comfyui-models-output", create_if_missing=True)
+output_volume = modal.Volume.from_name("modal-comfyui-models-output", create_if_missing=True, version=2)
 preview_mount = modal.CloudBucketMount(
     bucket_name="modal-studio-assets",
     bucket_endpoint_url=os.getenv(
@@ -512,18 +332,17 @@ for workflow_json in sorted(WORKFLOW_DIR.rglob("*.json")):
 app = modal.App(name=f"modal-{WORKFLOW}", image=image)
 
 
-@app.function(
-    image=download_image,
-    cpu=DOWNLOAD_CPU,
-    memory=DOWNLOAD_MEMORY,
-    timeout=DOWNLOAD_TIMEOUT,
-    volumes={"/cache": vol},
-    secrets=_hf_secrets(),
-)
+@app.local_entrypoint()
 def download_models():
-    """Explicit model initialization: run separately from deploy/build."""
-    download_all()
-    vol.commit()
+    """Use the canonical 16GB-sharded downloader; do not launch a GPU."""
+    # The standalone downloader owns shard packing, retry, verification and
+    # Volume V2 merge. This keeps both CLI entrypoints on exactly one path.
+    subprocess.run(
+        ["uv", "run", "modal", "run", "download-models.py"],
+        cwd=root_dir,
+        env=os.environ.copy(),
+        check=True,
+    )
 
 
 @app.cls(
@@ -558,6 +377,46 @@ class ComfyUI:
         # Block here — snapshot is taken only after this returns
         wait_for_port(8000, timeout=300)
 
+    @staticmethod
+    def _output_snapshot():
+        """Track completed-looking output files without touching temp files."""
+        extensions = {".glb", ".gltf", ".ply", ".splat", ".ksplat", ".spz",
+                      ".mp4", ".webm", ".mov", ".mkv", ".png", ".jpg", ".jpeg",
+                      ".json", ".bin", ".obj", ".mtl", ".stl"}
+        root = Path("/outputs") / WORKFLOW
+        snapshot = {}
+        for category in ("3d", "3dgs", "video"):
+            directory = root / category
+            if not directory.exists():
+                continue
+            for path in directory.rglob("*"):
+                if not path.is_file() or path.suffix.lower() not in extensions:
+                    continue
+                try:
+                    stat = path.stat()
+                except FileNotFoundError:
+                    continue
+                if stat.st_size:
+                    snapshot[str(path)] = (stat.st_size, stat.st_mtime_ns)
+        return snapshot
+
+    def _commit_outputs_loop(self):
+        """Periodically persist stable outputs; retry failures next cycle."""
+        previous = {}
+        committed = {}
+        while not self.commit_stop.wait(30):
+            try:
+                current = self._output_snapshot()
+                stable = {p: version for p, version in current.items()
+                          if previous.get(p) == version}
+                if stable != committed and stable:
+                    output_volume.commit()
+                    committed = stable
+                    print(f"Output Volume V2 committed: {len(stable)} stable files", flush=True)
+                previous = current
+            except Exception as exc:
+                print(f"Output Volume V2 commit failed (will retry): {exc}", flush=True)
+
     @modal.enter(snap=False)
     def start_restore(self):
         wait_for_port(8000, timeout=30)
@@ -565,6 +424,11 @@ class ComfyUI:
             ["python", "-u", "/root/hf_sync.py"],
             env={**os.environ, "WORKFLOW": WORKFLOW, "COMFY_OUTPUT_ROOT": f"/outputs/{WORKFLOW}"},
         )
+        # Start only after snapshot restore: background threads must not enter snapshots.
+        import threading
+        self.commit_stop = threading.Event()
+        self.commit_thread = threading.Thread(target=self._commit_outputs_loop, daemon=True)
+        self.commit_thread.start()
         print("App Restored!")
     
     @modal.web_server(8000, startup_timeout=300)
@@ -573,6 +437,11 @@ class ComfyUI:
     
     @modal.exit()
     def cleanup(self):
+        # Stop background commits before the final flush on graceful shutdown.
+        commit_stop = getattr(self, "commit_stop", None)
+        if commit_stop is not None:
+            commit_stop.set()
+            self.commit_thread.join(timeout=10)
         # Persist staging files even if HF was temporarily unavailable.
         output_volume.commit()
         sync_proc = getattr(self, "sync_proc", None)

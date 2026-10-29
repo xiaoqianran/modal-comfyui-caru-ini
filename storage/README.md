@@ -1,6 +1,7 @@
 # Storage: 3D / 3DGS / Video
 
-- **Modal Volume `modal-comfyui-models-output`**: shared persistent staging mounted at `/outputs`, separated by workflow into `/outputs/{workflow}/3d/`, `3dgs/`, and `video/`.
+- **Modal Volume V2 `modal-comfyui-models-output`**: shared persistent staging mounted at `/outputs`, separated by workflow into `/outputs/{workflow}/3d/`, `3dgs/`, and `video/`.
+  - The ComfyUI runtime checks outputs every 30 seconds and commits the Volume when eligible file metadata remains unchanged across two scans; graceful shutdown also commits. HF Sync independently archives stable files. A metadata-stable file may still be open, so this is best-effort crash protection, not a guarantee against interrupted writes.
 - **Hugging Face Storage Bucket**: permanent source of truth at `comfyui/{workflow}/{category}/...`.
 - **Cloudflare R2**: preview images in `previews/{workflow}/{category}/...`; original files only on request at `downloads/comfyui/...`.
 - **Local PC2 console**: the HF download button copies the original to R2 (or reuses an existing identical cached copy), then issues a one-hour presigned URL.

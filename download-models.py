@@ -22,8 +22,8 @@ except modal.exception.NotFoundError:
 image = (
     modal.Image.debian_slim(python_version="3.11")
     .pip_install("huggingface_hub>=0.30,<2", "hf_xet", "httpx")
-    # 只开 Xet 高性能模式；HF_HUB_ENABLE_HF_TRANSFER 已废弃，不要再设置。
-    .env({"HF_XET_HIGH_PERFORMANCE": "1"})
+    # 关闭 Xet 高性能模式（基准测试确定的默认值）。
+    .env({"HF_XET_HIGH_PERFORMANCE": "0"})
 )
 
 CACHE_DIR = "/cache"
@@ -106,8 +106,8 @@ def fetch_manifest(config_json: str) -> list[dict]:
     return items
 
 
-# 与 comfyui.py 构建期下载相同的快档资源：CPU=16 / MEMORY=32768 MiB。
-@app.function(image=image, volumes={CACHE_DIR: volume}, timeout=86400, secrets=[hf_secret], cpu=16.0, memory=32768)
+# 与 comfyui.py 下载函数相同的默认资源：CPU=4 / MEMORY=4096 MiB。
+@app.function(image=image, volumes={CACHE_DIR: volume}, timeout=86400, secrets=[hf_secret], cpu=4.0, memory=4096)
 def download_shard(payload: dict) -> dict:
     """One shard = one container. HF files go to this shard's private cache
     directory so parallel containers never race on the shared HF cache
@@ -284,9 +284,9 @@ def main():
         sort_keys=True)
     run_id = hashlib.sha256(fingerprint.encode()).hexdigest()[:12]
     print(f"Run id: {run_id}")
-    workers = _env_int("MODEL_DOWNLOAD_WORKERS", 4, 1, 8)
+    workers = _env_int("MODEL_DOWNLOAD_WORKERS", 2, 1, 8)
     total = sum(int(it.get("size") or 0) for it in items)
-    target_gb = _env_int("MODEL_DOWNLOAD_SHARD_TARGET_GB", 64, 1, 1024)
+    target_gb = _env_int("MODEL_DOWNLOAD_SHARD_TARGET_GB", 16, 1, 1024)
     forced = _env_int("MODEL_DOWNLOAD_SHARDS", 0, 0, MAX_SHARDS)
     if forced:
         target = -(-total // forced) if total else 0
