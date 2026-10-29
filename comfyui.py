@@ -48,6 +48,7 @@ COMFY_MODELS_ROOT = Path("/root/comfy/ComfyUI/models")
 GPU_TYPE = os.getenv("MODAL_GPU") or model_config.get("gpu", "L40S")
 # 根据最终 GPU 配置（包含 MODAL_GPU 覆盖）自动决定高显存模式。
 HIGH_VRAM = GPU_TYPE.strip().upper() == "B300"
+DUAL_COMFYUI = os.getenv("MODAL_DUAL_COMFYUI", "0") == "1" and HIGH_VRAM
 COMFY_VER = os.getenv("COMFY_VER")
 
 # ============================================================================
@@ -106,16 +107,18 @@ vol = modal.Volume.from_name("modal-comfyui-models-v2", create_if_missing=True, 
 
 # construct images and install deps/custom nodes
 VERSION = f"--version {COMFY_VER}" if COMFY_VER else ""
-# Unified CUDA 13.0 / PyTorch 2.14.1 image for every GPU type.
+# B300 uses CUDA 13.2; other GPUs retain CUDA 13.0.
+CUDA_VERSION = "13.2.1" if HIGH_VRAM else "13.0.3"
+TORCH_CUDA_INDEX = "cu132" if HIGH_VRAM else "cu130"
 image = (
-    modal.Image.from_registry("nvidia/cuda:13.0.3-devel-ubuntu22.04", add_python="3.11")
+    modal.Image.from_registry(f"nvidia/cuda:{CUDA_VERSION}-devel-ubuntu22.04", add_python="3.11")
     .entrypoint([])
     .apt_install("git", "git-lfs", "libgl1-mesa-dev", "libglib2.0-0", "axel", "build-essential", "ninja-build")
     .pip_install_from_requirements(str(root_dir / "requirements_comfy.txt"))
     .run_commands(
         "uv pip install --system "
         "torch==2.14.1 torchvision==0.29.1 "
-        "--index-url https://download.pytorch.org/whl/cu130"
+        f"--index-url https://download.pytorch.org/whl/{TORCH_CUDA_INDEX}"
     )
     .run_commands(f"comfy --skip-prompt install --nvidia --skip-torch-or-directml {VERSION}")
     .run_commands("git lfs install")
@@ -307,7 +310,7 @@ preview_mount = modal.CloudBucketMount(
 )
 image = image.pip_install("boto3", "imageio-ffmpeg").add_local_file(
     root_dir / "storage" / "hf_sync.py", "/root/hf_sync.py", copy=True
-).env({"WORKFLOW": WORKFLOW})
+).env({"WORKFLOW": WORKFLOW, "MODAL_DUAL_COMFYUI": "1" if DUAL_COMFYUI else "0"})
 
 # Runtime configuration is mounted after builds; editing models.json cannot
 # invalidate the plugin installation image layers.
@@ -369,13 +372,26 @@ class ComfyUI:
     @modal.enter(snap=True)
     def start_checkpoint(self):
         link_cached_models()
-        self.proc = subprocess.Popen(
-            f"comfy launch --background -- --listen 0.0.0.0 --port 8000 "
-            f"--output-directory /outputs/{WORKFLOW}"
-            f"{' --highvram' if HIGH_VRAM else ''}", shell=True
-        )
-        # Block here — snapshot is taken only after this returns
-        wait_for_port(8000, timeout=300)
+        self.procs = []
+        for index, port in enumerate((8000, 8001) if DUAL_COMFYUI else (8000,), start=1):
+            output_dir = f"/outputs/{WORKFLOW}/instance-{index}" if DUAL_COMFYUI else f"/outputs/{WORKFLOW}"
+            user_dir = f"/tmp/comfyui-user-{index}"
+            temp_dir = f"/tmp/comfyui-temp-{index}"
+            import shutil
+            source_user_dir = Path("/root/comfy/ComfyUI/user")
+            if source_user_dir.is_dir():
+                shutil.copytree(source_user_dir, user_dir, dirs_exist_ok=True)
+            else:
+                Path(user_dir).mkdir(parents=True, exist_ok=True)
+            Path(temp_dir).mkdir(parents=True, exist_ok=True)
+            args = ["comfy", "launch", "--", "--listen", "0.0.0.0",
+                    "--port", str(port), "--output-directory", output_dir,
+                    "--temp-directory", temp_dir, "--user-directory", user_dir]
+            if HIGH_VRAM:
+                args.append("--highvram")
+            self.procs.append(subprocess.Popen(args))
+        for port in ((8000, 8001) if DUAL_COMFYUI else (8000,)):
+            wait_for_port(port, timeout=300)
 
     @staticmethod
     def _output_snapshot():
@@ -419,7 +435,8 @@ class ComfyUI:
 
     @modal.enter(snap=False)
     def start_restore(self):
-        wait_for_port(8000, timeout=30)
+        for port in ((8000, 8001) if DUAL_COMFYUI else (8000,)):
+            wait_for_port(port, timeout=30)
         self.sync_proc = subprocess.Popen(
             ["python", "-u", "/root/hf_sync.py"],
             env={**os.environ, "WORKFLOW": WORKFLOW, "COMFY_OUTPUT_ROOT": f"/outputs/{WORKFLOW}"},
@@ -435,6 +452,11 @@ class ComfyUI:
     def ui(self):
         print("App Ready!")
     
+    if DUAL_COMFYUI:
+        @modal.web_server(8001, startup_timeout=300)
+        def ui_second(self):
+            print("ComfyUI instance 2 ready!")
+
     @modal.exit()
     def cleanup(self):
         # Stop background commits before the final flush on graceful shutdown.
@@ -451,10 +473,12 @@ class ComfyUI:
                 sync_proc.wait(timeout=5)
             except subprocess.TimeoutExpired:
                 sync_proc.kill()
-        proc = getattr(self, "proc", None)
-        if proc is not None:
+        for proc in getattr(self, "procs", []):
             try:
                 proc.terminate()
+                proc.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                proc.kill()
             except (ProcessLookupError, OSError):
                 pass
         print("App CleanUp!")
