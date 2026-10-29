@@ -47,8 +47,9 @@ COMFY_MODELS_ROOT = Path("/root/comfy/ComfyUI/models")
 
 GPU_TYPE = os.getenv("MODAL_GPU") or model_config.get("gpu", "L40S")
 # 根据最终 GPU 配置（包含 MODAL_GPU 覆盖）自动决定高显存模式。
-HIGH_VRAM = GPU_TYPE.strip().upper() == "B300"
-DUAL_COMFYUI = os.getenv("MODAL_DUAL_COMFYUI", "0") == "1" and HIGH_VRAM
+IS_B300 = GPU_TYPE.strip().upper() == "B300"
+HIGH_VRAM = IS_B300
+DUAL_COMFYUI = IS_B300 and os.getenv("MODAL_DUAL_COMFYUI", "1") == "1"
 COMFY_VER = os.getenv("COMFY_VER")
 
 # ============================================================================
@@ -107,9 +108,11 @@ vol = modal.Volume.from_name("modal-comfyui-models-v2", create_if_missing=True, 
 
 # construct images and install deps/custom nodes
 VERSION = f"--version {COMFY_VER}" if COMFY_VER else ""
-# B300 uses CUDA 13.2; other GPUs retain CUDA 13.0.
-CUDA_VERSION = "13.2.1" if HIGH_VRAM else "13.0.3"
-TORCH_CUDA_INDEX = "cu132" if HIGH_VRAM else "cu130"
+# B300 uses official CUDA 13.4 / PyTorch cu134; other GPUs retain CUDA 13.0.
+CUDA_VERSION = "13.4.3" if IS_B300 else "13.0.3"
+TORCH_CUDA_INDEX = "cu134" if IS_B300 else "cu130"
+TORCH_VERSION = "2.15.0" if IS_B300 else "2.14.1"
+TORCHVISION_VERSION = "0.29.2" if IS_B300 else "0.29.1"
 image = (
     modal.Image.from_registry(f"nvidia/cuda:{CUDA_VERSION}-devel-ubuntu22.04", add_python="3.11")
     .entrypoint([])
@@ -117,7 +120,7 @@ image = (
     .pip_install_from_requirements(str(root_dir / "requirements_comfy.txt"))
     .run_commands(
         "uv pip install --system "
-        "torch==2.14.1 torchvision==0.29.1 "
+        f"torch=={TORCH_VERSION} torchvision=={TORCHVISION_VERSION} "
         f"--index-url https://download.pytorch.org/whl/{TORCH_CUDA_INDEX}"
     )
     .run_commands(f"comfy --skip-prompt install --nvidia --skip-torch-or-directml {VERSION}")
@@ -349,7 +352,7 @@ def download_models():
 
 
 @app.cls(
-    max_containers=1,
+    max_containers=1,  # Hard cap: never start a second B300 container for this app.
     gpu=GPU_TYPE,
     volumes={
         "/cache": vol,
@@ -448,12 +451,12 @@ class ComfyUI:
         self.commit_thread.start()
         print("App Restored!")
     
-    @modal.web_server(8000, startup_timeout=300)
+    @modal.web_server(8000, startup_timeout=300, label="comfyui-1")
     def ui(self):
         print("App Ready!")
     
     if DUAL_COMFYUI:
-        @modal.web_server(8001, startup_timeout=300)
+        @modal.web_server(8001, startup_timeout=300, label="comfyui-2")
         def ui_second(self):
             print("ComfyUI instance 2 ready!")
 
