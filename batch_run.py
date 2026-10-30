@@ -12,9 +12,13 @@ jobs:  JSON list; each job is {"name": "optional", "set": {"<node_id>.<input>": 
        Other values are written as-is. Seed-like inputs are NOT randomized unless
        you pass --random-seed "<node_id>.<input>".
 Alternatively --images DIR with --image-input "<node_id>.image" makes one job per image.
+For text generation: --prompt TEXT, --prompts FILE.txt (one per line), or
+--shots FILE.csv (shot_id,prompt columns). Uses the unique *.prompt input in the
+API workflow, or --prompt-input NODE.prompt if there are multiple.
 Re-running skips jobs whose output folder already has a DONE marker.
 """
 import argparse
+import csv
 import json
 import mimetypes
 import os
@@ -122,16 +126,47 @@ def wait_done(base, pid, timeout):
     raise TimeoutError(f"prompt {pid} not finished in {timeout}s")
 
 
-def load_jobs(args):
+def prompt_target(graph, target):
+    """Find a unique prompt input unless a node.input target is supplied."""
+    if target:
+        node, sep, field = target.partition(".")
+        if not sep or node not in graph or field not in graph[node].get("inputs", {}):
+            raise ValueError(f"Invalid --prompt-input: {target}")
+        return target
+    matches = [f"{node}.prompt" for node, data in graph.items()
+               if isinstance(data, dict) and isinstance(data.get("inputs", {}).get("prompt"), str)]
+    if len(matches) != 1:
+        raise ValueError(f"Found {len(matches)} prompt inputs; specify --prompt-input NODE.prompt")
+    return matches[0]
+
+
+def load_jobs(args, graph):
     if args.jobs:
-        jobs = json.loads(Path(args.jobs).read_text(encoding="utf-8"))
+        jobs = json.loads(Path(args.jobs).read_text(encoding="utf-8-sig"))
     elif args.images:
         if not args.image_input:
             sys.exit("--images requires --image-input '<node_id>.<input>'")
         files = sorted(p for p in Path(args.images).iterdir() if p.suffix.lower() in IMAGE_EXT)
         jobs = [{"name": p.stem, "set": {args.image_input: "@" + str(p)}} for p in files]
     else:
-        sys.exit("Provide --jobs or --images")
+        target = prompt_target(graph, args.prompt_input)
+        if args.prompt is not None:
+            prompts = [("prompt_001", args.prompt)]
+        elif args.prompts:
+            lines = Path(args.prompts).read_text(encoding="utf-8-sig").splitlines()
+            prompts = [(f"shot_{i:03d}", line.strip()) for i, line in enumerate(lines, 1) if line.strip()]
+        elif args.shots:
+            with Path(args.shots).open(encoding="utf-8-sig", newline="") as f:
+                reader = csv.DictReader(f)
+                if not reader.fieldnames or not {"shot_id", "prompt"}.issubset(reader.fieldnames):
+                    raise ValueError("CSV needs shot_id,prompt columns")
+                prompts = [(row["shot_id"].strip(), row["prompt"].strip()) for row in reader
+                           if row["prompt"] and row["prompt"].strip()]
+        else:
+            sys.exit("Provide --jobs, --images, --prompt, --prompts, or --shots")
+        if any(not name for name, _ in prompts) or len({name for name, _ in prompts}) != len(prompts):
+            raise ValueError("Shot names must be nonempty and unique")
+        jobs = [{"name": name, "set": {target: prompt}} for name, prompt in prompts]
     if not isinstance(jobs, list) or not jobs:
         sys.exit("No jobs found")
     return jobs
@@ -141,8 +176,13 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--url", default=os.getenv("COMFY_URL"), help="Deployed app URL (or env COMFY_URL)")
     ap.add_argument("--graph", required=True, help="ComfyUI API-format JSON")
-    ap.add_argument("--jobs", help="jobs JSON list")
-    ap.add_argument("--images", help="folder of images, one job per image")
+    inputs = ap.add_mutually_exclusive_group()
+    inputs.add_argument("--jobs", help="jobs JSON list")
+    inputs.add_argument("--images", help="folder of images, one job per image")
+    inputs.add_argument("--prompt", help="one text prompt")
+    inputs.add_argument("--prompts", help="TXT, one prompt per line")
+    inputs.add_argument("--shots", help="CSV with shot_id,prompt columns")
+    ap.add_argument("--prompt-input", help="node_id.prompt; auto-detects if unique")
     ap.add_argument("--image-input", help="target for --images, e.g. 10.image")
     ap.add_argument("--random-seed", action="append", default=[], help="<node_id>.<input> to randomize per job")
     ap.add_argument("--out", default="results")
@@ -155,7 +195,7 @@ def main():
     graph = json.loads(Path(args.graph).read_text(encoding="utf-8"))
     if "nodes" in graph:
         sys.exit("This is a UI-format workflow. In ComfyUI use Workflow > Export (API) and pass that file.")
-    jobs = load_jobs(args)
+    jobs = load_jobs(args, graph)
     out = Path(args.out)
     cache, failed = {}, 0
 
