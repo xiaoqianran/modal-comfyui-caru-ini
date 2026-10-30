@@ -24,5 +24,12 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Typecheck and bundle
         run: npm run check
+      - name: Bundle distributable Worker
+        run: npx wrangler deploy --dry-run --outdir dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: file-transfer-worker
+          path: integrations/file-transfer-mcp/dist/
+          retention-days: 1
       - name: Verify PC2 receiver syntax
         run: python3 -m py_compile pc2_receive.py
