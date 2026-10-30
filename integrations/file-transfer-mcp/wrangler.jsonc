@@ -1,8 +1,17 @@
 {
+  "$schema": "node_modules/wrangler/config-schema.json",
   "name": "chatgpt-file-transfer-mcp",
   "main": "src/index.ts",
   "compatibility_date": "2026-10-30",
-  "compatibility_flags": ["nodejs_compat"],
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "workers_dev": true,
-  "r2_buckets": [{ "binding": "FILES", "bucket_name": "chatgpt-transfer" }]
+  "vars": {
+    "MCP_RESOURCE": "https://chatgpt-file-transfer-mcp.wangran.workers.dev/mcp"
+  },
+  "kv_namespaces": [
+    { "binding": "OAUTH_KV", "id": "3793596ec6c64264946fc605ef7393eb" }
+  ],
+  "r2_buckets": [
+    { "binding": "FILES", "bucket_name": "chatgpt-transfer" }
+  ]
 }

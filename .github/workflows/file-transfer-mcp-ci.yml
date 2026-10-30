@@ -1,0 +1,28 @@
+name: File Transfer MCP CI
+on:
+  push:
+    paths:
+      - integrations/file-transfer-mcp/**
+      - .github/workflows/file-transfer-mcp-ci.yml
+  pull_request:
+    paths:
+      - integrations/file-transfer-mcp/**
+      - .github/workflows/file-transfer-mcp-ci.yml
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: integrations/file-transfer-mcp
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install
+        run: npm install --no-audit --no-fund
+      - name: Typecheck and bundle
+        run: npm run check
+      - name: Verify PC2 receiver syntax
+        run: python3 -m py_compile pc2_receive.py

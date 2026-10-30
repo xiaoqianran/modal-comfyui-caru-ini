@@ -1,52 +1,68 @@
-# ChatGPT → Cloudflare Worker MCP → R2 → PC2
+# ChatGPT ↔ Cloudflare Worker MCP ↔ private R2 ↔ PC2
 
-A small, private file bridge independent of the existing Qwen / H3 runner.
+Private transfer bridge for the existing ComfyUI/Qwen/H3 runner.
 
-## Included
+## Files
 
-- `upload_file`: accepts a ChatGPT-authorized file input (`openai/fileParams`), downloads its bytes and stores privately in R2; returns `key`, `size`, `sha256`.
-- `get_download_url`: creates a 10-minute HMAC-signed Worker download URL for that key.
-- `delete_file`: deletes the temporary R2 object (destructive action).
-- `pc2_receive.py`: downloads and checks SHA-256, optionally safely extracts ZIP.
+- `src/index.ts`: MCP tools, R2 storage, 10-minute HMAC-signed downloads.
+- `src/auth.ts`: Cloudflare OAuth 2.1 authorization + per-client consent and owner-passphrase login.
+- `pc2_receive.py`: downloads, verifies SHA-256, safely extracts ZIPs.
 
-Only `/download/*` with an unexpired HMAC signature is available without bearer authorization. All MCP tools require `TRANSFER_TOKEN`. The R2 bucket is **not public**. Upload input is limited to 25 MiB and approved HTTPS source hosts, and never follows HTTP redirects.
+## Three MCP tools
 
-## Cloudflare setup
+1. `upload_file(file)` declares `_meta["openai/fileParams"]`. ChatGPT supplies a file object with `download_url`, `file_id`, `file_name`, `mime_type`. Worker fetches **real bytes** and saves privately to R2, returns `key`, `size`, `sha256`.
+2. `get_download_url(key)` returns an expiring (10-minute) *Worker-signed GET URL* plus stored SHA-256. It is **not** an S3 presigned URL; it needs no R2 keys on PC2.
+3. `delete_file(key)` deletes an R2 object.
 
-Existing private R2 bucket: `chatgpt-transfer`, bound to `FILES` by `wrangler.jsonc`.
+No PC2 inbound ports, no second MCP server, no new runner required. The only unauthenticated endpoint is a time-limited, HMAC-authenticated GET download route. All MCP tools use OAuth.
+
+## Cloudflare bindings
+
+The existing private R2 bucket `chatgpt-transfer` is bound as `FILES`. The OAuth KV namespace `chatgpt-transfer-oauth` is bound as `OAUTH_KV` in `wrangler.jsonc`. `MCP_RESOURCE` must exactly equal the deployed public `https://.../mcp` URL.
+
+This setup uses the Cloudflare `OAuthProvider` one-Worker option. Clients authorize via a browser page that displays the requesting client name, redirect host and requested scopes, and requires the owner's 24+ character passphrase. No passphrase is committed in Git.
+
+## Build / deploy
+
+Run in this directory on a machine with working npm registry access:
 
 ```powershell
-cd integrations/file-transfer-mcp
-npm install --registry=https://registry.npmjs.org
+npm install
 npm run check
 npx wrangler login
-npx wrangler secret put TRANSFER_TOKEN
+npx wrangler secret put OWNER_PASSWORD
+npx wrangler secret put DOWNLOAD_SECRET
 npm run deploy
 ```
 
-Set a randomly generated, high-entropy secret through Wrangler. Never save a token in Git.
+Use two **different, random** secrets of at least 32 characters each. The owner passphrase must be kept so you can enter it during the ChatGPT OAuth consent flow; the download secret is server-only. Do not include either in Git or ChatGPT messages.
 
-The service deliberately returns 503 if the secret is not set; a mismatched bearer token returns 401. For **ChatGPT private plugin installation**, replace this development bearer gate with the Cloudflare **OAuth authenticated remote MCP** template before connecting. ChatGPT's OAuth handshake, identity handling and consent flow are **not** implemented in this repository yet. It is therefore not production-ready or verified with ChatGPT.
+After deployment, open ChatGPT Plugins settings, add a private custom MCP endpoint at the configured `MCP_RESOURCE`, complete the authorization prompt, and check that all three tools appear. If the account/workspace cannot install private MCP plugins, do not bypass that by exposing unsecured endpoints.
 
-## Use after ChatGPT plugin authorization
+## End-to-end test
 
-Call `upload_file`, followed by `get_download_url`. Then tell the connected PC2 AgentDock to run (with the actual values returned, not placeholders):
-
-```powershell
-python integrations/file-transfer-mcp/pc2_receive.py --url "<temporary URL>" --sha256 "<sha256>" --output "inputs/storyboard_16_frames.zip" --extract-to "inputs/storyboard_16"
-```
-
-The Worker URL is **a custom signed download proxy**, not an S3 presigned GET URL. PC2 needs no S3 secrets and no inbound ports. After validating the 16 files, invoke the project's existing `batch_run.py` task. Then call `delete_file` for cleanup.
-
-## Verification
+1. In ChatGPT, select the generated `storyboard_16_frames.zip` as the `upload_file` file parameter.
+2. Confirm `key` and `sha256` are returned and the private R2 object exists.
+3. Call `get_download_url` and pass its URL + SHA-256 to the connected PC2 AgentDock.
+4. AgentDock executes:
 
 ```powershell
-python -m py_compile integrations/file-transfer-mcp/pc2_receive.py
-node --experimental-strip-types --check integrations/file-transfer-mcp/src/index.ts
+uv run python integrations/file-transfer-mcp/pc2_receive.py --url "<temporary-url>" --sha256 "<64-hex>" --output inputs/storyboard_16_frames.zip --extract-to inputs/storyboard_16
 ```
 
-Passing syntax checks alone does not verify MCP routing, OAuth, deployment or network transfer. Do not declare the workflow complete without a full ChatGPT → Worker → R2 → PC2 SHA-256 test.
+5. Verify `01.png`–`16.png` and start the existing Task/Runner only after matching the complete archive hash.
+6. Call `delete_file` to remove the transient R2 object.
+
+## Safety and limitations
+
+- Source URLs must be HTTPS on the allowlist (ChatGPT/OpenAI domains). Redirects are blocked to reduce SSRF risks.
+- 25 MiB file input cap, size-enforced even when Content-Length is missing.
+- Object keys are randomized and private. No R2 secrets reach PC2.
+- The shared owner login is suitable for **one trusted user only**. Apply Cloudflare WAF/rate-limiting rules to `/authorize` before production; add separate identities/ACLs before multi-user support.
+- ZIPs must be checked for path traversal and symlinks; do not extract unknown/untrusted archives without resource limits.
+- OAuth, build, plugin installation, file selection and full network transfer must pass real tests. Successful syntax checks are not proof of a deployed service.
 
 References:
-- https://developers.cloudflare.com/agents/model-context-protocol/apis/handler-api/
-- https://developers.openai.com/plugins/reference#file-apis
+- https://developers.cloudflare.com/agents/model-context-protocol/guides/remote-mcp-server/
+- https://developers.cloudflare.com/agents/model-context-protocol/protocol/authorization/
+- https://developers.openai.com/plugins/reference

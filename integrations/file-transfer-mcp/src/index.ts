@@ -1,10 +1,16 @@
 import { McpServer } from "@modelcontextprotocol/server";
 import { createMcpHandler } from "agents/mcp/server";
+import { OAuthProvider, insufficientScope, type OAuthResourceContext } from "@cloudflare/workers-oauth-provider";
+import { authHandler } from "./auth";
 import { z } from "zod";
 
 interface Env {
   FILES: R2Bucket;
-  TRANSFER_TOKEN?: string;
+  OAUTH_KV: KVNamespace;
+  OAUTH_PROVIDER: any;
+  OWNER_PASSWORD?: string;
+  DOWNLOAD_SECRET?: string;
+  MCP_RESOURCE: string;
 }
 
 const MAX_BYTES = 25 * 1024 * 1024;
@@ -117,11 +123,11 @@ function makeServer(env: Env, origin: string): McpServer {
     annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
   }, async ({ key }) => {
     const object = await env.FILES.head(key);
-    if (!object || !env.TRANSFER_TOKEN) {
+    if (!object || !env.DOWNLOAD_SECRET) {
       return { isError: true, content: [{ type: "text", text: "Object not found" }] };
     }
     const expires = Math.floor(Date.now() / 1000) + DOWNLOAD_TTL_SECONDS;
-    const signature = await hmac(env.TRANSFER_TOKEN, `${key}\n${expires}`);
+    const signature = await hmac(env.DOWNLOAD_SECRET, `${key}\n${expires}`);
     const url = new URL(`/download/${key}`, origin);
     url.searchParams.set("expires", String(expires));
     url.searchParams.set("sig", signature);
@@ -141,7 +147,7 @@ function makeServer(env: Env, origin: string): McpServer {
 }
 
 async function serveDownload(request: Request, env: Env, path: string): Promise<Response> {
-  if (request.method !== "GET" || !env.TRANSFER_TOKEN) return new Response("Not found", { status: 404 });
+  if (request.method !== "GET" || !env.DOWNLOAD_SECRET) return new Response("Not found", { status: 404 });
   const key = decodeURIComponent(path.slice("/download/".length));
   if (!KEY_PATTERN.test(key)) return new Response("Invalid key", { status: 400 });
   const url = new URL(request.url);
@@ -151,7 +157,7 @@ async function serveDownload(request: Request, env: Env, path: string): Promise<
   if (!Number.isSafeInteger(expires) || expires < now || expires > now + DOWNLOAD_TTL_SECONDS || !sig || !/^[a-f0-9]{64}$/.test(sig)) {
     return new Response("Invalid or expired link", { status: 403 });
   }
-  const expected = await hmac(env.TRANSFER_TOKEN, `${key}\n${expires}`);
+  const expected = await hmac(env.DOWNLOAD_SECRET, `${key}\n${expires}`);
   if (sig !== expected) return new Response("Invalid signature", { status: 403 });
   const object = await env.FILES.get(key);
   if (!object) return new Response("Not found", { status: 404 });
@@ -166,14 +172,33 @@ async function serveDownload(request: Request, env: Env, path: string): Promise<
 }
 
 export default {
-  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+  fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
     if (url.pathname.startsWith("/download/")) return serveDownload(request, env, url.pathname);
-    if (url.pathname !== "/mcp") return new Response("Not found", { status: 404 });
-    if (!env.TRANSFER_TOKEN) return new Response("Not configured", { status: 503 });
-    if (request.headers.get("Authorization") !== `Bearer ${env.TRANSFER_TOKEN}`) {
-      return new Response("Unauthorized", { status: 401 });
+    if (!env.MCP_RESOURCE || !env.DOWNLOAD_SECRET) {
+      return Promise.resolve(new Response("Not configured", { status: 503 }));
     }
-    return createMcpHandler(() => makeServer(env, url.origin), { corsOptions: false })(request, env, ctx);
+    const provider = new OAuthProvider<Env>({
+      authorizeEndpoint: "/authorize",
+      tokenEndpoint: "/oauth/token",
+      apiRoute: "/mcp",
+      apiHandler: {
+        fetch(req: Request, bindings: Env, context: OAuthResourceContext<{ userId: string }>) {
+          if (!context.auth.scope.includes("mcp:files")) {
+            return insufficientScope(context.auth, ["mcp:files"]);
+          }
+          return createMcpHandler(() => makeServer(bindings, url.origin))(req, bindings, context);
+        },
+      },
+      defaultHandler: authHandler,
+      scopesSupported: ["mcp:files"],
+      requiredScopes: ["mcp:files"],
+      resourceMetadata: {
+        resource: env.MCP_RESOURCE,
+        authorization_servers: [new URL(env.MCP_RESOURCE).origin],
+      },
+      clientIdMetadataDocumentEnabled: true,
+    });
+    return provider.fetch(request, env, ctx);
   },
 };
