@@ -26,5 +26,6 @@
       "filename": "vae/qwen_image_2.1_vae_bf16.safetensors",
       "model_dir": "vae"
     }
-  ]
+  ],
+  "min_containers": 1
 }
