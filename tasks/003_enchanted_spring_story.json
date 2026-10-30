@@ -1,0 +1,148 @@
+{
+  "name": "003_enchanted_spring_story",
+  "synopsis_zh": "少女循着无声银铃与发光花瓣进入冰封温室，以金色种子唤醒春天，最终让整座花园重新盛放。",
+  "steps": [
+    {
+      "id": "scenes",
+      "endpoint": "qwen",
+      "workflow": "workflows/comfyui-qwen-image-2-1/image_qwen_image_2_1_t2i.json",
+      "set": {
+        "459:452.prompt": "$item.prompt",
+        "459:452.negative_prompt": "deformed hands, extra fingers, distorted facial anatomy, text, watermark",
+        "13.aspect_ratio": "3:4 (Portrait Standard)",
+        "13.megapixels": 2,
+        "459:458.steps": 40
+      },
+      "foreach": [
+        {
+          "name": "01",
+          "prompt": "A young adult woman with long flowing dark chestnut-brown hair, wispy bangs, luminous olive-green eyes, rosy cheeks and natural peach-toned skin wears a cream-white floral lace dress with translucent sleeves, tiny white blossoms in her hair and a large sheer ivory ribbon tied behind her head. She notices a small silver bell hanging silently from a flowering branch and reaches toward it, framed in a close three-quarter portrait. The scene is a Japanese semi-realistic fantasy illustration with delicate painterly textures, fresh yellow-green spring foliage, warm golden backlighting, dappled leaf shadows and luminous atmospheric haze. No lettering or watermark.",
+          "set": {
+            "459:458.seed": 202610300300,
+            "461.filename_prefix": "003_enchanted_spring_01"
+          }
+        },
+        {
+          "name": "02",
+          "prompt": "A young adult woman with long flowing dark chestnut-brown hair, wispy bangs, luminous olive-green eyes, rosy cheeks and natural peach-toned skin wears a cream-white floral lace dress with translucent sleeves, tiny white blossoms in her hair and a large sheer ivory ribbon tied behind her head. The silver bell moves without a sound as nearby white blossoms turn toward it; she looks surprised beneath the green canopy. The scene is a Japanese semi-realistic fantasy illustration with delicate painterly textures, fresh yellow-green spring foliage, warm golden backlighting, dappled leaf shadows and luminous atmospheric haze. No lettering or watermark.",
+          "set": {
+            "459:458.seed": 202610300300,
+            "461.filename_prefix": "003_enchanted_spring_02"
+          }
+        },
+        {
+          "name": "03",
+          "prompt": "A young adult woman with long flowing dark chestnut-brown hair, wispy bangs, luminous olive-green eyes, rosy cheeks and natural peach-toned skin wears a cream-white floral lace dress with translucent sleeves, tiny white blossoms in her hair and a large sheer ivory ribbon tied behind her head. A luminous petal lands in her palm and reflects the outline of an abandoned greenhouse; close focus on her eyes and hand. The scene is a Japanese semi-realistic fantasy illustration with delicate painterly textures, fresh yellow-green spring foliage, warm golden backlighting, dappled leaf shadows and luminous atmospheric haze. No lettering or watermark.",
+          "set": {
+            "459:458.seed": 202610300300,
+            "461.filename_prefix": "003_enchanted_spring_03"
+          }
+        },
+        {
+          "name": "04",
+          "prompt": "A young adult woman with long flowing dark chestnut-brown hair, wispy bangs, luminous olive-green eyes, rosy cheeks and natural peach-toned skin wears a cream-white floral lace dress with translucent sleeves, tiny white blossoms in her hair and a large sheer ivory ribbon tied behind her head. She follows the floating petal along a winding mossy stone path, viewed from behind through foreground flowers. The scene is a Japanese semi-realistic fantasy illustration with delicate painterly textures, fresh yellow-green spring foliage, warm golden backlighting, dappled leaf shadows and luminous atmospheric haze. No lettering or watermark.",
+          "set": {
+            "459:458.seed": 202610300300,
+            "461.filename_prefix": "003_enchanted_spring_04"
+          }
+        },
+        {
+          "name": "05",
+          "prompt": "A young adult woman with long flowing dark chestnut-brown hair, wispy bangs, luminous olive-green eyes, rosy cheeks and natural peach-toned skin wears a cream-white floral lace dress with translucent sleeves, tiny white blossoms in her hair and a large sheer ivory ribbon tied behind her head. She discovers a forgotten glass greenhouse covered in ivy and climbing roses, with one golden window glowing in the distance. The scene is a Japanese semi-realistic fantasy illustration with delicate painterly textures, fresh yellow-green spring foliage, warm golden backlighting, dappled leaf shadows and luminous atmospheric haze. No lettering or watermark.",
+          "set": {
+            "459:458.seed": 202610300300,
+            "461.filename_prefix": "003_enchanted_spring_05"
+          }
+        },
+        {
+          "name": "06",
+          "prompt": "A young adult woman with long flowing dark chestnut-brown hair, wispy bangs, luminous olive-green eyes, rosy cheeks and natural peach-toned skin wears a cream-white floral lace dress with translucent sleeves, tiny white blossoms in her hair and a large sheer ivory ribbon tied behind her head. At the greenhouse door she examines a brass lock shaped like a closed flower as the petal approaches its center. The scene is a Japanese semi-realistic fantasy illustration with delicate painterly textures, fresh yellow-green spring foliage, warm golden backlighting, dappled leaf shadows and luminous atmospheric haze. No lettering or watermark.",
+          "set": {
+            "459:458.seed": 202610300300,
+            "461.filename_prefix": "003_enchanted_spring_06"
+          }
+        },
+        {
+          "name": "07",
+          "prompt": "A young adult woman with long flowing dark chestnut-brown hair, wispy bangs, luminous olive-green eyes, rosy cheeks and natural peach-toned skin wears a cream-white floral lace dress with translucent sleeves, tiny white blossoms in her hair and a large sheer ivory ribbon tied behind her head. The flower-shaped lock unfolds and the door opens, releasing a gentle cloud of golden pollen; she steps back in wonder. The scene is a Japanese semi-realistic fantasy illustration with delicate painterly textures, fresh yellow-green spring foliage, warm golden backlighting, dappled leaf shadows and luminous atmospheric haze. No lettering or watermark.",
+          "set": {
+            "459:458.seed": 202610300300,
+            "461.filename_prefix": "003_enchanted_spring_07"
+          }
+        },
+        {
+          "name": "08",
+          "prompt": "A young adult woman with long flowing dark chestnut-brown hair, wispy bangs, luminous olive-green eyes, rosy cheeks and natural peach-toned skin wears a cream-white floral lace dress with translucent sleeves, tiny white blossoms in her hair and a large sheer ivory ribbon tied behind her head. Inside the greenhouse, frost coats the glass and dormant plants fill ceramic pots; she walks down the central aisle. The scene is a Japanese semi-realistic fantasy illustration with delicate painterly textures, fresh yellow-green spring foliage, warm golden backlighting, dappled leaf shadows and luminous atmospheric haze. No lettering or watermark.",
+          "set": {
+            "459:458.seed": 202610300300,
+            "461.filename_prefix": "003_enchanted_spring_08"
+          }
+        },
+        {
+          "name": "09",
+          "prompt": "A young adult woman with long flowing dark chestnut-brown hair, wispy bangs, luminous olive-green eyes, rosy cheeks and natural peach-toned skin wears a cream-white floral lace dress with translucent sleeves, tiny white blossoms in her hair and a large sheer ivory ribbon tied behind her head. She kneels before a cracked porcelain bowl containing a tiny golden seed on a wooden table. The scene is a Japanese semi-realistic fantasy illustration with delicate painterly textures, fresh yellow-green spring foliage, warm golden backlighting, dappled leaf shadows and luminous atmospheric haze. No lettering or watermark.",
+          "set": {
+            "459:458.seed": 202610300300,
+            "461.filename_prefix": "003_enchanted_spring_09"
+          }
+        },
+        {
+          "name": "10",
+          "prompt": "A young adult woman with long flowing dark chestnut-brown hair, wispy bangs, luminous olive-green eyes, rosy cheeks and natural peach-toned skin wears a cream-white floral lace dress with translucent sleeves, tiny white blossoms in her hair and a large sheer ivory ribbon tied behind her head. She cups the golden seed between her hands; its warmth melts the frost on the nearby glass and lights her face. The scene is a Japanese semi-realistic fantasy illustration with delicate painterly textures, fresh yellow-green spring foliage, warm golden backlighting, dappled leaf shadows and luminous atmospheric haze. No lettering or watermark.",
+          "set": {
+            "459:458.seed": 202610300300,
+            "461.filename_prefix": "003_enchanted_spring_10"
+          }
+        },
+        {
+          "name": "11",
+          "prompt": "A young adult woman with long flowing dark chestnut-brown hair, wispy bangs, luminous olive-green eyes, rosy cheeks and natural peach-toned skin wears a cream-white floral lace dress with translucent sleeves, tiny white blossoms in her hair and a large sheer ivory ribbon tied behind her head. Fresh green vines climb the greenhouse columns and white flowers bloom overhead as she looks upward. The scene is a Japanese semi-realistic fantasy illustration with delicate painterly textures, fresh yellow-green spring foliage, warm golden backlighting, dappled leaf shadows and luminous atmospheric haze. No lettering or watermark.",
+          "set": {
+            "459:458.seed": 202610300300,
+            "461.filename_prefix": "003_enchanted_spring_11"
+          }
+        },
+        {
+          "name": "12",
+          "prompt": "A young adult woman with long flowing dark chestnut-brown hair, wispy bangs, luminous olive-green eyes, rosy cheeks and natural peach-toned skin wears a cream-white floral lace dress with translucent sleeves, tiny white blossoms in her hair and a large sheer ivory ribbon tied behind her head. A translucent pale butterfly emerges from a flower and circles her face, caught in a delicate close portrait. The scene is a Japanese semi-realistic fantasy illustration with delicate painterly textures, fresh yellow-green spring foliage, warm golden backlighting, dappled leaf shadows and luminous atmospheric haze. No lettering or watermark.",
+          "set": {
+            "459:458.seed": 202610300300,
+            "461.filename_prefix": "003_enchanted_spring_12"
+          }
+        },
+        {
+          "name": "13",
+          "prompt": "A young adult woman with long flowing dark chestnut-brown hair, wispy bangs, luminous olive-green eyes, rosy cheeks and natural peach-toned skin wears a cream-white floral lace dress with translucent sleeves, tiny white blossoms in her hair and a large sheer ivory ribbon tied behind her head. She finds the last frost-covered circular window and reaches toward it while the butterfly rests on its frame. The scene is a Japanese semi-realistic fantasy illustration with delicate painterly textures, fresh yellow-green spring foliage, warm golden backlighting, dappled leaf shadows and luminous atmospheric haze. No lettering or watermark.",
+          "set": {
+            "459:458.seed": 202610300300,
+            "461.filename_prefix": "003_enchanted_spring_13"
+          }
+        },
+        {
+          "name": "14",
+          "prompt": "A young adult woman with long flowing dark chestnut-brown hair, wispy bangs, luminous olive-green eyes, rosy cheeks and natural peach-toned skin wears a cream-white floral lace dress with translucent sleeves, tiny white blossoms in her hair and a large sheer ivory ribbon tied behind her head. The frost dissolves from the window and golden sunlight floods the greenhouse, revealing thousands of newly opened flowers. The scene is a Japanese semi-realistic fantasy illustration with delicate painterly textures, fresh yellow-green spring foliage, warm golden backlighting, dappled leaf shadows and luminous atmospheric haze. No lettering or watermark.",
+          "set": {
+            "459:458.seed": 202610300300,
+            "461.filename_prefix": "003_enchanted_spring_14"
+          }
+        },
+        {
+          "name": "15",
+          "prompt": "A young adult woman with long flowing dark chestnut-brown hair, wispy bangs, luminous olive-green eyes, rosy cheeks and natural peach-toned skin wears a cream-white floral lace dress with translucent sleeves, tiny white blossoms in her hair and a large sheer ivory ribbon tied behind her head. She steps outside the restored greenhouse holding the empty porcelain bowl, a butterfly perched on its rim. The scene is a Japanese semi-realistic fantasy illustration with delicate painterly textures, fresh yellow-green spring foliage, warm golden backlighting, dappled leaf shadows and luminous atmospheric haze. No lettering or watermark.",
+          "set": {
+            "459:458.seed": 202610300300,
+            "461.filename_prefix": "003_enchanted_spring_15"
+          }
+        },
+        {
+          "name": "16",
+          "prompt": "A young adult woman with long flowing dark chestnut-brown hair, wispy bangs, luminous olive-green eyes, rosy cheeks and natural peach-toned skin wears a cream-white floral lace dress with translucent sleeves, tiny white blossoms in her hair and a large sheer ivory ribbon tied behind her head. At golden hour she turns back beneath flowering branches toward the restored greenhouse, with the little silver bell behind her. The scene is a Japanese semi-realistic fantasy illustration with delicate painterly textures, fresh yellow-green spring foliage, warm golden backlighting, dappled leaf shadows and luminous atmospheric haze. No lettering or watermark.",
+          "set": {
+            "459:458.seed": 202610300300,
+            "461.filename_prefix": "003_enchanted_spring_16"
+          }
+        }
+      ]
+    }
+  ]
+}
