@@ -1,5 +1,5 @@
 {
-  "gpu": "B300",
+  "gpu": "B200+",
   "models": [
     {
       "repo_id": "Comfy-Org/Qwen-Image-2.1",

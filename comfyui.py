@@ -47,7 +47,7 @@ COMFY_MODELS_ROOT = Path("/root/comfy/ComfyUI/models")
 
 GPU_TYPE = os.getenv("MODAL_GPU") or model_config.get("gpu", "L40S")
 # 根据最终 GPU 配置（包含 MODAL_GPU 覆盖）自动决定高显存模式。
-IS_BLACKWELL = GPU_TYPE.strip().upper() in {"B200", "B300"}
+IS_BLACKWELL = GPU_TYPE.strip().upper() in {"B200", "B200+", "B300"}
 HIGH_VRAM = IS_BLACKWELL
 DUAL_COMFYUI = IS_BLACKWELL and os.getenv("MODAL_DUAL_COMFYUI", "1") == "1"
 COMFY_VER = os.getenv("COMFY_VER")
