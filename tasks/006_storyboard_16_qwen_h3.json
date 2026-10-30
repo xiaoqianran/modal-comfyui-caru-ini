@@ -1,0 +1,308 @@
+{
+  "name": "006_storyboard_16_qwen_h3",
+  "mode": "stream",
+  "steps": [
+    {
+      "id": "qwen",
+      "endpoint": "qwen",
+      "workflow": "workflows/comfyui-qwen-image-2-1/image_qwen_image_2_1_image_edit.json",
+      "foreach": [
+        {
+          "name": "01",
+          "set": {
+            "470.image": "@inputs/storyboard_16/01.png",
+            "475.image": "@inputs/storyboard_16/01.png",
+            "459:474.prompt": "Remove the white scene number at the upper left of image 1 and naturally inpaint the missing background. Preserve the same woman, facial identity, pose, hairstyle, clothing, scene, lighting and camera framing. Enhance fine facial detail and cinematic realism without changing the composition or adding objects. No text, numbers or watermark.",
+            "459:458.steps": 25,
+            "461.filename_prefix": "storyboard_qwen_01"
+          }
+        },
+        {
+          "name": "02",
+          "set": {
+            "470.image": "@inputs/storyboard_16/02.png",
+            "475.image": "@inputs/storyboard_16/02.png",
+            "459:474.prompt": "Remove the white scene number at the upper left of image 1 and naturally inpaint the missing background. Preserve the same woman, facial identity, pose, hairstyle, clothing, scene, lighting and camera framing. Enhance fine facial detail and cinematic realism without changing the composition or adding objects. No text, numbers or watermark.",
+            "459:458.steps": 25,
+            "461.filename_prefix": "storyboard_qwen_02"
+          }
+        },
+        {
+          "name": "03",
+          "set": {
+            "470.image": "@inputs/storyboard_16/03.png",
+            "475.image": "@inputs/storyboard_16/03.png",
+            "459:474.prompt": "Remove the white scene number at the upper left of image 1 and naturally inpaint the missing background. Preserve the same woman, facial identity, pose, hairstyle, clothing, scene, lighting and camera framing. Enhance fine facial detail and cinematic realism without changing the composition or adding objects. No text, numbers or watermark.",
+            "459:458.steps": 25,
+            "461.filename_prefix": "storyboard_qwen_03"
+          }
+        },
+        {
+          "name": "04",
+          "set": {
+            "470.image": "@inputs/storyboard_16/04.png",
+            "475.image": "@inputs/storyboard_16/04.png",
+            "459:474.prompt": "Remove the white scene number at the upper left of image 1 and naturally inpaint the missing background. Preserve the same woman, facial identity, pose, hairstyle, clothing, scene, lighting and camera framing. Enhance fine facial detail and cinematic realism without changing the composition or adding objects. No text, numbers or watermark.",
+            "459:458.steps": 25,
+            "461.filename_prefix": "storyboard_qwen_04"
+          }
+        },
+        {
+          "name": "05",
+          "set": {
+            "470.image": "@inputs/storyboard_16/05.png",
+            "475.image": "@inputs/storyboard_16/05.png",
+            "459:474.prompt": "Remove the white scene number at the upper left of image 1 and naturally inpaint the missing background. Preserve the same woman, facial identity, pose, hairstyle, clothing, scene, lighting and camera framing. Enhance fine facial detail and cinematic realism without changing the composition or adding objects. No text, numbers or watermark.",
+            "459:458.steps": 25,
+            "461.filename_prefix": "storyboard_qwen_05"
+          }
+        },
+        {
+          "name": "06",
+          "set": {
+            "470.image": "@inputs/storyboard_16/06.png",
+            "475.image": "@inputs/storyboard_16/06.png",
+            "459:474.prompt": "Remove the white scene number at the upper left of image 1 and naturally inpaint the missing background. Preserve the same woman, facial identity, pose, hairstyle, clothing, scene, lighting and camera framing. Enhance fine facial detail and cinematic realism without changing the composition or adding objects. No text, numbers or watermark.",
+            "459:458.steps": 25,
+            "461.filename_prefix": "storyboard_qwen_06"
+          }
+        },
+        {
+          "name": "07",
+          "set": {
+            "470.image": "@inputs/storyboard_16/07.png",
+            "475.image": "@inputs/storyboard_16/07.png",
+            "459:474.prompt": "Remove the white scene number at the upper left of image 1 and naturally inpaint the missing background. Preserve the same woman, facial identity, pose, hairstyle, clothing, scene, lighting and camera framing. Enhance fine facial detail and cinematic realism without changing the composition or adding objects. No text, numbers or watermark.",
+            "459:458.steps": 25,
+            "461.filename_prefix": "storyboard_qwen_07"
+          }
+        },
+        {
+          "name": "08",
+          "set": {
+            "470.image": "@inputs/storyboard_16/08.png",
+            "475.image": "@inputs/storyboard_16/08.png",
+            "459:474.prompt": "Remove the white scene number at the upper left of image 1 and naturally inpaint the missing background. Preserve the same woman, facial identity, pose, hairstyle, clothing, scene, lighting and camera framing. Enhance fine facial detail and cinematic realism without changing the composition or adding objects. No text, numbers or watermark.",
+            "459:458.steps": 25,
+            "461.filename_prefix": "storyboard_qwen_08"
+          }
+        },
+        {
+          "name": "09",
+          "set": {
+            "470.image": "@inputs/storyboard_16/09.png",
+            "475.image": "@inputs/storyboard_16/09.png",
+            "459:474.prompt": "Remove the white scene number at the upper left of image 1 and naturally inpaint the missing background. Preserve the same woman, facial identity, pose, hairstyle, clothing, scene, lighting and camera framing. Enhance fine facial detail and cinematic realism without changing the composition or adding objects. No text, numbers or watermark.",
+            "459:458.steps": 25,
+            "461.filename_prefix": "storyboard_qwen_09"
+          }
+        },
+        {
+          "name": "10",
+          "set": {
+            "470.image": "@inputs/storyboard_16/10.png",
+            "475.image": "@inputs/storyboard_16/10.png",
+            "459:474.prompt": "Remove the white scene number at the upper left of image 1 and naturally inpaint the missing background. Preserve the same woman, facial identity, pose, hairstyle, clothing, scene, lighting and camera framing. Enhance fine facial detail and cinematic realism without changing the composition or adding objects. No text, numbers or watermark.",
+            "459:458.steps": 25,
+            "461.filename_prefix": "storyboard_qwen_10"
+          }
+        },
+        {
+          "name": "11",
+          "set": {
+            "470.image": "@inputs/storyboard_16/11.png",
+            "475.image": "@inputs/storyboard_16/11.png",
+            "459:474.prompt": "Remove the white scene number at the upper left of image 1 and naturally inpaint the missing background. Preserve the same woman, facial identity, pose, hairstyle, clothing, scene, lighting and camera framing. Enhance fine facial detail and cinematic realism without changing the composition or adding objects. No text, numbers or watermark.",
+            "459:458.steps": 25,
+            "461.filename_prefix": "storyboard_qwen_11"
+          }
+        },
+        {
+          "name": "12",
+          "set": {
+            "470.image": "@inputs/storyboard_16/12.png",
+            "475.image": "@inputs/storyboard_16/12.png",
+            "459:474.prompt": "Remove the white scene number at the upper left of image 1 and naturally inpaint the missing background. Preserve the same woman, facial identity, pose, hairstyle, clothing, scene, lighting and camera framing. Enhance fine facial detail and cinematic realism without changing the composition or adding objects. No text, numbers or watermark.",
+            "459:458.steps": 25,
+            "461.filename_prefix": "storyboard_qwen_12"
+          }
+        },
+        {
+          "name": "13",
+          "set": {
+            "470.image": "@inputs/storyboard_16/13.png",
+            "475.image": "@inputs/storyboard_16/13.png",
+            "459:474.prompt": "Remove the white scene number at the upper left of image 1 and naturally inpaint the missing background. Preserve the same woman, facial identity, pose, hairstyle, clothing, scene, lighting and camera framing. Enhance fine facial detail and cinematic realism without changing the composition or adding objects. No text, numbers or watermark.",
+            "459:458.steps": 25,
+            "461.filename_prefix": "storyboard_qwen_13"
+          }
+        },
+        {
+          "name": "14",
+          "set": {
+            "470.image": "@inputs/storyboard_16/14.png",
+            "475.image": "@inputs/storyboard_16/14.png",
+            "459:474.prompt": "Remove the white scene number at the upper left of image 1 and naturally inpaint the missing background. Preserve the same woman, facial identity, pose, hairstyle, clothing, scene, lighting and camera framing. Enhance fine facial detail and cinematic realism without changing the composition or adding objects. No text, numbers or watermark.",
+            "459:458.steps": 25,
+            "461.filename_prefix": "storyboard_qwen_14"
+          }
+        },
+        {
+          "name": "15",
+          "set": {
+            "470.image": "@inputs/storyboard_16/15.png",
+            "475.image": "@inputs/storyboard_16/15.png",
+            "459:474.prompt": "Remove the white scene number at the upper left of image 1 and naturally inpaint the missing background. Preserve the same woman, facial identity, pose, hairstyle, clothing, scene, lighting and camera framing. Enhance fine facial detail and cinematic realism without changing the composition or adding objects. No text, numbers or watermark.",
+            "459:458.steps": 25,
+            "461.filename_prefix": "storyboard_qwen_15"
+          }
+        },
+        {
+          "name": "16",
+          "set": {
+            "470.image": "@inputs/storyboard_16/16.png",
+            "475.image": "@inputs/storyboard_16/16.png",
+            "459:474.prompt": "Remove the white scene number at the upper left of image 1 and naturally inpaint the missing background. Preserve the same woman, facial identity, pose, hairstyle, clothing, scene, lighting and camera framing. Enhance fine facial detail and cinematic realism without changing the composition or adding objects. No text, numbers or watermark.",
+            "459:458.steps": 25,
+            "461.filename_prefix": "storyboard_qwen_16"
+          }
+        }
+      ]
+    },
+    {
+      "id": "h3",
+      "endpoint": "pika",
+      "workflow": "workflows/001-minimax-h3-fl2va-bf16/pika_h3_flex_fl2va_api.json",
+      "foreach": [
+        {
+          "name": "01",
+          "set": {
+            "image_input.image": "$qwen.01.image",
+            "140:131.prompt": "Maintain exactly the same woman, facial identity, chestnut hair, white hair bow, outfit, and composition of the first frame. One continuous cinematic shot, realistic subtle movement, stable anatomy, no cuts, no morphing, no extra limbs, no text. Action: She slowly raises her chin and blinks as blossoms sway. Camera: subtle stable motion, 5-second scene. Ambient sound only; no dialogue or background music.",
+            "92.filename_prefix": "video/storyboard_h3_01"
+          }
+        },
+        {
+          "name": "02",
+          "set": {
+            "image_input.image": "$qwen.02.image",
+            "140:131.prompt": "Maintain exactly the same woman, facial identity, chestnut hair, white hair bow, outfit, and composition of the first frame. One continuous cinematic shot, realistic subtle movement, stable anatomy, no cuts, no morphing, no extra limbs, no text. Action: She softly looks into the camera and brushes her cheek with her fingers. Camera: subtle stable motion, 5-second scene. Ambient sound only; no dialogue or background music.",
+            "92.filename_prefix": "video/storyboard_h3_02"
+          }
+        },
+        {
+          "name": "03",
+          "set": {
+            "image_input.image": "$qwen.03.image",
+            "140:131.prompt": "Maintain exactly the same woman, facial identity, chestnut hair, white hair bow, outfit, and composition of the first frame. One continuous cinematic shot, realistic subtle movement, stable anatomy, no cuts, no morphing, no extra limbs, no text. Action: She turns toward the sunlight with a gentle smile. Camera: subtle stable motion, 5-second scene. Ambient sound only; no dialogue or background music.",
+            "92.filename_prefix": "video/storyboard_h3_03"
+          }
+        },
+        {
+          "name": "04",
+          "set": {
+            "image_input.image": "$qwen.04.image",
+            "140:131.prompt": "Maintain exactly the same woman, facial identity, chestnut hair, white hair bow, outfit, and composition of the first frame. One continuous cinematic shot, realistic subtle movement, stable anatomy, no cuts, no morphing, no extra limbs, no text. Action: She opens her eyes and slowly lifts her head from the pillow. Camera: subtle stable motion, 5-second scene. Ambient sound only; no dialogue or background music.",
+            "92.filename_prefix": "video/storyboard_h3_04"
+          }
+        },
+        {
+          "name": "05",
+          "set": {
+            "image_input.image": "$qwen.05.image",
+            "140:131.prompt": "Maintain exactly the same woman, facial identity, chestnut hair, white hair bow, outfit, and composition of the first frame. One continuous cinematic shot, realistic subtle movement, stable anatomy, no cuts, no morphing, no extra limbs, no text. Action: She tilts her head and smiles softly while flowers sway. Camera: subtle stable motion, 5-second scene. Ambient sound only; no dialogue or background music.",
+            "92.filename_prefix": "video/storyboard_h3_05"
+          }
+        },
+        {
+          "name": "06",
+          "set": {
+            "image_input.image": "$qwen.06.image",
+            "140:131.prompt": "Maintain exactly the same woman, facial identity, chestnut hair, white hair bow, outfit, and composition of the first frame. One continuous cinematic shot, realistic subtle movement, stable anatomy, no cuts, no morphing, no extra limbs, no text. Action: She looks down at the daisies and gently smiles as a breeze moves her hair. Camera: subtle stable motion, 5-second scene. Ambient sound only; no dialogue or background music.",
+            "92.filename_prefix": "video/storyboard_h3_06"
+          }
+        },
+        {
+          "name": "07",
+          "set": {
+            "image_input.image": "$qwen.07.image",
+            "140:131.prompt": "Maintain exactly the same woman, facial identity, chestnut hair, white hair bow, outfit, and composition of the first frame. One continuous cinematic shot, realistic subtle movement, stable anatomy, no cuts, no morphing, no extra limbs, no text. Action: She raises her camera to frame a photograph, then lowers it slightly. Camera: subtle stable motion, 5-second scene. Ambient sound only; no dialogue or background music.",
+            "92.filename_prefix": "video/storyboard_h3_07"
+          }
+        },
+        {
+          "name": "08",
+          "set": {
+            "image_input.image": "$qwen.08.image",
+            "140:131.prompt": "Maintain exactly the same woman, facial identity, chestnut hair, white hair bow, outfit, and composition of the first frame. One continuous cinematic shot, realistic subtle movement, stable anatomy, no cuts, no morphing, no extra limbs, no text. Action: She looks upward and slowly turns her head as her hair moves in the breeze. Camera: subtle stable motion, 5-second scene. Ambient sound only; no dialogue or background music.",
+            "92.filename_prefix": "video/storyboard_h3_08"
+          }
+        },
+        {
+          "name": "09",
+          "set": {
+            "image_input.image": "$qwen.09.image",
+            "140:131.prompt": "Maintain exactly the same woman, facial identity, chestnut hair, white hair bow, outfit, and composition of the first frame. One continuous cinematic shot, realistic subtle movement, stable anatomy, no cuts, no morphing, no extra limbs, no text. Action: She looks back over her shoulder and smiles as the sea sparkles. Camera: subtle stable motion, 5-second scene. Ambient sound only; no dialogue or background music.",
+            "92.filename_prefix": "video/storyboard_h3_09"
+          }
+        },
+        {
+          "name": "10",
+          "set": {
+            "image_input.image": "$qwen.10.image",
+            "140:131.prompt": "Maintain exactly the same woman, facial identity, chestnut hair, white hair bow, outfit, and composition of the first frame. One continuous cinematic shot, realistic subtle movement, stable anatomy, no cuts, no morphing, no extra limbs, no text. Action: She turns a page of her book and glances up thoughtfully. Camera: subtle stable motion, 5-second scene. Ambient sound only; no dialogue or background music.",
+            "92.filename_prefix": "video/storyboard_h3_10"
+          }
+        },
+        {
+          "name": "11",
+          "set": {
+            "image_input.image": "$qwen.11.image",
+            "140:131.prompt": "Maintain exactly the same woman, facial identity, chestnut hair, white hair bow, outfit, and composition of the first frame. One continuous cinematic shot, realistic subtle movement, stable anatomy, no cuts, no morphing, no extra limbs, no text. Action: She blinks slowly and shifts her gaze toward the camera. Camera: subtle stable motion, 5-second scene. Ambient sound only; no dialogue or background music.",
+            "92.filename_prefix": "video/storyboard_h3_11"
+          }
+        },
+        {
+          "name": "12",
+          "set": {
+            "image_input.image": "$qwen.12.image",
+            "140:131.prompt": "Maintain exactly the same woman, facial identity, chestnut hair, white hair bow, outfit, and composition of the first frame. One continuous cinematic shot, realistic subtle movement, stable anatomy, no cuts, no morphing, no extra limbs, no text. Action: She leans toward the roses and gently inhales their scent. Camera: subtle stable motion, 5-second scene. Ambient sound only; no dialogue or background music.",
+            "92.filename_prefix": "video/storyboard_h3_12"
+          }
+        },
+        {
+          "name": "13",
+          "set": {
+            "image_input.image": "$qwen.13.image",
+            "140:131.prompt": "Maintain exactly the same woman, facial identity, chestnut hair, white hair bow, outfit, and composition of the first frame. One continuous cinematic shot, realistic subtle movement, stable anatomy, no cuts, no morphing, no extra limbs, no text. Action: She reaches toward the camera and smiles, hands moving naturally. Camera: subtle stable motion, 5-second scene. Ambient sound only; no dialogue or background music.",
+            "92.filename_prefix": "video/storyboard_h3_13"
+          }
+        },
+        {
+          "name": "14",
+          "set": {
+            "image_input.image": "$qwen.14.image",
+            "140:131.prompt": "Maintain exactly the same woman, facial identity, chestnut hair, white hair bow, outfit, and composition of the first frame. One continuous cinematic shot, realistic subtle movement, stable anatomy, no cuts, no morphing, no extra limbs, no text. Action: She raises her hand to shield her eyes from the sun, hair moving softly. Camera: subtle stable motion, 5-second scene. Ambient sound only; no dialogue or background music.",
+            "92.filename_prefix": "video/storyboard_h3_14"
+          }
+        },
+        {
+          "name": "15",
+          "set": {
+            "image_input.image": "$qwen.15.image",
+            "140:131.prompt": "Maintain exactly the same woman, facial identity, chestnut hair, white hair bow, outfit, and composition of the first frame. One continuous cinematic shot, realistic subtle movement, stable anatomy, no cuts, no morphing, no extra limbs, no text. Action: She turns her face toward the sunset as the water shimmers. Camera: subtle stable motion, 5-second scene. Ambient sound only; no dialogue or background music.",
+            "92.filename_prefix": "video/storyboard_h3_15"
+          }
+        },
+        {
+          "name": "16",
+          "set": {
+            "image_input.image": "$qwen.16.image",
+            "140:131.prompt": "Maintain exactly the same woman, facial identity, chestnut hair, white hair bow, outfit, and composition of the first frame. One continuous cinematic shot, realistic subtle movement, stable anatomy, no cuts, no morphing, no extra limbs, no text. Action: She watches the fireworks with a serene smile as light flickers across her face. Camera: subtle stable motion, 5-second scene. Ambient sound only; no dialogue or background music.",
+            "92.filename_prefix": "video/storyboard_h3_16"
+          }
+        }
+      ]
+    }
+  ]
+}
