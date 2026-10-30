@@ -1,0 +1,34 @@
+{
+  "name": "004-002_character_consistency",
+  "synopsis_zh": "004故事人物一致性双图编辑：先测试01、14镜头，不覆盖原图。",
+  "steps": [
+    {
+      "id": "edit",
+      "endpoint": "qwen",
+      "workflow": "workflows/comfyui-qwen-image-2-1/image_qwen_image_2_1_image_edit.json",
+      "set": {
+        "475.image": "@workflows/comfyui-qwen-image-2-1/example-inputs/portrait_model_denim.png",
+        "459:474.prompt": "Edit the woman in image 1 so that her facial identity and distinctive appearance match the woman in image 2. Preserve the original image 1 camera angle, pose, expression, framing, clothing, background, butterfly, lighting and color palette. Match the reference woman's softly rounded oval face, luminous hazel-green eyes, delicate nose, naturally rosy cheeks, wispy chestnut bangs, very long dark chestnut hair, tiny white blossoms and translucent ivory organza hair bow. Blend the face naturally into the same delicate Japanese fantasy illustration style. Do not replace the scene or copy the reference image composition. No text or watermark.",
+        "459:458.steps": 25
+      },
+      "foreach": [
+        {
+          "name": "01",
+          "set": {
+            "470.image": "@outputs/004_last_butterfly_of_spring/scenes/01/004_last_butterfly_01_00001.png",
+            "461.filename_prefix": "004-002_face_01",
+            "459:458.seed": 202610300402
+          }
+        },
+        {
+          "name": "14",
+          "set": {
+            "470.image": "@outputs/004_last_butterfly_of_spring/scenes/14/004_last_butterfly_14_00001.png",
+            "461.filename_prefix": "004-002_face_14",
+            "459:458.seed": 202610300402
+          }
+        }
+      ]
+    }
+  ]
+}
