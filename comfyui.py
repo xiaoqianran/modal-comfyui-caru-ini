@@ -72,10 +72,19 @@ def link_cached_models():
             cached = hf_hub_download(repo_id=model["repo_id"], filename=model["filename"],
                                      cache_dir="/cache", local_files_only=True)
         except LocalEntryNotFoundError as exc:
-            raise RuntimeError(
-                f"Model missing: {model['repo_id']}/{model['filename']}. "
-                "Run: uv run modal run comfyui.py::download_models"
-            ) from exc
+            # Downloads are pinned to a SHA; refs/main may not exist yet.
+            repo_cache = Path('/cache') / ('models--' + model['repo_id'].replace('/', '--'))
+            candidates = list((repo_cache / 'snapshots').glob('*/' + model['filename']))
+            candidates = [path for path in candidates if path.is_file()]
+            if len(candidates) == 1:
+                cached = str(candidates[0])
+                print(f"CACHE SNAPSHOT {model['repo_id']}/{model['filename']}", flush=True)
+            else:
+                raise RuntimeError(
+                    f"Model missing or ambiguous: {model['repo_id']}/{model['filename']} "
+                    f"({len(candidates)} cached snapshots). "
+                    "Run: uv run modal run comfyui.py::download_models"
+                ) from exc
         name = model.get("local_filename") or Path(model["filename"]).name
         target = resolve_model_dir(model["model_dir"]) / name
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -374,6 +383,8 @@ def download_models():
 class ComfyUI:
     @modal.enter(snap=True)
     def start_checkpoint(self):
+        # Reload the shared model Volume before resolving newly committed weights.
+        vol.reload()
         link_cached_models()
         self.procs = []
         for index, port in enumerate((8000, 8001) if DUAL_COMFYUI else (8000,), start=1):
