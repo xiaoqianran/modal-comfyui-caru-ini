@@ -1,33 +1,51 @@
-# ChatGPT File Transfer MCP
+# ChatGPT → Cloudflare Worker MCP → R2 → PC2
 
-Minimal **private Cloudflare Worker** using the official stateless MCP SDK and a private R2 bucket.
+A small, private file bridge independent of the existing Qwen / H3 runner.
 
-## Current scope
+## Included
 
-- One `upload_file` MCP tool, with `_meta["openai/fileParams"]` for ChatGPT file inputs.
-- Only HTTPS URLs on an explicitly allowlisted ChatGPT/OpenAI host (no redirect).
-- Streaming read with a hard **25 MiB** cap, SHA-256, unique object keys and private R2 storage.
-- No file bytes or signed source URLs are returned to ChatGPT.
-- **Fail-closed** authentication: missing `TRANSFER_TOKEN` returns HTTP 503, invalid bearer token returns 401.
+- `upload_file`: accepts a ChatGPT-authorized file input (`openai/fileParams`), downloads its bytes and stores privately in R2; returns `key`, `size`, `sha256`.
+- `get_download_url`: creates a 10-minute HMAC-signed Worker download URL for that key.
+- `delete_file`: deletes the temporary R2 object (destructive action).
+- `pc2_receive.py`: downloads and checks SHA-256, optionally safely extracts ZIP.
 
-This is a **test-only bearer-authenticated prototype**. ChatGPT plugin installation normally requires a properly supported OAuth flow. Do **not** deploy or register as a ChatGPT app until OAuth is added and verified. The Worker is not a public upload API.
+Only `/download/*` with an unexpired HMAC signature is available without bearer authorization. All MCP tools require `TRANSFER_TOKEN`. The R2 bucket is **not public**. Upload input is limited to 25 MiB and approved HTTPS source hosts, and never follows HTTP redirects.
 
-## Development
+## Cloudflare setup
 
-1. Cloudflare R2 bucket `chatgpt-transfer` must exist.
-2. Run `npm install` and `npm run check`.
-3. For a controlled private test, configure `wrangler secret put TRANSFER_TOKEN`. Do not write tokens into repo files.
-4. Run `npm run dev` and exercise `/mcp` with an authenticated MCP Inspector/client.
-5. Before ChatGPT integration, adopt the official Cloudflare authenticated MCP example, with OAuth + consent and per-user authorization.
-6. Connect a private plugin, select an explicitly authorized file, verify the R2 object's SHA-256 matches local source.
+Existing private R2 bucket: `chatgpt-transfer`, bound to `FILES` by `wrangler.jsonc`.
 
-## Production follow-ups
+```powershell
+cd integrations/file-transfer-mcp
+npm install --registry=https://registry.npmjs.org
+npm run check
+npx wrangler login
+npx wrangler secret put TRANSFER_TOKEN
+npm run deploy
+```
 
-- OAuth authentication instead of the test bearer token.
-- Signed short-lived GET URLs with per-user access control, and delete/TTL cleanup.
-- PC2 download: verify SHA-256 before extracting, reject ZIP path traversal, then invoke existing `batch_run.py`.
-- Large files: stream/multipart upload rather than buffering; keep a separate upload limit.
-- Verify real ChatGPT file download URL domains before extending the allowlist.
+Set a randomly generated, high-entropy secret through Wrangler. Never save a token in Git.
+
+The service deliberately returns 503 if the secret is not set; a mismatched bearer token returns 401. For **ChatGPT private plugin installation**, replace this development bearer gate with the Cloudflare **OAuth authenticated remote MCP** template before connecting. ChatGPT's OAuth handshake, identity handling and consent flow are **not** implemented in this repository yet. It is therefore not production-ready or verified with ChatGPT.
+
+## Use after ChatGPT plugin authorization
+
+Call `upload_file`, followed by `get_download_url`. Then tell the connected PC2 AgentDock to run (with the actual values returned, not placeholders):
+
+```powershell
+python integrations/file-transfer-mcp/pc2_receive.py --url "<temporary URL>" --sha256 "<sha256>" --output "inputs/storyboard_16_frames.zip" --extract-to "inputs/storyboard_16"
+```
+
+The Worker URL is **a custom signed download proxy**, not an S3 presigned GET URL. PC2 needs no S3 secrets and no inbound ports. After validating the 16 files, invoke the project's existing `batch_run.py` task. Then call `delete_file` for cleanup.
+
+## Verification
+
+```powershell
+python -m py_compile integrations/file-transfer-mcp/pc2_receive.py
+node --experimental-strip-types --check integrations/file-transfer-mcp/src/index.ts
+```
+
+Passing syntax checks alone does not verify MCP routing, OAuth, deployment or network transfer. Do not declare the workflow complete without a full ChatGPT → Worker → R2 → PC2 SHA-256 test.
 
 References:
 - https://developers.cloudflare.com/agents/model-context-protocol/apis/handler-api/
