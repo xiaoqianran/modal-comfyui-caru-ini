@@ -252,6 +252,15 @@ def merge_shards(payload: dict) -> dict:
         print(f"MERGE verification failed: moved {moved} entries, missing={len(missing)}; "
               "shard caches kept, nothing committed", flush=True)
         return {"ok": False, "missing": missing, "moved_entries": moved}
+    # Persist per-workflow commit IDs only after all files verify.
+    revisions = {
+        f"{item['repo_id']}/{item['filename']}": item["revision"]
+        for item in items if item["kind"] == "hf"
+    }
+    revision_dir = main_cache / ".workflow-revisions"
+    revision_dir.mkdir(exist_ok=True)
+    (revision_dir / f"{payload['workflow']}.json").write_text(
+        json.dumps(revisions, sort_keys=True), encoding="utf-8")
     # Verified: only now is it safe to drop this run's shard directories.
     if shard_root.is_dir():
         shutil.rmtree(shard_root)
@@ -311,7 +320,7 @@ def main():
             "Some shards failed; shard caches are kept on the volume, fix the "
             "cause and re-run — finished files resume instead of restarting.")
 
-    merged = merge_shards.remote({"items": items, "run_id": run_id})
+    merged = merge_shards.remote({"items": items, "run_id": run_id, "workflow": WORKFLOW})
     if not merged["ok"]:
         for m in merged["missing"]:
             print("MISSING after merge:", m)

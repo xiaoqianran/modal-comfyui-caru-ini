@@ -67,31 +67,35 @@ def link_cached_models():
     from huggingface_hub import hf_hub_download
     from huggingface_hub.errors import LocalEntryNotFoundError
 
+    # Use exact revisions written by the verified downloader.
+    revision_file = Path("/cache/.workflow-revisions") / f"{WORKFLOW}.json"
+    revisions = json.loads(revision_file.read_text()) if revision_file.is_file() else {}
+
     for model in models:
+        key = f"{model['repo_id']}/{model['filename']}"
+        revision = revisions.get(key)
         try:
-            cached = hf_hub_download(repo_id=model["repo_id"], filename=model["filename"],
-                                     cache_dir="/cache", local_files_only=True)
+            cached = hf_hub_download(
+                repo_id=model["repo_id"], filename=model["filename"],
+                cache_dir="/cache", revision=revision, local_files_only=True)
         except LocalEntryNotFoundError as exc:
-            # Downloads are pinned to a SHA; refs/main may not exist yet.
-            repo_cache = Path('/cache') / ('models--' + model['repo_id'].replace('/', '--'))
-            candidates = list((repo_cache / 'snapshots').glob('*/' + model['filename']))
+            # Compatibility for older caches without an exact revision manifest.
+            repo_cache = Path("/cache") / ("models--" + model["repo_id"].replace("/", "--"))
+            candidates = list((repo_cache / "snapshots").glob("*/" + model["filename"]))
             candidates = [path for path in candidates if path.is_file()]
-            if len(candidates) == 1:
+            if revision is None and len(candidates) == 1:
                 cached = str(candidates[0])
-                print(f"CACHE SNAPSHOT {model['repo_id']}/{model['filename']}", flush=True)
             else:
                 raise RuntimeError(
-                    f"Model missing or ambiguous: {model['repo_id']}/{model['filename']} "
-                    f"({len(candidates)} cached snapshots). "
-                    "Run: uv run modal run comfyui.py::download_models"
-                ) from exc
+                    f"Model not cached: {key} (revision={revision!r}). "
+                    "Run: uv run modal run comfyui.py::download_models") from exc
         name = model.get("local_filename") or Path(model["filename"]).name
         target = resolve_model_dir(model["model_dir"]) / name
         target.parent.mkdir(parents=True, exist_ok=True)
         if target.is_symlink() or target.exists():
             target.unlink()
         target.symlink_to(cached)
-        print(f"CACHE HIT {model['repo_id']}/{model['filename']}")
+        print(f"CACHE HIT {key} revision={revision or 'legacy'}")
     for model in models_ext:
         cached = Path("/cache") / model["filename"]
         if not cached.is_file() or cached.stat().st_size == 0:
