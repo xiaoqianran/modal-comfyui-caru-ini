@@ -70,7 +70,7 @@ async function readFile(response: Response): Promise<Uint8Array> {
 }
 
 async function sha256(bytes: Uint8Array): Promise<string> {
-  const hash = new Uint8Array(await crypto.subtle.digest("SHA-256", bytes));
+  const hash = new Uint8Array(await crypto.subtle.digest("SHA-256", bytes.buffer as ArrayBuffer));
   return [...hash].map(byte => byte.toString(16).padStart(2, "0")).join("");
 }
 
@@ -183,11 +183,12 @@ export default {
       tokenEndpoint: "/oauth/token",
       apiRoute: "/mcp",
       apiHandler: {
-        fetch(req: Request, bindings: Env, context: OAuthResourceContext<{ userId: string }>) {
-          if (!context.auth.scope.includes("mcp:files")) {
-            return insufficientScope(context.auth, ["mcp:files"]);
+        fetch(req: Request, bindings: Env, ctx: ExecutionContext) {
+          const auth = (ctx as OAuthResourceContext<{ userId: string }>).auth;
+          if (!auth.scope.includes("mcp:files")) {
+            return insufficientScope(auth, ["mcp:files"]);
           }
-          return createMcpHandler(() => makeServer(bindings, url.origin))(req, bindings, context);
+          return createMcpHandler(() => makeServer(bindings, url.origin))(req, bindings, ctx);
         },
       },
       defaultHandler: authHandler,
