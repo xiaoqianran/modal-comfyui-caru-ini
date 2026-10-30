@@ -263,7 +263,7 @@ Legacy `preview_r2.py` and `preview_hf.py` remain optional standalone previews f
 
 ## Multi-endpoint Task Pipeline
 
-The existing `batch_run.py --graph ... --jobs ...` interface still works.
+Only the `--task` interface is supported; the legacy `--graph/--jobs` mode has been removed.
 For sequential pipelines spanning multiple Modal ComfyUI services, run:
 
 ```powershell
