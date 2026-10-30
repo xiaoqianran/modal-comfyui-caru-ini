@@ -16,6 +16,11 @@ For text generation: --prompt TEXT, --prompts FILE.txt (one per line), or
 --shots FILE.csv (shot_id,prompt columns). Uses the unique *.prompt input in the
 API workflow, or --prompt-input NODE.prompt if there are multiple.
 Re-running skips jobs whose output folder already has a DONE marker.
+
+Python example:
+  from batch_run import generate
+  generate(url="https://your-comfyui-url", workflow="workflow_api.json",
+           prompts=["A red apple", "A blue flower"], output="results/story")
 """
 import argparse
 import csv
@@ -172,6 +177,88 @@ def load_jobs(args, graph):
     return jobs
 
 
+def generate(url, workflow, prompts, output="results", *, seed=None, timeout=3600):
+    """Generate one image per text prompt using an API-format ComfyUI workflow.
+
+    prompts: list of strings. Outputs go to output/shot_001, output/shot_002, etc.
+    A fixed seed is optional; by default each shot gets a random seed if a seed
+    input is present, preventing identical runs when the template uses a fixed seed.
+    """
+    graph = json.loads(Path(workflow).read_text(encoding="utf-8-sig"))
+    if "nodes" in graph:
+        raise ValueError("Export the workflow in ComfyUI API format")
+    target = prompt_target(graph, None)
+    if isinstance(prompts, (str, bytes)) or not isinstance(prompts, (list, tuple)) or not prompts:
+        raise ValueError("prompts must be a nonempty list of strings")
+    if any(not isinstance(p, str) or not p.strip() for p in prompts):
+        raise ValueError("Each prompt must be a nonempty string")
+    jobs = [{"name": f"shot_{i:03d}", "set": {target: prompt}}
+            for i, prompt in enumerate(prompts, 1)]
+    # Apply the sampler seed without assuming node IDs across workflows.
+    seeds = [f"{node}.seed" for node, data in graph.items()
+             if isinstance(data, dict) and "seed" in data.get("inputs", {})]
+    if seed is not None:
+        if len(seeds) != 1:
+            raise ValueError(f"Expected one seed input, found {len(seeds)}")
+        for job in jobs:
+            job["set"][seeds[0]] = seed
+    random_seeds = seeds if seed is None and len(seeds) == 1 else []
+    failed = run_jobs(url, graph, jobs, output, random_seeds, timeout)
+    if failed:
+        raise RuntimeError(f"{failed} of {len(jobs)} jobs failed")
+    return Path(output)
+
+
+def run_jobs(base, graph, jobs, output, random_seed=(), timeout=3600):
+    """Submit queued jobs, then download completed outputs."""
+    base = base.rstrip("/")
+    out = Path(output)
+    cache, failed = {}, 0
+
+    print("Connecting (first request may wait for a cold start)...", flush=True)
+    request(base + "/system_stats", timeout=300, retries=12)
+
+    # Submit everything first so ComfyUI's own queue keeps the GPU busy
+    # (and the container does not scale down between jobs).
+    pending = []
+    for i, job in enumerate(jobs, 1):
+        name = "".join(c if c.isalnum() or c in "-_." else "_" for c in str(job.get("name") or f"job{i:03d}"))
+        folder = out / name
+        if (folder / "DONE").exists():
+            print(f"[{i}/{len(jobs)}] {name}: already done, skip")
+            continue
+        try:
+            sets = dict(job.get("set", {}))
+            for target in random_seed:
+                sets.setdefault(target, random.randint(0, 2**53))
+            prompt = build_prompt(graph, sets, base, cache)
+            body = json.dumps({"prompt": prompt, "client_id": uuid.uuid4().hex}).encode()
+            pid = json.loads(request(base + "/prompt", body, {"Content-Type": "application/json"}))["prompt_id"]
+            pending.append((i, name, folder, pid))
+            print(f"[{i}/{len(jobs)}] {name}: queued {pid}", flush=True)
+        except Exception as e:
+            failed += 1
+            print(f"[{i}/{len(jobs)}] {name}: SUBMIT FAILED: {e}", file=sys.stderr)
+
+    for i, name, folder, pid in pending:
+        try:
+            outputs = wait_done(base, pid, timeout)
+            folder.mkdir(parents=True, exist_ok=True)
+            files = collect_files(outputs)
+            for item in files:
+                download(base, item, folder / Path(item["filename"]).name)
+            (folder / "prompt_id.txt").write_text(pid)
+            (folder / "DONE").write_text("")
+            print(f"[{i}/{len(jobs)}] {name}: {len(files)} file(s) -> {folder}", flush=True)
+        except Exception as e:
+            failed += 1
+            print(f"[{i}/{len(jobs)}] {name}: FAILED: {e}", file=sys.stderr)
+
+    print(f"Finished. {len(pending)} submitted, {failed} failed.")
+    return failed
+
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--url", default=os.getenv("COMFY_URL"), help="Deployed app URL (or env COMFY_URL)")
@@ -196,51 +283,8 @@ def main():
     if "nodes" in graph:
         sys.exit("This is a UI-format workflow. In ComfyUI use Workflow > Export (API) and pass that file.")
     jobs = load_jobs(args, graph)
-    out = Path(args.out)
-    cache, failed = {}, 0
-
-    print("Connecting (first request may wait for a cold start)...", flush=True)
-    request(base + "/system_stats", timeout=300, retries=12)
-
-    # Submit everything first so ComfyUI's own queue keeps the GPU busy
-    # (and the container does not scale down between jobs).
-    pending = []
-    for i, job in enumerate(jobs, 1):
-        name = "".join(c if c.isalnum() or c in "-_." else "_" for c in str(job.get("name") or f"job{i:03d}"))
-        folder = out / name
-        if (folder / "DONE").exists():
-            print(f"[{i}/{len(jobs)}] {name}: already done, skip")
-            continue
-        try:
-            sets = dict(job.get("set", {}))
-            for target in args.random_seed:
-                sets.setdefault(target, random.randint(0, 2**53))
-            prompt = build_prompt(graph, sets, base, cache)
-            body = json.dumps({"prompt": prompt, "client_id": uuid.uuid4().hex}).encode()
-            pid = json.loads(request(base + "/prompt", body, {"Content-Type": "application/json"}))["prompt_id"]
-            pending.append((i, name, folder, pid))
-            print(f"[{i}/{len(jobs)}] {name}: queued {pid}", flush=True)
-        except Exception as e:
-            failed += 1
-            print(f"[{i}/{len(jobs)}] {name}: SUBMIT FAILED: {e}", file=sys.stderr)
-
-    for i, name, folder, pid in pending:
-        try:
-            outputs = wait_done(base, pid, args.timeout)
-            folder.mkdir(parents=True, exist_ok=True)
-            files = collect_files(outputs)
-            for item in files:
-                download(base, item, folder / Path(item["filename"]).name)
-            (folder / "prompt_id.txt").write_text(pid)
-            (folder / "DONE").write_text("")
-            print(f"[{i}/{len(jobs)}] {name}: {len(files)} file(s) -> {folder}", flush=True)
-        except Exception as e:
-            failed += 1
-            print(f"[{i}/{len(jobs)}] {name}: FAILED: {e}", file=sys.stderr)
-
-    print(f"Finished. {len(pending)} submitted, {failed} failed.")
+    failed = run_jobs(base, graph, jobs, args.out, args.random_seed, args.timeout)
     sys.exit(1 if failed else 0)
-
 
 if __name__ == "__main__":
     main()
