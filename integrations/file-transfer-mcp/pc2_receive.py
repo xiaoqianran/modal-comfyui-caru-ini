@@ -41,19 +41,21 @@ def main() -> None:
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
     digest = hashlib.sha256()
-    with tempfile.NamedTemporaryFile(dir=args.output.parent, delete=False) as tmp:
-        temp = Path(tmp.name)
-        try:
+    tmp = tempfile.NamedTemporaryFile(dir=args.output.parent, delete=False)
+    temp = Path(tmp.name)
+    tmp.close()
+    try:
+        with temp.open("wb") as output:
             with urllib.request.urlopen(args.url, timeout=60) as response:
                 while block := response.read(1024 * 1024):
                     digest.update(block)
-                    tmp.write(block)
-            actual = digest.hexdigest()
-            if actual.lower() != args.sha256.lower():
-                raise ValueError(f"SHA-256 mismatch: {actual}")
-            temp.replace(args.output)
-        finally:
-            temp.unlink(missing_ok=True)
+                    output.write(block)
+        actual = digest.hexdigest()
+        if actual.lower() != args.sha256.lower():
+            raise ValueError(f"SHA-256 mismatch: {actual}")
+        temp.replace(args.output)
+    finally:
+        temp.unlink(missing_ok=True)
 
     if args.extract_to:
         extract_zip_safely(args.output, args.extract_to)

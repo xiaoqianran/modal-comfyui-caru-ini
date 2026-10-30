@@ -22,20 +22,25 @@ The existing private R2 bucket `chatgpt-transfer` is bound as `FILES`. The OAuth
 
 This setup uses the Cloudflare `OAuthProvider` one-Worker option. Clients authorize via a browser page that displays the requesting client name, redirect host and requested scopes, and requires the owner's 24+ character passphrase. No passphrase is committed in Git.
 
-## Build / deploy
+## Deployment (2026-10-30)
 
-Run in this directory on a machine with working npm registry access:
+**Deployed** to `https://chatgpt-file-transfer-mcp.wangran.workers.dev/mcp` using Cloudflare's Worker API. The private R2 bucket and OAuth KV are bound. GitHub Actions typecheck + Worker bundle have passed.
+
+**Current endpoint returns HTTP 503 `Not configured` deliberately**. Two secret bindings must still be created by the account owner in the Cloudflare dashboard before the OAuth endpoint can be used.
+
+1. Open **Cloudflare Dashboard → Workers & Pages → chatgpt-file-transfer-mcp → Settings → Variables and Secrets**.
+2. Add **Secret** `OWNER_PASSWORD`: a random 32+ character passphrase. Save it in your password manager; you will enter it when ChatGPT prompts for OAuth consent.
+3. Add **Secret** `DOWNLOAD_SECRET`: a **different** 32+ character random secret. This is used only for signed temporary GET URLs.
+4. Deploy the resulting Worker version if the dashboard asks; then verify the MCP URL no longer returns 503. Anonymous access should be challenged by OAuth, not enabled.
+5. In ChatGPT, add a **private custom MCP plugin** pointing to `https://chatgpt-file-transfer-mcp.wangran.workers.dev/mcp`, complete browser OAuth authorization, and verify the three tools.
+
+Generate each random secret in a terminal, one at a time:
 
 ```powershell
-npm install
-npm run check
-npx wrangler login
-npx wrangler secret put OWNER_PASSWORD
-npx wrangler secret put DOWNLOAD_SECRET
-npm run deploy
+uv run --no-project python -c "import secrets; print(secrets.token_urlsafe(36))"
 ```
 
-Use two **different, random** secrets of at least 32 characters each. The owner passphrase must be kept so you can enter it during the ChatGPT OAuth consent flow; the download secret is server-only. Do not include either in Git or ChatGPT messages.
+**Do not commit secrets to Git or paste them into a chat.** Both must be stored only in Cloudflare's Secret bindings. If registering a private MCP plugin is not enabled for the current ChatGPT account/workspace, the user must enable it; do not weaken access controls.
 
 After deployment, open ChatGPT Plugins settings, add a private custom MCP endpoint at the configured `MCP_RESOURCE`, complete the authorization prompt, and check that all three tools appear. If the account/workspace cannot install private MCP plugins, do not bypass that by exposing unsecured endpoints.
 
