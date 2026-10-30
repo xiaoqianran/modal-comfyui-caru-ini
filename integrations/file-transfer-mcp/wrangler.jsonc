@@ -1,0 +1,8 @@
+{
+  "name": "chatgpt-file-transfer-mcp",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-30",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "r2_buckets": [{ "binding": "FILES", "bucket_name": "chatgpt-transfer" }]
+}
