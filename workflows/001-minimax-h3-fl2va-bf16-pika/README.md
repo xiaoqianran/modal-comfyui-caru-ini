@@ -1,7 +1,7 @@
-# Pika H3 Flex FL2VA (BF16)
-
-Derived from 001-minimax-h3-fl2va-bf16. Uses the same base model, replacing the Turbo 8-step LoRA with the official Pika FL2VA LoRA (strength 1.0). Sampling: LCM + ManualSigmas 1.0, 0.972973, 0.923077, 0.8, 0.571429, 0.333333, 0.0.
-
-The original workflow remains unchanged. The six-step setup is based on official ComfyUI guidance; fresh intermediate noise from the original Pika inference contract is not yet verified in this ComfyUI workflow. Validate an actual render before treating it as equivalent to the official inference pipeline.
-
-Run with WORKFLOW=001-minimax-h3-fl2va-bf16-pika.
+# Pika H3 Flex FL2VA — official ComfyUI workflow, BF16 weights
+Source: https://github.com/Comfy-Org/workflow_templates
+Files: video_pika_h3_flex_t2v.json and video_pika_h3_flex_fl2va.json.
+These are **ComfyUI UI-format workflow JSONs**, adapted ONLY to the already-downloaded BF16 base model, FP16 video VAE, and Pika-Labs BF16 LoRA; original official node graph and connections are retained.
+The Pika LoRA connects directly to the guider (no disabled toggle). FL2VA accepts first and last frame.
+The repository's automated API workflow runner may require an API-format export from a running ComfyUI instance: UI-format JSON must NOT be submitted directly to /prompt.
+Actual GPU inference with BF16 and the Pika-Labs LoRA has not yet been tested.

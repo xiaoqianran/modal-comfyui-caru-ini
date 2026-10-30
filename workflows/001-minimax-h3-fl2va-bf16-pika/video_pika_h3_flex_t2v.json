@@ -1,8 +1,8 @@
 {
   "id": "e3f2b845-8f2c-4b5a-9caf-eac1029d3e7e",
   "revision": 0,
-  "last_node_id": 140,
-  "last_link_id": 248,
+  "last_node_id": 150,
+  "last_link_id": 262,
   "nodes": [
     {
       "id": 92,
@@ -13,10 +13,10 @@
       ],
       "size": [
         1070,
-        357.875
+        360
       ],
       "flags": {},
-      "order": 5,
+      "order": 3,
       "mode": 0,
       "inputs": [
         {
@@ -37,13 +37,15 @@
         "ver": "0.33.0"
       },
       "widgets_values": [
-        "video/Pika_H3_Flex",
+        "video/Pika_H3_Flex_T2V",
+        "auto",
         "auto",
         "auto"
       ],
       "widgets_values_named": {
-        "filename_prefix": "video/Pika_H3_Flex",
+        "filename_prefix": "video/Pika_H3_Flex_T2V",
         "format": "auto",
+        "format.codec": "auto",
         "codec": "auto"
       }
     },
@@ -51,8 +53,8 @@
       "id": 115,
       "type": "ResolutionSelector",
       "pos": [
-        -1550,
-        5220
+        -1510,
+        5170
       ],
       "size": [
         270,
@@ -80,98 +82,44 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "ResolutionSelector",
         "cnr_id": "comfy-core",
-        "ver": "0.33.0",
-        "Node name for S&R": "ResolutionSelector"
+        "ver": "0.33.0"
       },
       "widgets_values": [
         "16:9 (Widescreen)",
-        0.4,
-        32
+        0.98,
+        16
       ],
       "widgets_values_named": {
         "aspect_ratio": "16:9 (Widescreen)",
-        "megapixels": 0.4,
-        "multiple": 32
+        "megapixels": 0.98,
+        "multiple": 16
       }
     },
     {
-      "id": 116,
+      "id": 117,
       "type": "MarkdownNote",
       "pos": [
-        -2080,
-        4840
+        -1990,
+        4850
       ],
       "size": [
-        450,
-        740
+        440,
+        830
       ],
       "flags": {},
       "order": 1,
       "mode": 0,
       "inputs": [],
       "outputs": [],
-      "title": "Note: MiniMax H3",
-      "properties": {},
-      "widgets_values": [
-        "## MiniMax H3\n\n[MiniMax H3](https://www.minimax.io/blog/minimax-h3) is MiniMax's general-purpose, omni-modal generation model. It jointly understands text, image, video, and audio, and generates video with **native stereo audio**: voice, sound effects, and music are modeled jointly in a single forward pass, not layered on afterward. Output is up to 2K resolution, 24fps, and up to about 15 seconds.\n\n## ComfyUI links\n- [ComfyUI#15224](https://github.com/Comfy-Org/ComfyUI/pull/15224)\n- [🤗 Comfy-Org/MiniMax-H3](https://huggingface.co/Comfy-Org/MiniMax-H3)\n\n## About this workflow\n\n**Key inputs**\n\n- **prompt**: describe the shots, camera moves, and the accompanying audio (dialogue, SFX, music) in one block\n- **width / height**: set via Resolution Selector. H3's native canvas is a 768px short edge, capped at 768x1344 pixels, rounded to a multiple of 32\n- **duration (seconds)**: converted to a valid frame `length` by the Math Expression node, snapping up to the model's 17-frame-per-block (17k+5) grid at 24fps\n"
-      ],
-      "widgets_values_named": {
-        "text": "## MiniMax H3\n\n[MiniMax H3](https://www.minimax.io/blog/minimax-h3) is MiniMax's general-purpose, omni-modal generation model. It jointly understands text, image, video, and audio, and generates video with **native stereo audio**: voice, sound effects, and music are modeled jointly in a single forward pass, not layered on afterward. Output is up to 2K resolution, 24fps, and up to about 15 seconds.\n\n## ComfyUI links\n- [ComfyUI#15224](https://github.com/Comfy-Org/ComfyUI/pull/15224)\n- [🤗 Comfy-Org/MiniMax-H3](https://huggingface.co/Comfy-Org/MiniMax-H3)\n\n## About this workflow\n\n**Key inputs**\n\n- **prompt**: describe the shots, camera moves, and the accompanying audio (dialogue, SFX, music) in one block\n- **width / height**: set via Resolution Selector. H3's native canvas is a 768px short edge, capped at 768x1344 pixels, rounded to a multiple of 32\n- **duration (seconds)**: converted to a valid frame `length` by the Math Expression node, snapping up to the model's 17-frame-per-block (17k+5) grid at 24fps\n"
-      },
-      "color": "#222",
-      "bgcolor": "#000"
-    },
-    {
-      "id": 117,
-      "type": "MarkdownNote",
-      "pos": [
-        -2550,
-        4840
-      ],
-      "size": [
-        440,
-        823.8125
-      ],
-      "flags": {},
-      "order": 2,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [],
       "title": "Note: Model Links",
       "properties": {},
       "widgets_values": [
-        "Guide: [Subgraph](https://docs.comfy.org/interface/features/subgraph)\n\n## Model Links\n\n- [Hugging Face:Comfy-Org/MiniMax-H3](https://huggingface.co/Comfy-Org/MiniMax-H3)\n- [ModelScope:Comfy-Org/MiniMax-H3](https://modelscope.cn/models/Comfy-Org/MiniMax-H3)\n\n**vae**\n\n- [minimax_h3_video_vae_fp16.safetensors](https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/vae/minimax_h3_video_vae_fp16.safetensors) (2.62 GB)\n- [minimax_h3_audio_vae_fp32.safetensors](https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/vae/minimax_h3_audio_vae_fp32.safetensors) (577.2 MB)\n\n**diffusion_models**\n\n- [minimax_h3_fl2va_bf16.safetensors](https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/diffusion_models/minimax_h3_fl2va_bf16.safetensors) (19.53 GB)\n\n**text_encoders**\n\n- [qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors](https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/text_encoders/qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors) (14.61 GB)\n\n**loras**\n\n- 8 steps:  [minimax_h3_fl2v_turbo_8step_v1.0_comfyui_bf16.safetensors](https://huggingface.co/lightx2v/Minimax-h3-Turbo/resolve/main/minimax_h3_fl2v_turbo_8step_v1.0_comfyui_bf16.safetensors) (1.82 GB)\n-  4 steps: [minimax_h3_fl2v_turbo_4step_v1.0_768p_comfyui_bf16.safetensors](https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/loras/minimax_h3_fl2v_turbo_4step_v1.0_768p_comfyui_bf16.safetensors) (1.82 GB)\n\n**embeddings**\n\n- [10 style embeddings](https://huggingface.co/Comfy-Org/MiniMax-H3/tree/main/embeddings) (`minimaxh3_*.safetensors`), for example `minimaxh3_art_is_explosion`\n\n## Model Storage Location\n\n```\n📂 ComfyUI/\n├── 📂 models/\n│   ├── 📂 vae/\n│   │   ├── minimax_h3_video_vae_fp16.safetensors\n│   │   └── minimax_h3_audio_vae_fp32.safetensors\n│   ├── 📂 diffusion_models/\n│   │   └── minimax_h3_fl2va_bf16.safetensors\n│   ├── 📂 text_encoders/\n│   │   └── qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors\n│   ├── 📂 loras/\n│   │   └── minimax_h3_fl2v_turbo_8step_v1.0_comfyui_bf16.safetensors\n│   └── 📂 embeddings/\n│       └── minimaxh3_art_is_explosion.safetensors\n```\n\n## Using Prompt Embeddings\n\nPrompt embeddings (supported since [ComfyUI#15697](https://github.com/Comfy-Org/ComfyUI/pull/15697)) add reusable style tokens to your prompt. Download one or more embeddings from the folder above into `ComfyUI/models/embeddings/`, then reference one in the prompt text with the `embedding:` prefix and the filename without its extension, for example:\n\n`embedding:minimaxh3_art_is_explosion`\n\nUsing an embedding is optional and the template runs fine without one.\n\n## Report Issue\n\nNote: Please update ComfyUI first ([guide](https://docs.comfy.org/installation/update_comfyui)) and prepare required models. Desktop/Cloud updates follow stable releases, so some nightly-supported models may not be available yet.\n\n- Cannot run / runtime errors: [ComfyUI/issues](https://github.com/comfyanonymous/ComfyUI/issues)\n- UI / frontend issues: [ComfyUI_frontend/issues](https://github.com/Comfy-Org/ComfyUI_frontend/issues)\n- Workflow issues: [workflow_templates/issues](https://github.com/Comfy-Org/workflow_templates/issues)\n"
+        "[Subgraph Guide](https://docs.comfy.org/interface/features/subgraph)\n\n- GitHub: https://github.com/Pika-Labs/Pika-H3-Flex\n- Hugging Face: https://huggingface.co/Pika-Labs/Pika-H3-Flex\n\n## Model Links\n\n- [Hugging Face:Comfy-Org/MiniMax-H3](https://huggingface.co/Comfy-Org/MiniMax-H3)\n\n**vae**\n\n- [minimax_h3_video_vae_fp16.safetensors](https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/vae/minimax_h3_video_vae_fp16.safetensors) (2.62 GB)\n- [minimax_h3_audio_vae_fp32.safetensors](https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/vae/minimax_h3_audio_vae_fp32.safetensors) (577.2 MB)\n\n**diffusion_models**\n\n- [minimax_h3_fl2va_bf16.safetensors](https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/diffusion_models/minimax_h3_fl2va_bf16.safetensors) (19.53 GB)\n\n**text_encoders**\n\n- [qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors](https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/text_encoders/qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors) (14.61 GB)\n\n**loras**\n\n- [pika_h3_flex_fl2va_comfy_bf16.safetensors](https://huggingface.co/Pika-Labs/Pika-H3-Flex/resolve/main/comfy/loras/pika_h3_flex_fl2va_comfy_bf16.safetensors)\n\n\n## Model Storage Location\n\n```\n📂 ComfyUI/\n├── 📂 models/\n│   ├── 📂 vae/\n│   │   ├── minimax_h3_video_vae_fp16.safetensors\n│   │   └── minimax_h3_audio_vae_fp32.safetensors\n│   ├── 📂 diffusion_models/\n│   │   └── minimax_h3_fl2va_bf16.safetensors\n│   ├── 📂 text_encoders/\n│   │   └── qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors\n│   └── 📂 loras/\n│       └── pika_h3_flex_fl2va_comfy_bf16.safetensors\n```\n\n## Report Issue\n\nNote: Please update ComfyUI first ([guide](https://docs.comfy.org/installation/update_comfyui)) and prepare required models. Desktop/Cloud updates follow stable releases, so some nightly-supported models may not be available yet.\n\n- Cannot run / runtime errors: [ComfyUI/issues](https://github.com/comfyanonymous/ComfyUI/issues)\n- UI / frontend issues: [ComfyUI_frontend/issues](https://github.com/Comfy-Org/ComfyUI_frontend/issues)\n- Workflow issues: [workflow_templates/issues](https://github.com/Comfy-Org/workflow_templates/issues)\n"
       ],
       "widgets_values_named": {
-        "text": "Guide: [Subgraph](https://docs.comfy.org/interface/features/subgraph)\n\n## Model Links\n\n- [Hugging Face:Comfy-Org/MiniMax-H3](https://huggingface.co/Comfy-Org/MiniMax-H3)\n- [ModelScope:Comfy-Org/MiniMax-H3](https://modelscope.cn/models/Comfy-Org/MiniMax-H3)\n\n**vae**\n\n- [minimax_h3_video_vae_fp16.safetensors](https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/vae/minimax_h3_video_vae_fp16.safetensors) (2.62 GB)\n- [minimax_h3_audio_vae_fp32.safetensors](https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/vae/minimax_h3_audio_vae_fp32.safetensors) (577.2 MB)\n\n**diffusion_models**\n\n- [minimax_h3_fl2va_bf16.safetensors](https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/diffusion_models/minimax_h3_fl2va_bf16.safetensors) (19.53 GB)\n\n**text_encoders**\n\n- [qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors](https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/text_encoders/qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors) (14.61 GB)\n\n**loras**\n\n- 8 steps:  [minimax_h3_fl2v_turbo_8step_v1.0_comfyui_bf16.safetensors](https://huggingface.co/lightx2v/Minimax-h3-Turbo/resolve/main/minimax_h3_fl2v_turbo_8step_v1.0_comfyui_bf16.safetensors) (1.82 GB)\n-  4 steps: [minimax_h3_fl2v_turbo_4step_v1.0_768p_comfyui_bf16.safetensors](https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/loras/minimax_h3_fl2v_turbo_4step_v1.0_768p_comfyui_bf16.safetensors) (1.82 GB)\n\n**embeddings**\n\n- [10 style embeddings](https://huggingface.co/Comfy-Org/MiniMax-H3/tree/main/embeddings) (`minimaxh3_*.safetensors`), for example `minimaxh3_art_is_explosion`\n\n## Model Storage Location\n\n```\n📂 ComfyUI/\n├── 📂 models/\n│   ├── 📂 vae/\n│   │   ├── minimax_h3_video_vae_fp16.safetensors\n│   │   └── minimax_h3_audio_vae_fp32.safetensors\n│   ├── 📂 diffusion_models/\n│   │   └── minimax_h3_fl2va_bf16.safetensors\n│   ├── 📂 text_encoders/\n│   │   └── qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors\n│   ├── 📂 loras/\n│   │   └── minimax_h3_fl2v_turbo_8step_v1.0_comfyui_bf16.safetensors\n│   └── 📂 embeddings/\n│       └── minimaxh3_art_is_explosion.safetensors\n```\n\n## Using Prompt Embeddings\n\nPrompt embeddings (supported since [ComfyUI#15697](https://github.com/Comfy-Org/ComfyUI/pull/15697)) add reusable style tokens to your prompt. Download one or more embeddings from the folder above into `ComfyUI/models/embeddings/`, then reference one in the prompt text with the `embedding:` prefix and the filename without its extension, for example:\n\n`embedding:minimaxh3_art_is_explosion`\n\nUsing an embedding is optional and the template runs fine without one.\n\n## Report Issue\n\nNote: Please update ComfyUI first ([guide](https://docs.comfy.org/installation/update_comfyui)) and prepare required models. Desktop/Cloud updates follow stable releases, so some nightly-supported models may not be available yet.\n\n- Cannot run / runtime errors: [ComfyUI/issues](https://github.com/comfyanonymous/ComfyUI/issues)\n- UI / frontend issues: [ComfyUI_frontend/issues](https://github.com/Comfy-Org/ComfyUI_frontend/issues)\n- Workflow issues: [workflow_templates/issues](https://github.com/Comfy-Org/workflow_templates/issues)\n"
-      },
-      "color": "#222",
-      "bgcolor": "#000"
-    },
-    {
-      "id": 118,
-      "type": "MarkdownNote",
-      "pos": [
-        -1570,
-        5460
-      ],
-      "size": [
-        310,
-        390
-      ],
-      "flags": {},
-      "order": 3,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [],
-      "title": "Note: Size Settings Reference",
-      "properties": {},
-      "widgets_values": [
-        "| megapixels | Aspect | Output (multiple=32) |\n|---|---|---|\n| 0.2 | 16:9 | 608 x 352 |\n| 0.3 | 16:9 | 736 x 416 |\n| 0.4 | 16:9 | 864 x 480 |\n| 0.5 | 16:9 | 960 x 544 |\n| 0.6 | 16:9 | 1056 x 608 |\n| 0.7 | 16:9 | 1152 x 640 |\n| 0.8 | 16:9 | 1216 x 672 |\n| 0.9 | 16:9 | 1280 x 736 |\n| 0.98 | 16:9 | 1344 x 768 (official 768p) |\n"
-      ],
-      "widgets_values_named": {
-        "text": "| megapixels | Aspect | Output (multiple=32) |\n|---|---|---|\n| 0.2 | 16:9 | 608 x 352 |\n| 0.3 | 16:9 | 736 x 416 |\n| 0.4 | 16:9 | 864 x 480 |\n| 0.5 | 16:9 | 960 x 544 |\n| 0.6 | 16:9 | 1056 x 608 |\n| 0.7 | 16:9 | 1152 x 640 |\n| 0.8 | 16:9 | 1216 x 672 |\n| 0.9 | 16:9 | 1280 x 736 |\n| 0.98 | 16:9 | 1344 x 768 (official 768p) |\n"
+        "text": "[Subgraph Guide](https://docs.comfy.org/interface/features/subgraph)\n\n- GitHub: https://github.com/Pika-Labs/Pika-H3-Flex\n- Hugging Face: https://huggingface.co/Pika-Labs/Pika-H3-Flex\n\n## Model Links\n\n- [Hugging Face:Comfy-Org/MiniMax-H3](https://huggingface.co/Comfy-Org/MiniMax-H3)\n\n**vae**\n\n- [minimax_h3_video_vae_int8_convrot.safetensors](https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/vae/minimax_h3_video_vae_int8_convrot.safetensors) (2.62 GB)\n- [minimax_h3_audio_vae_fp32.safetensors](https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/vae/minimax_h3_audio_vae_fp32.safetensors) (577.2 MB)\n\n**diffusion_models**\n\n- [minimax_h3_fl2va_pruned_int8_convrot.safetensors](https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/diffusion_models/minimax_h3_fl2va_pruned_int8_convrot.safetensors) (19.53 GB)\n\n**text_encoders**\n\n- [qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors](https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/text_encoders/qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors) (14.61 GB)\n\n**loras**\n\n- [pika_h3_flex_fl2va_v1_bf16.safetensors](https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/loras/pika_h3_flex_fl2va_v1_bf16.safetensors)\n\n\n## Model Storage Location\n\n```\n📂 ComfyUI/\n├── 📂 models/\n│   ├── 📂 vae/\n│   │   ├── minimax_h3_video_vae_int8_convrot.safetensors\n│   │   └── minimax_h3_audio_vae_fp32.safetensors\n│   ├── 📂 diffusion_models/\n│   │   └── minimax_h3_fl2va_pruned_int8_convrot.safetensors\n│   ├── 📂 text_encoders/\n│   │   └── qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors\n│   └── 📂 loras/\n│       └── pika_h3_flex_fl2va_v1_bf16.safetensors\n```\n\n## Report Issue\n\nNote: Please update ComfyUI first ([guide](https://docs.comfy.org/installation/update_comfyui)) and prepare required models. Desktop/Cloud updates follow stable releases, so some nightly-supported models may not be available yet.\n\n- Cannot run / runtime errors: [ComfyUI/issues](https://github.com/comfyanonymous/ComfyUI/issues)\n- UI / frontend issues: [ComfyUI_frontend/issues](https://github.com/Comfy-Org/ComfyUI_frontend/issues)\n- Workflow issues: [workflow_templates/issues](https://github.com/Comfy-Org/workflow_templates/issues)\n"
       },
       "color": "#222",
       "bgcolor": "#000"
@@ -188,7 +136,7 @@
         630
       ],
       "flags": {},
-      "order": 4,
+      "order": 2,
       "mode": 0,
       "inputs": [
         {
@@ -238,29 +186,11 @@
           "link": null
         },
         {
-          "label": "turbo_mode",
-          "name": "value",
-          "type": "BOOLEAN",
-          "widget": {
-            "name": "value"
-          },
-          "link": null
-        },
-        {
-          "label": "turbo_model_strength",
+          "label": "lora_strength",
           "name": "strength_model_1",
           "type": "FLOAT",
           "widget": {
             "name": "strength_model_1"
-          },
-          "link": null
-        },
-        {
-          "label": "turbo_steps",
-          "name": "value_2",
-          "type": "INT",
-          "widget": {
-            "name": "value_2"
           },
           "link": null
         }
@@ -280,38 +210,42 @@
         "previewExposures": []
       },
       "widgets_values": [
-        "Realistic live-action cinematic look, action movie trailer: practical film photography style, a post-rain dusk metropolis, anamorphic lens, shallow depth of field, film grain, city volumetric fog, flying-car traffic between the towers, restrained grading for a premium feel, powerful natural movement.\n\nScene overview: at dusk on a cluster of skyscrapers, the protagonist is being chased, sprinting and leaping across rooftops, jumping from one building's roof to the next with pursuers closing in behind. This is the escape sequence of an action movie trailer: every leap is life-or-death, thrilling and fluid.\n\nStoryboard (each shot a separate scene, rapid cuts, all landing on the musical beats):\n[0s-1.5s] Shot 1: high side angle: the protagonist sprinting at the roof edge, pursuers appearing in the rooftop doorway behind him, wind catching his coat.\n[1s-2.5s] Shot 2: the protagonist leaps across the gap between buildings, body stretching mid-air, towers and flying-car light trails behind him, a slight slow-motion feel.\n[2.5s-4s] Shot 3: he lands, rolls and rises, low-angle shot, tower shadows and fog behind him, he keeps running.\n[4s-5s] Shot 4: freeze: the instant he hits the edge of the next roof and launches into the jump, silhouette, holding.\n\nCamera: each shot its own angle, cuts clean and hard, no dissolves, a slight frame jitter on the jumps.\n\nAudio: wind, rapid footsteps, city ambience, low score underneath, an accent hit on each leap, the score bursting at 4s, closing the last 1s.\n\nNo text, subtitles, logos or watermarks of any kind, no animation or cartoon rendering, no overly-CG look, keep the live-action texture.",
+        "integrated_multimodal_description: [Shot 1] Stylized 3D animation, Pixar-inspired cartoon rendering with a C4D and Octane look, warm subsurface scattering through ears and fingertips and exaggerated squash-and-stretch acting; a three-head-tall cook with a round face, a tall white toque that flops to one side and a flour-dusted apron stands at a stainless counter in a small warm kitchen, rolling dumplings by hand. The counter is dusted white, a bamboo steamer steams on the right, and a shallow pot of broth sits at the burner behind him with visible heat shimmer. The camera holds a static shot at counter height for the first second while he sets one finished dumpling down on a tray in the foreground, presses the seam with two fingers, then turns away to reach for a rolling pin on the shelf behind him, the toque tipping as he turns. At about one and a half seconds the dumpling on the tray presses itself upward, its pleated top gathering like a brow, and two stubby legs of dough push out of its base. It walks to the tray edge in three quick shuffling steps, the tray ringing slightly under each step, and jumps off toward the pot. At about two and a half seconds the cook whips around and lunges, both arms out, and misses clean over the top of it as the dumpling arcs into the broth with a plop. He freezes half-bent over the pot, arms still out. At about three and a half seconds the surface breaks and the dumpling floats back up, cooked, glossy and steaming, bobbing once against the side of the pot. The last second holds completely still on the cook's face as he straightens up slowly, flour on his cheek, the toque now fully flopped over one eye, one eyebrow rising while his mouth stays flat; a single bubble pops on the broth behind him.\n\noverall_soundscape: Warm small-kitchen ambience with a low gas burner hiss and the faint creak of a steaming bamboo basket, the dry shuffle of a flour dusting, three soft doughy footfalls on metal tray, one short airy whoosh as he lunges, a clean heavy plop into broth, then a gentle simmer with one small bubble popping.\n\nnon_diegetic_music: A light pizzicato cello figure at a moderate tempo that follows the dumpling's footsteps, drops out completely during the lunge and the plop, and returns on a single dry resolved note as the cook straightens up.",
         1344,
         768,
         5,
-        757358688076805,
+        914757319624586,
         "minimax_h3_fl2va_bf16.safetensors",
         "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
         "minimax_h3_video_vae_fp16.safetensors",
         "minimax_h3_audio_vae_fp32.safetensors",
-        false,
         "pika_h3_flex_fl2va_comfy_bf16.safetensors",
-        1.0,
-        6
+        1
       ],
       "widgets_values_named": {
-        "prompt": "Realistic live-action cinematic look, action movie trailer: practical film photography style, a post-rain dusk metropolis, anamorphic lens, shallow depth of field, film grain, city volumetric fog, flying-car traffic between the towers, restrained grading for a premium feel, powerful natural movement.\n\nScene overview: at dusk on a cluster of skyscrapers, the protagonist is being chased, sprinting and leaping across rooftops, jumping from one building's roof to the next with pursuers closing in behind. This is the escape sequence of an action movie trailer: every leap is life-or-death, thrilling and fluid.\n\nStoryboard (each shot a separate scene, rapid cuts, all landing on the musical beats):\n[0s-1.5s] Shot 1: high side angle: the protagonist sprinting at the roof edge, pursuers appearing in the rooftop doorway behind him, wind catching his coat.\n[1s-2.5s] Shot 2: the protagonist leaps across the gap between buildings, body stretching mid-air, towers and flying-car light trails behind him, a slight slow-motion feel.\n[2.5s-4s] Shot 3: he lands, rolls and rises, low-angle shot, tower shadows and fog behind him, he keeps running.\n[4s-5s] Shot 4: freeze: the instant he hits the edge of the next roof and launches into the jump, silhouette, holding.\n\nCamera: each shot its own angle, cuts clean and hard, no dissolves, a slight frame jitter on the jumps.\n\nAudio: wind, rapid footsteps, city ambience, low score underneath, an accent hit on each leap, the score bursting at 4s, closing the last 1s.\n\nNo text, subtitles, logos or watermarks of any kind, no animation or cartoon rendering, no overly-CG look, keep the live-action texture.",
+        "prompt": "integrated_multimodal_description: [Shot 1] Stylized 3D animation, Pixar-inspired cartoon rendering with a C4D and Octane look, warm subsurface scattering through ears and fingertips and exaggerated squash-and-stretch acting; a three-head-tall cook with a round face, a tall white toque that flops to one side and a flour-dusted apron stands at a stainless counter in a small warm kitchen, rolling dumplings by hand. The counter is dusted white, a bamboo steamer steams on the right, and a shallow pot of broth sits at the burner behind him with visible heat shimmer. The camera holds a static shot at counter height for the first second while he sets one finished dumpling down on a tray in the foreground, presses the seam with two fingers, then turns away to reach for a rolling pin on the shelf behind him, the toque tipping as he turns. At about one and a half seconds the dumpling on the tray presses itself upward, its pleated top gathering like a brow, and two stubby legs of dough push out of its base. It walks to the tray edge in three quick shuffling steps, the tray ringing slightly under each step, and jumps off toward the pot. At about two and a half seconds the cook whips around and lunges, both arms out, and misses clean over the top of it as the dumpling arcs into the broth with a plop. He freezes half-bent over the pot, arms still out. At about three and a half seconds the surface breaks and the dumpling floats back up, cooked, glossy and steaming, bobbing once against the side of the pot. The last second holds completely still on the cook's face as he straightens up slowly, flour on his cheek, the toque now fully flopped over one eye, one eyebrow rising while his mouth stays flat; a single bubble pops on the broth behind him.\n\noverall_soundscape: Warm small-kitchen ambience with a low gas burner hiss and the faint creak of a steaming bamboo basket, the dry shuffle of a flour dusting, three soft doughy footfalls on metal tray, one short airy whoosh as he lunges, a clean heavy plop into broth, then a gentle simmer with one small bubble popping.\n\nnon_diegetic_music: A light pizzicato cello figure at a moderate tempo that follows the dumpling's footsteps, drops out completely during the lunge and the plop, and returns on a single dry resolved note as the cook straightens up.",
         "width": 1344,
         "height": 768,
         "value_1": 5,
-        "noise_seed": 757358688076805,
+        "noise_seed": 914757319624586,
         "unet_name": "minimax_h3_fl2va_bf16.safetensors",
         "clip_name": "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
         "vae_name": "minimax_h3_video_vae_fp16.safetensors",
         "vae_name_1": "minimax_h3_audio_vae_fp32.safetensors",
-        "value": false,
-        "lora_name": "minimax_h3_fl2v_turbo_8step_v1.0_comfyui_bf16.safetensors",
-        "strength_model_1": 1,
-        "value_2": 8
+        "lora_name": "pika_h3_flex_fl2va_comfy_bf16.safetensors",
+        "strength_model_1": 1
       }
     }
   ],
   "links": [
+    [
+      248,
+      140,
+      0,
+      92,
+      0,
+      "VIDEO"
+    ],
     [
       246,
       115,
@@ -327,14 +261,6 @@
       140,
       3,
       "INT"
-    ],
-    [
-      248,
-      140,
-      0,
-      92,
-      0,
-      "VIDEO"
     ]
   ],
   "groups": [],
@@ -345,27 +271,27 @@
         "version": 1,
         "state": {
           "lastGroupId": 6,
-          "lastNodeId": 140,
-          "lastLinkId": 248,
+          "lastNodeId": 150,
+          "lastLinkId": 262,
           "lastRerouteId": 0
         },
         "revision": 0,
         "config": {},
-        "name": "Image to Video (MiniMax H3)",
+        "name": "Image to Video (Pika H3 Flex)",
         "inputNode": {
           "id": -10,
           "bounding": [
-            -2560,
-            4790,
-            171.62109375,
-            348
+            -3070,
+            4770,
+            128,
+            308
           ]
         },
         "outputNode": {
           "id": -20,
           "bounding": [
-            2130,
-            5070,
+            860,
+            4890,
             128,
             68
           ]
@@ -379,8 +305,8 @@
               195
             ],
             "pos": [
-              -2412.37890625,
-              4814
+              -2966,
+              4794
             ]
           },
           {
@@ -391,8 +317,8 @@
               196
             ],
             "pos": [
-              -2412.37890625,
-              4834
+              -2966,
+              4814
             ]
           },
           {
@@ -403,8 +329,8 @@
               197
             ],
             "pos": [
-              -2412.37890625,
-              4854
+              -2966,
+              4834
             ]
           },
           {
@@ -412,11 +338,11 @@
             "name": "width",
             "type": "INT",
             "linkIds": [
-              200
+              259
             ],
             "pos": [
-              -2412.37890625,
-              4874
+              -2966,
+              4854
             ]
           },
           {
@@ -424,11 +350,11 @@
             "name": "height",
             "type": "INT",
             "linkIds": [
-              201
+              260
             ],
             "pos": [
-              -2412.37890625,
-              4894
+              -2966,
+              4874
             ]
           },
           {
@@ -440,8 +366,8 @@
             ],
             "label": "duration",
             "pos": [
-              -2412.37890625,
-              4914
+              -2966,
+              4894
             ]
           },
           {
@@ -452,8 +378,8 @@
               207
             ],
             "pos": [
-              -2412.37890625,
-              4934
+              -2966,
+              4914
             ]
           },
           {
@@ -464,8 +390,8 @@
               221
             ],
             "pos": [
-              -2412.37890625,
-              4954
+              -2966,
+              4934
             ]
           },
           {
@@ -476,8 +402,8 @@
               227
             ],
             "pos": [
-              -2412.37890625,
-              4974
+              -2966,
+              4954
             ]
           },
           {
@@ -488,8 +414,8 @@
               223
             ],
             "pos": [
-              -2412.37890625,
-              4994
+              -2966,
+              4974
             ]
           },
           {
@@ -501,21 +427,8 @@
             ],
             "label": "audio_vae",
             "pos": [
-              -2412.37890625,
-              5014
-            ]
-          },
-          {
-            "id": "5fa5fd85-5efc-45ea-b938-2767dc6a375b",
-            "name": "value",
-            "type": "BOOLEAN",
-            "linkIds": [
-              240
-            ],
-            "label": "turbo_mode",
-            "pos": [
-              -2412.37890625,
-              5034
+              -2966,
+              4994
             ]
           },
           {
@@ -526,8 +439,8 @@
               243
             ],
             "pos": [
-              -2412.37890625,
-              5054
+              -2966,
+              5014
             ]
           },
           {
@@ -537,23 +450,10 @@
             "linkIds": [
               244
             ],
-            "label": "turbo_model_strength",
+            "label": "lora_strength",
             "pos": [
-              -2412.37890625,
-              5074
-            ]
-          },
-          {
-            "id": "4a02c41e-7fa6-4faf-9018-7a09de5245d8",
-            "name": "value_2",
-            "type": "INT",
-            "linkIds": [
-              245
-            ],
-            "label": "turbo_steps",
-            "pos": [
-              -2412.37890625,
-              5094
+              -2966,
+              5034
             ]
           }
         ],
@@ -567,8 +467,8 @@
             ],
             "localized_name": "VIDEO",
             "pos": [
-              2154,
-              5094
+              884,
+              4914
             ]
           }
         ],
@@ -611,9 +511,9 @@
               }
             ],
             "properties": {
+              "Node name for S&R": "VAELoader",
               "cnr_id": "comfy-core",
               "ver": "0.33.0",
-              "Node name for S&R": "VAELoader",
               "models": [
                 {
                   "name": "minimax_h3_video_vae_fp16.safetensors",
@@ -665,9 +565,9 @@
               }
             ],
             "properties": {
+              "Node name for S&R": "VAELoader",
               "cnr_id": "comfy-core",
               "ver": "0.33.0",
-              "Node name for S&R": "VAELoader",
               "models": [
                 {
                   "name": "minimax_h3_audio_vae_fp32.safetensors",
@@ -687,7 +587,7 @@
             "id": 121,
             "type": "VAEDecodeAudio",
             "pos": [
-              760,
+              -20,
               4990
             ],
             "size": [
@@ -724,16 +624,16 @@
               }
             ],
             "properties": {
+              "Node name for S&R": "VAEDecodeAudio",
               "cnr_id": "comfy-core",
-              "ver": "0.33.0",
-              "Node name for S&R": "VAEDecodeAudio"
+              "ver": "0.33.0"
             }
           },
           {
             "id": 122,
             "type": "VAEDecode",
             "pos": [
-              760,
+              -20,
               4850
             ],
             "size": [
@@ -770,17 +670,17 @@
               }
             ],
             "properties": {
+              "Node name for S&R": "VAEDecode",
               "cnr_id": "comfy-core",
-              "ver": "0.33.0",
-              "Node name for S&R": "VAEDecode"
+              "ver": "0.33.0"
             }
           },
           {
             "id": 123,
             "type": "KSamplerSelect",
             "pos": [
-              0,
-              4950
+              -790,
+              4970
             ],
             "size": [
               370,
@@ -801,67 +701,30 @@
               }
             ],
             "properties": {
+              "Node name for S&R": "KSamplerSelect",
               "cnr_id": "comfy-core",
-              "ver": "0.33.0",
-              "Node name for S&R": "KSamplerSelect"
+              "ver": "0.33.0"
             },
             "widgets_values": [
               "lcm"
             ],
             "widgets_values_named": {
-              "sampler_name": "res_multistep"
-            }
-          },
-          {
-            "id": 124,
-            "type": "ManualSigmas",
-            "pos": [
-              0,
-              5100
-            ],
-            "size": [
-              370,
-              150
-            ],
-            "flags": {},
-            "order": 6,
-            "mode": 0,
-            "inputs": [],
-            "outputs": [
-              {
-                "localized_name": "SIGMAS",
-                "name": "SIGMAS",
-                "type": "SIGMAS",
-                "links": [
-                  18
-                ]
-              }
-            ],
-            "properties": {
-              "cnr_id": "comfy-core"
-            },
-            "widgets_values": [
-              "1.0, 0.972973, 0.923077, 0.8, 0.571429, 0.333333, 0.0"
-            ],
-            "widgets_values_named": {
-              "scheduler": "simple",
-              "steps": 4,
-              "denoise": 1
+              "sampler_name": "lcm"
             }
           },
           {
             "id": 125,
             "type": "SamplerCustomAdvanced",
             "pos": [
-              420,
-              4780
+              -360,
+              4710
             ],
             "size": [
               230,
               390
             ],
             "flags": {},
-            "order": 7,
+            "order": 6,
             "mode": 0,
             "inputs": [
               {
@@ -886,7 +749,7 @@
                 "localized_name": "sigmas",
                 "name": "sigmas",
                 "type": "SIGMAS",
-                "link": 18
+                "link": 250
               },
               {
                 "localized_name": "latent_image",
@@ -913,31 +776,31 @@
               }
             ],
             "properties": {
+              "Node name for S&R": "SamplerCustomAdvanced",
               "cnr_id": "comfy-core",
-              "ver": "0.33.0",
-              "Node name for S&R": "SamplerCustomAdvanced"
+              "ver": "0.33.0"
             }
           },
           {
             "id": 126,
             "type": "BasicGuider",
             "pos": [
-              0,
+              -790,
               4820
             ],
             "size": [
-              360,
+              370,
               80
             ],
             "flags": {},
-            "order": 8,
+            "order": 7,
             "mode": 0,
             "inputs": [
               {
                 "localized_name": "model",
                 "name": "model",
                 "type": "MODEL",
-                "link": 241
+                "link": 256
               },
               {
                 "localized_name": "conditioning",
@@ -957,9 +820,9 @@
               }
             ],
             "properties": {
+              "Node name for S&R": "BasicGuider",
               "cnr_id": "comfy-core",
-              "ver": "0.33.0",
-              "Node name for S&R": "BasicGuider"
+              "ver": "0.33.0"
             }
           },
           {
@@ -974,7 +837,7 @@
               120
             ],
             "flags": {},
-            "order": 9,
+            "order": 8,
             "mode": 0,
             "inputs": [
               {
@@ -993,15 +856,14 @@
                 "name": "MODEL",
                 "type": "MODEL",
                 "links": [
-                  229,
-                  232
+                  229
                 ]
               }
             ],
             "properties": {
+              "Node name for S&R": "UNETLoader",
               "cnr_id": "comfy-core",
               "ver": "0.33.0",
-              "Node name for S&R": "UNETLoader",
               "models": [
                 {
                   "name": "minimax_h3_fl2va_bf16.safetensors",
@@ -1031,7 +893,7 @@
               150
             ],
             "flags": {},
-            "order": 10,
+            "order": 9,
             "mode": 0,
             "inputs": [
               {
@@ -1055,9 +917,9 @@
               }
             ],
             "properties": {
+              "Node name for S&R": "CLIPLoader",
               "cnr_id": "comfy-core",
               "ver": "0.33.0",
-              "Node name for S&R": "CLIPLoader",
               "models": [
                 {
                   "name": "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
@@ -1081,15 +943,15 @@
             "id": 129,
             "type": "RandomNoise",
             "pos": [
-              0,
+              -790,
               4660
             ],
             "size": [
-              360,
+              370,
               90
             ],
             "flags": {},
-            "order": 11,
+            "order": 10,
             "mode": 0,
             "inputs": [
               {
@@ -1113,32 +975,32 @@
               }
             ],
             "properties": {
+              "Node name for S&R": "RandomNoise",
               "cnr_id": "comfy-core",
-              "ver": "0.33.0",
-              "Node name for S&R": "RandomNoise"
+              "ver": "0.33.0"
             },
             "widgets_values": [
-              1,
-              "fixed"
+              20261220,
+              "randomize"
             ],
             "widgets_values_named": {
-              "noise_seed": 1,
-              "control_after_generate": "fixed"
+              "noise_seed": 20261220,
+              "control_after_generate": "randomize"
             }
           },
           {
             "id": 130,
             "type": "CreateVideo",
             "pos": [
-              1090,
+              310,
               4890
             ],
             "size": [
               270,
-              140
+              150
             ],
             "flags": {},
-            "order": 12,
+            "order": 11,
             "mode": 0,
             "inputs": [
               {
@@ -1166,32 +1028,36 @@
               }
             ],
             "properties": {
+              "Node name for S&R": "CreateVideo",
               "cnr_id": "comfy-core",
-              "ver": "0.33.0",
-              "Node name for S&R": "CreateVideo"
+              "ver": "0.33.0"
             },
             "widgets_values": [
               24,
-              8
+              "auto",
+              "sRGB",
+              "none"
             ],
             "widgets_values_named": {
               "fps": 24,
-              "bit_depth": 8
+              "bit_depth": "auto",
+              "color_space": "sRGB",
+              "codec": "none"
             }
           },
           {
             "id": 131,
             "type": "MiniMaxH3ImageToVideo",
             "pos": [
-              -1300,
-              4740
+              -1290,
+              4710
             ],
             "size": [
               430,
               550
             ],
             "flags": {},
-            "order": 13,
+            "order": 12,
             "mode": 0,
             "inputs": [
               {
@@ -1236,7 +1102,7 @@
                 "widget": {
                   "name": "width"
                 },
-                "link": 200
+                "link": 261
               },
               {
                 "localized_name": "height",
@@ -1245,7 +1111,7 @@
                 "widget": {
                   "name": "height"
                 },
-                "link": 201
+                "link": 262
               },
               {
                 "localized_name": "length",
@@ -1276,18 +1142,18 @@
               }
             ],
             "properties": {
+              "Node name for S&R": "MiniMaxH3ImageToVideo",
               "cnr_id": "comfy-core",
-              "ver": "0.33.0",
-              "Node name for S&R": "MiniMaxH3ImageToVideo"
+              "ver": "0.33.0"
             },
             "widgets_values": [
-              "Vaporwave title sequence look: pink and blue gradient palette, VHS tracking artifacts, Greek statue motifs, chrome palm trees, RGB chromatic aberration, lo-fi retro atmosphere, mood languid and nostalgic.\n\nTimeline:\n[0s-1s] VHS static opens the frame, the title \"COMFYUI\" appears with RGB split and a slight horizontal jitter.\n[1s-2.5s] Hard cut, a Greek plaster bust close-up, pink-purple gradient sky, a pixelated sun.\n[2.5s-4s] Clean \"STARRING\" credits appear, \"LATENT\" and \"CONTROLNET\" each shown exactly once.\n[4s-5s] Final card \"DIRECTED BY COMFYUI\" holds, one VHS tracking glitch settling into stability.\n\nHard cuts only, transitions landing with tape jumps, no push-ins, no dissolves.\n\nAudio: lo-fi vaporwave score, slow drum machine with soft bass, VHS tape-noise sample joins at 2.5s, melody fading for the last 1s.\n\nAll text must be clearly legible, do not misspell English, no Chinese characters, do not repeat names or job titles, no soft dissolves, no subtitle bars.",
+              "integrated_multimodal_description: [Shot 1] Stylized 3D animation, Pixar-inspired cartoon rendering with a C4D and Octane look, warm subsurface scattering through ears and fingertips and exaggerated squash-and-stretch acting; a three-head-tall cook with a round face, a tall white toque that flops to one side and a flour-dusted apron stands at a stainless counter in a small warm kitchen, rolling dumplings by hand. The counter is dusted white, a bamboo steamer steams on the right, and a shallow pot of broth sits at the burner behind him with visible heat shimmer. The camera holds a static shot at counter height for the first second while he sets one finished dumpling down on a tray in the foreground, presses the seam with two fingers, then turns away to reach for a rolling pin on the shelf behind him, the toque tipping as he turns. At about one and a half seconds the dumpling on the tray presses itself upward, its pleated top gathering like a brow, and two stubby legs of dough push out of its base. It walks to the tray edge in three quick shuffling steps, the tray ringing slightly under each step, and jumps off toward the pot. At about two and a half seconds the cook whips around and lunges, both arms out, and misses clean over the top of it as the dumpling arcs into the broth with a plop. He freezes half-bent over the pot, arms still out. At about three and a half seconds the surface breaks and the dumpling floats back up, cooked, glossy and steaming, bobbing once against the side of the pot. The last second holds completely still on the cook's face as he straightens up slowly, flour on his cheek, the toque now fully flopped over one eye, one eyebrow rising while his mouth stays flat; a single bubble pops on the broth behind him.\n\noverall_soundscape: Warm small-kitchen ambience with a low gas burner hiss and the faint creak of a steaming bamboo basket, the dry shuffle of a flour dusting, three soft doughy footfalls on metal tray, one short airy whoosh as he lunges, a clean heavy plop into broth, then a gentle simmer with one small bubble popping.\n\nnon_diegetic_music: A light pizzicato cello figure at a moderate tempo that follows the dumpling's footsteps, drops out completely during the lunge and the plop, and returns on a single dry resolved note as the cook straightens up.",
               1344,
               768,
               73
             ],
             "widgets_values_named": {
-              "prompt": "Vaporwave title sequence look: pink and blue gradient palette, VHS tracking artifacts, Greek statue motifs, chrome palm trees, RGB chromatic aberration, lo-fi retro atmosphere, mood languid and nostalgic.\n\nTimeline:\n[0s-1s] VHS static opens the frame, the title \"COMFYUI\" appears with RGB split and a slight horizontal jitter.\n[1s-2.5s] Hard cut, a Greek plaster bust close-up, pink-purple gradient sky, a pixelated sun.\n[2.5s-4s] Clean \"STARRING\" credits appear, \"LATENT\" and \"CONTROLNET\" each shown exactly once.\n[4s-5s] Final card \"DIRECTED BY COMFYUI\" holds, one VHS tracking glitch settling into stability.\n\nHard cuts only, transitions landing with tape jumps, no push-ins, no dissolves.\n\nAudio: lo-fi vaporwave score, slow drum machine with soft bass, VHS tape-noise sample joins at 2.5s, melody fading for the last 1s.\n\nAll text must be clearly legible, do not misspell English, no Chinese characters, do not repeat names or job titles, no soft dissolves, no subtitle bars.",
+              "prompt": "integrated_multimodal_description: [Shot 1] Stylized 3D animation, Pixar-inspired cartoon rendering with a C4D and Octane look, warm subsurface scattering through ears and fingertips and exaggerated squash-and-stretch acting; a three-head-tall cook with a round face, a tall white toque that flops to one side and a flour-dusted apron stands at a stainless counter in a small warm kitchen, rolling dumplings by hand. The counter is dusted white, a bamboo steamer steams on the right, and a shallow pot of broth sits at the burner behind him with visible heat shimmer. The camera holds a static shot at counter height for the first second while he sets one finished dumpling down on a tray in the foreground, presses the seam with two fingers, then turns away to reach for a rolling pin on the shelf behind him, the toque tipping as he turns. At about one and a half seconds the dumpling on the tray presses itself upward, its pleated top gathering like a brow, and two stubby legs of dough push out of its base. It walks to the tray edge in three quick shuffling steps, the tray ringing slightly under each step, and jumps off toward the pot. At about two and a half seconds the cook whips around and lunges, both arms out, and misses clean over the top of it as the dumpling arcs into the broth with a plop. He freezes half-bent over the pot, arms still out. At about three and a half seconds the surface breaks and the dumpling floats back up, cooked, glossy and steaming, bobbing once against the side of the pot. The last second holds completely still on the cook's face as he straightens up slowly, flour on his cheek, the toque now fully flopped over one eye, one eyebrow rising while his mouth stays flat; a single bubble pops on the broth behind him.\n\noverall_soundscape: Warm small-kitchen ambience with a low gas burner hiss and the faint creak of a steaming bamboo basket, the dry shuffle of a flour dusting, three soft doughy footfalls on metal tray, one short airy whoosh as he lunges, a clean heavy plop into broth, then a gentle simmer with one small bubble popping.\n\nnon_diegetic_music: A light pizzicato cello figure at a moderate tempo that follows the dumpling's footsteps, drops out completely during the lunge and the plop, and returns on a single dry resolved note as the cook straightens up.",
               "width": 1344,
               "height": 768,
               "length": 73
@@ -1298,7 +1164,7 @@
             "type": "ComfyMathExpression",
             "pos": [
               -1710,
-              5740
+              5600
             ],
             "size": [
               360,
@@ -1307,19 +1173,19 @@
             "flags": {
               "collapsed": false
             },
-            "order": 14,
+            "order": 13,
             "mode": 0,
             "inputs": [
               {
                 "label": "a",
-                "localized_name": "values.a",
+                "localized_name": "a",
                 "name": "values.a",
                 "type": "FLOAT,INT,BOOLEAN",
                 "link": 205
               },
               {
                 "label": "b",
-                "localized_name": "values.b",
+                "localized_name": "b",
                 "name": "values.b",
                 "shape": 7,
                 "type": "FLOAT,INT,BOOLEAN",
@@ -1349,9 +1215,9 @@
               }
             ],
             "properties": {
+              "Node name for S&R": "ComfyMathExpression",
               "cnr_id": "comfy-core",
-              "ver": "0.33.0",
-              "Node name for S&R": "ComfyMathExpression"
+              "ver": "0.33.0"
             },
             "widgets_values": [
               "max(5, round(a * 24)) + (5 - (max(5, round(a * 24)) % 17)) % 17"
@@ -1365,14 +1231,14 @@
             "type": "PrimitiveFloat",
             "pos": [
               -2020,
-              5740
+              5600
             ],
             "size": [
               270,
               90
             ],
             "flags": {},
-            "order": 15,
+            "order": 14,
             "mode": 0,
             "inputs": [
               {
@@ -1397,15 +1263,15 @@
             ],
             "title": "Float (duration)",
             "properties": {
+              "Node name for S&R": "PrimitiveFloat",
               "cnr_id": "comfy-core",
-              "ver": "0.33.0",
-              "Node name for S&R": "PrimitiveFloat"
+              "ver": "0.33.0"
             },
             "widgets_values": [
-              2
+              5
             ],
             "widgets_values_named": {
-              "value": 2
+              "value": 5
             }
           },
           {
@@ -1420,7 +1286,7 @@
               130
             ],
             "flags": {},
-            "order": 16,
+            "order": 15,
             "mode": 0,
             "inputs": [
               {
@@ -1454,159 +1320,41 @@
                 "name": "MODEL",
                 "type": "MODEL",
                 "links": [
-                  233
+                  256
                 ]
               }
             ],
             "properties": {
+              "Node name for S&R": "LoraLoaderModelOnly",
               "cnr_id": "comfy-core",
               "ver": "0.33.0",
-              "Node name for S&R": "LoraLoaderModelOnly",
               "models": [
                 {
-                  "name": "minimax_h3_fl2v_turbo_8step_v1.0_comfyui_bf16.safetensors",
-                  "url": "https://huggingface.co/lightx2v/Minimax-h3-Turbo/resolve/main/minimax_h3_fl2v_turbo_8step_v1.0_comfyui_bf16.safetensors",
+                  "name": "pika_h3_flex_fl2va_comfy_bf16.safetensors",
+                  "url": "https://huggingface.co/Pika-Labs/Pika-H3-Flex/resolve/main/comfy/loras/pika_h3_flex_fl2va_comfy_bf16.safetensors",
                   "directory": "loras"
                 }
               ]
             },
             "widgets_values": [
               "pika_h3_flex_fl2va_comfy_bf16.safetensors",
-              1.0
+              1
             ],
             "widgets_values_named": {
-              "lora_name": "minimax_h3_fl2v_turbo_8step_v1.0_comfyui_bf16.safetensors",
+              "lora_name": "pika_h3_flex_fl2va_comfy_bf16.safetensors",
               "strength_model": 1
             }
           },
           {
-            "id": 135,
-            "type": "ComfySwitchNode",
+            "id": 143,
+            "type": "ManualSigmas",
             "pos": [
-              -400,
-              4790
+              -790,
+              5140
             ],
             "size": [
-              270,
-              110
-            ],
-            "flags": {},
-            "order": 17,
-            "mode": 0,
-            "inputs": [
-              {
-                "localized_name": "on_false",
-                "name": "on_false",
-                "type": "MODEL",
-                "link": 232
-              },
-              {
-                "localized_name": "on_true",
-                "name": "on_true",
-                "type": "MODEL",
-                "link": 233
-              },
-              {
-                "localized_name": "switch",
-                "name": "switch",
-                "type": "BOOLEAN",
-                "widget": {
-                  "name": "switch"
-                },
-                "link": 238
-              }
-            ],
-            "outputs": [
-              {
-                "localized_name": "output",
-                "name": "output",
-                "type": "MODEL",
-                "links": [
-                  241
-                ]
-              }
-            ],
-            "title": "If/Else Switch (Model)",
-            "properties": {
-              "cnr_id": "comfy-core",
-              "ver": "0.33.0",
-              "Node name for S&R": "ComfySwitchNode"
-            },
-            "widgets_values": [
-              false
-            ],
-            "widgets_values_named": {
-              "switch": false
-            }
-          },
-          {
-            "id": 136,
-            "type": "ComfySwitchNode",
-            "pos": [
-              -400,
-              4980
-            ],
-            "size": [
-              270,
-              110
-            ],
-            "flags": {},
-            "order": 18,
-            "mode": 0,
-            "inputs": [
-              {
-                "localized_name": "on_false",
-                "name": "on_false",
-                "type": "INT",
-                "link": 236
-              },
-              {
-                "localized_name": "on_true",
-                "name": "on_true",
-                "type": "INT",
-                "link": 237
-              },
-              {
-                "localized_name": "switch",
-                "name": "switch",
-                "type": "BOOLEAN",
-                "widget": {
-                  "name": "switch"
-                },
-                "link": 239
-              }
-            ],
-            "outputs": [
-              {
-                "localized_name": "output",
-                "name": "output",
-                "type": "INT",
-                "links": []
-              }
-            ],
-            "title": "If/Else Switch (Steps)",
-            "properties": {
-              "cnr_id": "comfy-core",
-              "ver": "0.33.0",
-              "Node name for S&R": "ComfySwitchNode"
-            },
-            "widgets_values": [
-              false
-            ],
-            "widgets_values_named": {
-              "switch": false
-            }
-          },
-          {
-            "id": 137,
-            "type": "PrimitiveInt",
-            "pos": [
-              -750,
-              4920
-            ],
-            "size": [
-              270,
-              90
+              370,
+              100
             ],
             "flags": {},
             "order": 1,
@@ -1614,34 +1362,199 @@
             "inputs": [],
             "outputs": [
               {
-                "localized_name": "INT",
-                "name": "INT",
-                "type": "INT",
+                "localized_name": "SIGMAS",
+                "name": "SIGMAS",
+                "type": "SIGMAS",
                 "links": [
-                  236
+                  250
                 ]
               }
             ],
             "properties": {
-              "cnr_id": "comfy-core",
-              "ver": "0.33.0",
-              "Node name for S&R": "PrimitiveInt"
+              "Node name for S&R": "ManualSigmas"
             },
             "widgets_values": [
-              20,
-              "fixed"
+              "1.0, 0.972973, 0.923077, 0.8, 0.571429, 0.333333, 0.0"
             ],
             "widgets_values_named": {
-              "value": 20,
-              "fixed": "fixed"
+              "sigmas": "1.0, 0.972973, 0.923077, 0.8, 0.571429, 0.333333, 0.0"
             }
           },
           {
-            "id": 138,
+            "id": 147,
+            "type": "ComfyMathExpression",
+            "pos": [
+              -2500,
+              4920
+            ],
+            "size": [
+              230,
+              150
+            ],
+            "flags": {},
+            "order": 16,
+            "mode": 0,
+            "inputs": [
+              {
+                "localized_name": "a",
+                "name": "values.a",
+                "type": "FLOAT,INT,BOOLEAN",
+                "link": 257
+              },
+              {
+                "localized_name": "b",
+                "name": "values.b",
+                "shape": 7,
+                "type": "FLOAT,INT,BOOLEAN",
+                "link": null
+              }
+            ],
+            "outputs": [
+              {
+                "localized_name": "FLOAT",
+                "name": "FLOAT",
+                "type": "FLOAT",
+                "links": []
+              },
+              {
+                "localized_name": "INT",
+                "name": "INT",
+                "type": "INT",
+                "links": [
+                  262
+                ]
+              },
+              {
+                "localized_name": "BOOL",
+                "name": "BOOL",
+                "type": "BOOLEAN",
+                "links": []
+              }
+            ],
+            "properties": {
+              "Node name for S&R": "ComfyMathExpression"
+            },
+            "widgets_values": [
+              "round(a/32)*32"
+            ],
+            "widgets_values_named": {
+              "expression": "round(a/32)*32"
+            }
+          },
+          {
+            "id": 148,
+            "type": "ComfyMathExpression",
+            "pos": [
+              -2500,
+              4720
+            ],
+            "size": [
+              230,
+              150
+            ],
+            "flags": {},
+            "order": 17,
+            "mode": 0,
+            "inputs": [
+              {
+                "localized_name": "a",
+                "name": "values.a",
+                "type": "FLOAT,INT,BOOLEAN",
+                "link": 258
+              },
+              {
+                "localized_name": "b",
+                "name": "values.b",
+                "shape": 7,
+                "type": "FLOAT,INT,BOOLEAN",
+                "link": null
+              }
+            ],
+            "outputs": [
+              {
+                "localized_name": "FLOAT",
+                "name": "FLOAT",
+                "type": "FLOAT",
+                "links": []
+              },
+              {
+                "localized_name": "INT",
+                "name": "INT",
+                "type": "INT",
+                "links": [
+                  261
+                ]
+              },
+              {
+                "localized_name": "BOOL",
+                "name": "BOOL",
+                "type": "BOOLEAN",
+                "links": []
+              }
+            ],
+            "properties": {
+              "Node name for S&R": "ComfyMathExpression"
+            },
+            "widgets_values": [
+              "round(a/32)*32"
+            ],
+            "widgets_values_named": {
+              "expression": "round(a/32)*32"
+            }
+          },
+          {
+            "id": 149,
             "type": "PrimitiveInt",
             "pos": [
-              -750,
-              5060
+              -2900,
+              4760
+            ],
+            "size": [
+              270,
+              90
+            ],
+            "flags": {},
+            "order": 18,
+            "mode": 0,
+            "inputs": [
+              {
+                "localized_name": "value",
+                "name": "value",
+                "type": "INT",
+                "widget": {
+                  "name": "value"
+                },
+                "link": 259
+              }
+            ],
+            "outputs": [
+              {
+                "localized_name": "INT",
+                "name": "INT",
+                "type": "INT",
+                "links": [
+                  258
+                ]
+              }
+            ],
+            "properties": {
+              "Node name for S&R": "PrimitiveInt"
+            },
+            "widgets_values": [
+              0,
+              "fixed"
+            ],
+            "widgets_values_named": {
+              "value": 0,
+              "control_after_generate": "fixed"
+            }
+          },
+          {
+            "id": 150,
+            "type": "PrimitiveInt",
+            "pos": [
+              -2900,
+              4910
             ],
             "size": [
               270,
@@ -1658,7 +1571,7 @@
                 "widget": {
                   "name": "value"
                 },
-                "link": 245
+                "link": 260
               }
             ],
             "outputs": [
@@ -1667,74 +1580,21 @@
                 "name": "INT",
                 "type": "INT",
                 "links": [
-                  237
+                  257
                 ]
               }
             ],
             "properties": {
-              "cnr_id": "comfy-core",
-              "ver": "0.33.0",
               "Node name for S&R": "PrimitiveInt"
             },
             "widgets_values": [
-              6,
+              0,
               "fixed"
             ],
             "widgets_values_named": {
-              "value": 6,
-              "fixed": "fixed"
+              "value": 0,
+              "control_after_generate": "fixed"
             }
-          },
-          {
-            "id": 139,
-            "type": "PrimitiveBoolean",
-            "pos": [
-              -750,
-              5210
-            ],
-            "size": [
-              270,
-              90
-            ],
-            "flags": {},
-            "order": 20,
-            "mode": 0,
-            "inputs": [
-              {
-                "localized_name": "value",
-                "name": "value",
-                "type": "BOOLEAN",
-                "widget": {
-                  "name": "value"
-                },
-                "link": 240
-              }
-            ],
-            "outputs": [
-              {
-                "localized_name": "BOOLEAN",
-                "name": "BOOLEAN",
-                "type": "BOOLEAN",
-                "links": [
-                  238,
-                  239
-                ]
-              }
-            ],
-            "title": "Boolean (Enable Lightning LoRA)",
-            "properties": {
-              "cnr_id": "comfy-core",
-              "ver": "0.33.0",
-              "Node name for S&R": "PrimitiveBoolean"
-            },
-            "widgets_values": [
-              false
-            ],
-            "widgets_values_named": {
-              "value": false
-            },
-            "color": "#322",
-            "bgcolor": "#533"
           }
         ],
         "groups": [
@@ -1754,7 +1614,7 @@
             "id": 2,
             "title": "Sampling",
             "bounding": [
-              -30,
+              -810,
               4540,
               700,
               800
@@ -1778,21 +1638,9 @@
             "id": 4,
             "title": "Decoding and create video",
             "bounding": [
-              700,
+              -80,
               4540,
               700,
-              800
-            ],
-            "color": "#3f789e",
-            "flags": {}
-          },
-          {
-            "id": 6,
-            "title": "Switch",
-            "bounding": [
-              -810,
-              4540,
-              750,
               800
             ],
             "color": "#3f789e",
@@ -1839,14 +1687,6 @@
             "target_id": 125,
             "target_slot": 2,
             "type": "SAMPLER"
-          },
-          {
-            "id": 18,
-            "origin_id": 124,
-            "origin_slot": 0,
-            "target_id": 125,
-            "target_slot": 3,
-            "type": "SIGMAS"
           },
           {
             "id": 188,
@@ -1937,30 +1777,6 @@
             "type": "INT"
           },
           {
-            "id": 200,
-            "origin_id": -10,
-            "origin_slot": 3,
-            "target_id": 131,
-            "target_slot": 5,
-            "type": "INT"
-          },
-          {
-            "id": 201,
-            "origin_id": -10,
-            "origin_slot": 4,
-            "target_id": 131,
-            "target_slot": 6,
-            "type": "INT"
-          },
-          {
-            "id": 205,
-            "origin_id": 133,
-            "origin_slot": 0,
-            "target_id": 132,
-            "target_slot": 0,
-            "type": "FLOAT"
-          },
-          {
             "id": 206,
             "origin_id": -10,
             "origin_slot": 5,
@@ -2033,73 +1849,9 @@
             "type": "MODEL"
           },
           {
-            "id": 232,
-            "origin_id": 127,
-            "origin_slot": 0,
-            "target_id": 135,
-            "target_slot": 0,
-            "type": "MODEL"
-          },
-          {
-            "id": 233,
-            "origin_id": 134,
-            "origin_slot": 0,
-            "target_id": 135,
-            "target_slot": 1,
-            "type": "MODEL"
-          },
-          {
-            "id": 236,
-            "origin_id": 137,
-            "origin_slot": 0,
-            "target_id": 136,
-            "target_slot": 0,
-            "type": "INT"
-          },
-          {
-            "id": 237,
-            "origin_id": 138,
-            "origin_slot": 0,
-            "target_id": 136,
-            "target_slot": 1,
-            "type": "INT"
-          },
-          {
-            "id": 238,
-            "origin_id": 139,
-            "origin_slot": 0,
-            "target_id": 135,
-            "target_slot": 2,
-            "type": "BOOLEAN"
-          },
-          {
-            "id": 239,
-            "origin_id": 139,
-            "origin_slot": 0,
-            "target_id": 136,
-            "target_slot": 2,
-            "type": "BOOLEAN"
-          },
-          {
-            "id": 240,
-            "origin_id": -10,
-            "origin_slot": 11,
-            "target_id": 139,
-            "target_slot": 0,
-            "type": "BOOLEAN"
-          },
-          {
-            "id": 241,
-            "origin_id": 135,
-            "origin_slot": 0,
-            "target_id": 126,
-            "target_slot": 0,
-            "type": "MODEL"
-          },
-          {
             "id": 243,
             "origin_id": -10,
-            "origin_slot": 12,
+            "origin_slot": 11,
             "target_id": 134,
             "target_slot": 1,
             "type": "COMBO"
@@ -2107,16 +1859,80 @@
           {
             "id": 244,
             "origin_id": -10,
-            "origin_slot": 13,
+            "origin_slot": 12,
             "target_id": 134,
             "target_slot": 2,
             "type": "FLOAT"
           },
           {
-            "id": 245,
+            "id": 250,
+            "origin_id": 143,
+            "origin_slot": 0,
+            "target_id": 125,
+            "target_slot": 3,
+            "type": "SIGMAS"
+          },
+          {
+            "id": 256,
+            "origin_id": 134,
+            "origin_slot": 0,
+            "target_id": 126,
+            "target_slot": 0,
+            "type": "MODEL"
+          },
+          {
+            "id": 259,
             "origin_id": -10,
-            "origin_slot": 14,
-            "target_id": 138,
+            "origin_slot": 3,
+            "target_id": 149,
+            "target_slot": 0,
+            "type": "INT"
+          },
+          {
+            "id": 260,
+            "origin_id": -10,
+            "origin_slot": 4,
+            "target_id": 150,
+            "target_slot": 0,
+            "type": "INT"
+          },
+          {
+            "id": 261,
+            "origin_id": 148,
+            "origin_slot": 1,
+            "target_id": 131,
+            "target_slot": 5,
+            "type": "INT"
+          },
+          {
+            "id": 262,
+            "origin_id": 147,
+            "origin_slot": 1,
+            "target_id": 131,
+            "target_slot": 6,
+            "type": "INT"
+          },
+          {
+            "id": 205,
+            "origin_id": 133,
+            "origin_slot": 0,
+            "target_id": 132,
+            "target_slot": 0,
+            "type": "FLOAT"
+          },
+          {
+            "id": 257,
+            "origin_id": 150,
+            "origin_slot": 0,
+            "target_id": 147,
+            "target_slot": 0,
+            "type": "INT"
+          },
+          {
+            "id": 258,
+            "origin_id": 149,
+            "origin_slot": 0,
+            "target_id": 148,
             "target_slot": 0,
             "type": "INT"
           }
@@ -2127,16 +1943,16 @@
   },
   "config": {},
   "extra": {
-    "frontendVersion": "1.49.6",
+    "frontendVersion": "1.57.1",
     "VHS_latentpreview": false,
     "VHS_latentpreviewrate": 0,
     "VHS_MetadataImage": true,
     "VHS_KeepIntermediate": true,
     "ds": {
-      "scale": 0.6561241784551809,
+      "scale": 0.47280987769648064,
       "offset": [
-        3354.7173769818073,
-        -4137.722049405241
+        4203.360472307374,
+        -4087.558895682532
       ]
     }
   },
