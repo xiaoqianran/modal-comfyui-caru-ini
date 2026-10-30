@@ -1,0 +1,16 @@
+{
+  "shots": [
+    {
+      "id": "001",
+      "prompt": "Cinematic wide shot, a young woman standing on a rainy Tokyo street, realistic lighting, no text"
+    },
+    {
+      "id": "002",
+      "prompt": "Cinematic close-up, the young woman opens an old letter, soft dramatic lighting, no text"
+    },
+    {
+      "id": "003",
+      "prompt": "Cinematic wide shot, the young woman walking toward a station at sunset, no text"
+    }
+  ]
+}
