@@ -1,0 +1,46 @@
+{
+  "models": [
+    {
+      "repo_id": "Comfy-Org/MiniMax-H3",
+      "filename": "vae/minimax_h3_audio_vae_fp32.safetensors",
+      "model_dir": "vae"
+    },
+    {
+      "repo_id": "Comfy-Org/MiniMax-H3",
+      "filename": "model_patches/minimax_h3_fun_controlnet_union_pruned_bf16.safetensors",
+      "model_dir": "model_patches"
+    },
+    {
+      "repo_id": "Comfy-Org/MiniMax-H3",
+      "filename": "diffusion_models/minimax_h3_ref2va_bf16.safetensors",
+      "model_dir": "diffusion_models"
+    },
+    {
+      "repo_id": "Comfy-Org/MiniMax-H3",
+      "filename": "vae/minimax_h3_video_vae_fp16.safetensors",
+      "model_dir": "vae"
+    },
+    {
+      "repo_id": "Comfy-Org/MiniMax-H3",
+      "filename": "text_encoders/qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+      "model_dir": "text_encoders"
+    },
+    {
+      "repo_id": "Comfy-Org/SDPose",
+      "filename": "diffusion_models/rt_detr_v4-x-hgnet_fp16.safetensors",
+      "model_dir": "diffusion_models"
+    },
+    {
+      "repo_id": "Comfy-Org/SDPose",
+      "filename": "checkpoints/sdpose_wholebody_fp16.safetensors",
+      "model_dir": "checkpoints"
+    },
+    {
+      "repo_id": "Pika-Labs/Pika-H3-Flex",
+      "filename": "comfy/loras/pika_h3_flex_ref2va_comfy_bf16.safetensors",
+      "model_dir": "loras"
+    }
+  ],
+  "models_ext": [],
+  "gpu": "RTX-PRO-6000"
+}
