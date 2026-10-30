@@ -1,0 +1,144 @@
+{
+  "name": "sunset_story",
+  "steps": [
+    {
+      "id": "scenes",
+      "endpoint": "qwen",
+      "workflow": "workflows/comfyui-qwen-image-2-1/image_qwen_image_2_1_t2i.json",
+      "set": {
+        "459:452.prompt": "$item.prompt",
+        "13.aspect_ratio": "9:16 (Portrait Widescreen)"
+      },
+      "foreach": [
+        {
+          "name": "01",
+          "prompt": "A cinematic 35mm film photograph of the same young East Asian woman, dark hair in a messy bun, wearing a black coat, carrying a dark backpack, with a vintage silver bicycle. A young woman with a messy bun and black coat walks a silver bicycle beside a sunset river. Nostalgic natural light, subtle film grain, soft bokeh, realistic anatomy, no text or watermark.",
+          "set": {
+            "459:458.seed": 202610310001,
+            "461.filename_prefix": "sunset_story_01"
+          }
+        },
+        {
+          "name": "02",
+          "prompt": "A cinematic 35mm film photograph of the same young East Asian woman, dark hair in a messy bun, wearing a black coat, carrying a dark backpack, with a vintage silver bicycle. A convex street mirror reflects a peach sunset and the young woman with her bicycle. Nostalgic natural light, subtle film grain, soft bokeh, realistic anatomy, no text or watermark.",
+          "set": {
+            "459:458.seed": 202610310002,
+            "461.filename_prefix": "sunset_story_02"
+          }
+        },
+        {
+          "name": "03",
+          "prompt": "A cinematic 35mm film photograph of the same young East Asian woman, dark hair in a messy bun, wearing a black coat, carrying a dark backpack, with a vintage silver bicycle. The young woman looks over her shoulder under warm riverside streetlamps. Nostalgic natural light, subtle film grain, soft bokeh, realistic anatomy, no text or watermark.",
+          "set": {
+            "459:458.seed": 202610310003,
+            "461.filename_prefix": "sunset_story_03"
+          }
+        },
+        {
+          "name": "04",
+          "prompt": "A cinematic 35mm film photograph of the same young East Asian woman, dark hair in a messy bun, wearing a black coat, carrying a dark backpack, with a vintage silver bicycle. She finds a faded letter in the basket of her silver bicycle. Nostalgic natural light, subtle film grain, soft bokeh, realistic anatomy, no text or watermark.",
+          "set": {
+            "459:458.seed": 202610310004,
+            "461.filename_prefix": "sunset_story_04"
+          }
+        },
+        {
+          "name": "05",
+          "prompt": "A cinematic 35mm film photograph of the same young East Asian woman, dark hair in a messy bun, wearing a black coat, carrying a dark backpack, with a vintage silver bicycle. She reads an old letter beneath an amber streetlamp. Nostalgic natural light, subtle film grain, soft bokeh, realistic anatomy, no text or watermark.",
+          "set": {
+            "459:458.seed": 202610310005,
+            "461.filename_prefix": "sunset_story_05"
+          }
+        },
+        {
+          "name": "06",
+          "prompt": "A cinematic 35mm film photograph of the same young East Asian woman, dark hair in a messy bun, wearing a black coat, carrying a dark backpack, with a vintage silver bicycle. The riverside streetlights glow against a purple evening sky as she stands by her bicycle. Nostalgic natural light, subtle film grain, soft bokeh, realistic anatomy, no text or watermark.",
+          "set": {
+            "459:458.seed": 202610310006,
+            "461.filename_prefix": "sunset_story_06"
+          }
+        },
+        {
+          "name": "07",
+          "prompt": "A cinematic 35mm film photograph of the same young East Asian woman, dark hair in a messy bun, wearing a black coat, carrying a dark backpack, with a vintage silver bicycle. She rides her silver bicycle through a quiet cobblestone lane. Nostalgic natural light, subtle film grain, soft bokeh, realistic anatomy, no text or watermark.",
+          "set": {
+            "459:458.seed": 202610310007,
+            "461.filename_prefix": "sunset_story_07"
+          }
+        },
+        {
+          "name": "08",
+          "prompt": "A cinematic 35mm film photograph of the same young East Asian woman, dark hair in a messy bun, wearing a black coat, carrying a dark backpack, with a vintage silver bicycle. Wind carries flower petals around her beside an old brick wall. Nostalgic natural light, subtle film grain, soft bokeh, realistic anatomy, no text or watermark.",
+          "set": {
+            "459:458.seed": 202610310008,
+            "461.filename_prefix": "sunset_story_08"
+          }
+        },
+        {
+          "name": "09",
+          "prompt": "A cinematic 35mm film photograph of the same young East Asian woman, dark hair in a messy bun, wearing a black coat, carrying a dark backpack, with a vintage silver bicycle. She shelters with her bicycle beneath a cafe awning in the rain. Nostalgic natural light, subtle film grain, soft bokeh, realistic anatomy, no text or watermark.",
+          "set": {
+            "459:458.seed": 202610310009,
+            "461.filename_prefix": "sunset_story_09"
+          }
+        },
+        {
+          "name": "10",
+          "prompt": "A cinematic 35mm film photograph of the same young East Asian woman, dark hair in a messy bun, wearing a black coat, carrying a dark backpack, with a vintage silver bicycle. Her face reflects in a rain-streaked cafe window. Nostalgic natural light, subtle film grain, soft bokeh, realistic anatomy, no text or watermark.",
+          "set": {
+            "459:458.seed": 202610310010,
+            "461.filename_prefix": "sunset_story_10"
+          }
+        },
+        {
+          "name": "11",
+          "prompt": "A cinematic 35mm film photograph of the same young East Asian woman, dark hair in a messy bun, wearing a black coat, carrying a dark backpack, with a vintage silver bicycle. She cycles along a wet street in blue-hour neon reflections. Nostalgic natural light, subtle film grain, soft bokeh, realistic anatomy, no text or watermark.",
+          "set": {
+            "459:458.seed": 202610310011,
+            "461.filename_prefix": "sunset_story_11"
+          }
+        },
+        {
+          "name": "12",
+          "prompt": "A cinematic 35mm film photograph of the same young East Asian woman, dark hair in a messy bun, wearing a black coat, carrying a dark backpack, with a vintage silver bicycle. She notices a man in a beige coat waiting on a bridge. Nostalgic natural light, subtle film grain, soft bokeh, realistic anatomy, no text or watermark.",
+          "set": {
+            "459:458.seed": 202610310012,
+            "461.filename_prefix": "sunset_story_12"
+          }
+        },
+        {
+          "name": "13",
+          "prompt": "A cinematic 35mm film photograph of the same young East Asian woman, dark hair in a messy bun, wearing a black coat, carrying a dark backpack, with a vintage silver bicycle. She approaches the man across the pedestrian bridge. Nostalgic natural light, subtle film grain, soft bokeh, realistic anatomy, no text or watermark.",
+          "set": {
+            "459:458.seed": 202610310013,
+            "461.filename_prefix": "sunset_story_13"
+          }
+        },
+        {
+          "name": "14",
+          "prompt": "A cinematic 35mm film photograph of the same young East Asian woman, dark hair in a messy bun, wearing a black coat, carrying a dark backpack, with a vintage silver bicycle. They reunite with a gentle smile beside the river bridge. Nostalgic natural light, subtle film grain, soft bokeh, realistic anatomy, no text or watermark.",
+          "set": {
+            "459:458.seed": 202610310014,
+            "461.filename_prefix": "sunset_story_14"
+          }
+        },
+        {
+          "name": "15",
+          "prompt": "A cinematic 35mm film photograph of the same young East Asian woman, dark hair in a messy bun, wearing a black coat, carrying a dark backpack, with a vintage silver bicycle. They sit on a riverside bench looking at the city at night. Nostalgic natural light, subtle film grain, soft bokeh, realistic anatomy, no text or watermark.",
+          "set": {
+            "459:458.seed": 202610310015,
+            "461.filename_prefix": "sunset_story_15"
+          }
+        },
+        {
+          "name": "16",
+          "prompt": "A cinematic 35mm film photograph of the same young East Asian woman, dark hair in a messy bun, wearing a black coat, carrying a dark backpack, with a vintage silver bicycle. Two bicycles rest beside a river railing as dawn appears. Nostalgic natural light, subtle film grain, soft bokeh, realistic anatomy, no text or watermark.",
+          "set": {
+            "459:458.seed": 202610310016,
+            "461.filename_prefix": "sunset_story_16"
+          }
+        }
+      ]
+    }
+  ]
+}

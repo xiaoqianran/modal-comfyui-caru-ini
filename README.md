@@ -259,3 +259,19 @@ Legacy `preview_r2.py` and `preview_hf.py` remain optional standalone previews f
 ## 致谢 / Acknowledgements
 
 特别感谢 [caru-ini](https://github.com/caru-ini) 和原项目 [modal-comfyui](https://github.com/caru-ini/modal-comfyui) 的贡献。本 Fork 以其开源实现为基础，持续增加工作流部署、资产存储与可视化管理功能；原项目的设计与贡献归属于原作者及其贡献者。
+
+
+## Multi-endpoint Task Pipeline
+
+The existing `batch_run.py --graph ... --jobs ...` interface still works.
+For sequential pipelines spanning multiple Modal ComfyUI services, run:
+
+```powershell
+uv run python batch_run.py --task tasks/sunset_story.json --endpoints endpoints.json
+```
+
+- `endpoints.json` maps endpoint aliases to ComfyUI URLs. A URL identifies a **running server**, not necessarily a model; multiple workflows may share it. Keep tokens and private URLs out of committed configs.
+- Each Task has a `name` and ordered `steps`. Each step has an `id`, `endpoint`, `workflow` (project-relative ComfyUI API JSON), `set` (node-ID/input overrides), and optional `foreach` array with named jobs and per-job `set`.
+- `$item.prompt` reads the current foreach item. `$step.image` reads the sole image from an earlier single-job step. For a batch, use `$step.jobname.image`. `video` and `file` selectors are also available and require an unambiguous single match. Any referenced file is downloaded and uploaded to the destination endpoint before use. Local image inputs use `@path/to/image.png`.
+- Results and status are stored under `outputs/<task>/<step>/<job>/`. Each submission saves the exact API graph and returned `prompt_id`; reruns query unfinished remote jobs and skip validated completed ones. If a submission response times out before its ID can be saved, the job enters `uncertain` and **will not automatically resubmit**: inspect the remote queue first.
+- This is a sequential step runner, not a general DAG scheduler. It does not add model-specific branches. A completed step is required before a later step can use its output.

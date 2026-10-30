@@ -31,3 +31,6 @@ wheels/
 # Batch outputs
 /results/
 frontend/logs/
+
+# Persisted pipeline generation outputs (local only)
+/outputs/
