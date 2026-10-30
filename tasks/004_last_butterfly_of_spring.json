@@ -1,0 +1,164 @@
+{
+  "name": "004_last_butterfly_of_spring",
+  "synopsis_zh": "少女追随白蝴蝶进入冰封温室，以告别唤醒春天，并在新生的蝴蝶身上获得重逢。",
+  "production_status": "storyboard_draft_only_do_not_run_until_character_approved",
+  "steps": [
+    {
+      "id": "scenes",
+      "endpoint": "qwen",
+      "workflow": "workflows/comfyui-qwen-image-2-1/image_qwen_image_2_1_t2i.json",
+      "set": {
+        "459:452.prompt": "$item.prompt",
+        "13.aspect_ratio": "3:4 (Portrait Standard)",
+        "13.megapixels": 2,
+        "459:458.steps": 40
+      },
+      "foreach": [
+        {
+          "name": "01",
+          "title_zh": "仰望",
+          "prompt": "A young adult woman with a softly rounded oval face, luminous natural peach-ivory skin, rosy cheeks, slightly parted pink lips and large hazel-olive eyes with intricate golden irises and fine eyelashes. Her very long dark chestnut-brown wavy hair has wispy uneven bangs, fine backlit flyaway strands, tiny white blossoms and a large translucent ivory organza bow tied behind her head. She wears the same pale ivory and sage-green dress with embroidered flowers and translucent lace sleeves. Close low-angle portrait beneath a dense canopy of tiny white spring blossoms. She lifts her chin and looks toward a single translucent ivory butterfly in the upper-left corner; her green eyes reflect its wings. Sunlight breaks into small irregular leaf-shaped patches across her cheeks; the butterfly remains clearly visible, and foreground flowers softly frame her face. The image blends realistic human facial anatomy and delicate Japanese fantasy illustration, with painterly botanical detail, natural skin texture, translucent materials, restrained spring-green and champagne-gold colors, and soft optical bloom. No text or watermark.",
+          "set": {
+            "459:458.seed": 202610300400,
+            "461.filename_prefix": "004_last_butterfly_01"
+          }
+        },
+        {
+          "name": "02",
+          "title_zh": "停驻",
+          "prompt": "A young adult woman with a softly rounded oval face, luminous natural peach-ivory skin, rosy cheeks, slightly parted pink lips and large hazel-olive eyes with intricate golden irises and fine eyelashes. Her very long dark chestnut-brown wavy hair has wispy uneven bangs, fine backlit flyaway strands, tiny white blossoms and a large translucent ivory organza bow tied behind her head. She wears the same pale ivory and sage-green dress with embroidered flowers and translucent lace sleeves. Extreme close-up of her open hand held gently at chest height. The same ivory butterfly, with delicate gray wing veins and a faint warm-gold light inside its wings, rests on the tip of her index finger. Her eyes and chestnut hair appear softly out of focus in the background; a narrow shaft of sunlight reveals the translucent wing membranes. The image blends realistic human facial anatomy and delicate Japanese fantasy illustration, with painterly botanical detail, natural skin texture, translucent materials, restrained spring-green and champagne-gold colors, and soft optical bloom. No text or watermark.",
+          "set": {
+            "459:458.seed": 202610300400,
+            "461.filename_prefix": "004_last_butterfly_02"
+          }
+        },
+        {
+          "name": "03",
+          "title_zh": "引路",
+          "prompt": "A young adult woman with a softly rounded oval face, luminous natural peach-ivory skin, rosy cheeks, slightly parted pink lips and large hazel-olive eyes with intricate golden irises and fine eyelashes. Her very long dark chestnut-brown wavy hair has wispy uneven bangs, fine backlit flyaway strands, tiny white blossoms and a large translucent ivory organza bow tied behind her head. She wears the same pale ivory and sage-green dress with embroidered flowers and translucent lace sleeves. Three-quarter medium shot along a narrow mossy path in a flowering garden. The butterfly flies ahead toward the left background, trailing only a few subtle golden motes. She steps after it, one hand reaching forward, her long chestnut hair and organza bow lifted by a gentle breeze; branches form a natural arch over the path. The image blends realistic human facial anatomy and delicate Japanese fantasy illustration, with painterly botanical detail, natural skin texture, translucent materials, restrained spring-green and champagne-gold colors, and soft optical bloom. No text or watermark.",
+          "set": {
+            "459:458.seed": 202610300400,
+            "461.filename_prefix": "004_last_butterfly_03"
+          }
+        },
+        {
+          "name": "04",
+          "title_zh": "遗忘的温室",
+          "prompt": "A delicate Japanese fantasy illustration. Wide establishing shot of an old Victorian glass greenhouse half hidden among fresh green vines at the end of the path. Outside are sunlit white flowers; inside the glass panes reveal a pale, cold, frost-covered interior. The young woman is a small figure seen from behind in the lower-right foreground, and the butterfly hovers beside the weathered entrance. The image blends realistic human facial anatomy and delicate Japanese fantasy illustration, with painterly botanical detail, natural skin texture, translucent materials, restrained spring-green and champagne-gold colors, and soft optical bloom. No text or watermark.",
+          "set": {
+            "459:458.seed": 202610300400,
+            "461.filename_prefix": "004_last_butterfly_04"
+          }
+        },
+        {
+          "name": "05",
+          "title_zh": "冰冷的玻璃",
+          "prompt": "A young adult woman with a softly rounded oval face, luminous natural peach-ivory skin, rosy cheeks, slightly parted pink lips and large hazel-olive eyes with intricate golden irises and fine eyelashes. Her very long dark chestnut-brown wavy hair has wispy uneven bangs, fine backlit flyaway strands, tiny white blossoms and a large translucent ivory organza bow tied behind her head. She wears the same pale ivory and sage-green dress with embroidered flowers and translucent lace sleeves. Intimate close-up of the woman's slender hand touching an antique greenhouse door pane covered with intricate white frost. A tiny circle of ice melts under her fingertip and warm golden light glows through the clearing. Her faint reflection appears in the glass, showing her chestnut bangs and olive-green eyes; the rest of the door remains frozen. The image blends realistic human facial anatomy and delicate Japanese fantasy illustration, with painterly botanical detail, natural skin texture, translucent materials, restrained spring-green and champagne-gold colors, and soft optical bloom. No text or watermark.",
+          "set": {
+            "459:458.seed": 202610300400,
+            "461.filename_prefix": "004_last_butterfly_05"
+          }
+        },
+        {
+          "name": "06",
+          "title_zh": "静止的春天",
+          "prompt": "A delicate Japanese fantasy illustration. Wide interior establishing shot inside the same old Victorian greenhouse: curved iron supports, tall glass roof, central stone pedestal and two rows of planters. Flowers are encased in delicate translucent frost and a fallen petal hangs motionless in the air. The woman stands small near the open entrance, surrounded by cool blue-gray stillness and faint light filtering through glass. The image blends realistic human facial anatomy and delicate Japanese fantasy illustration, with painterly botanical detail, natural skin texture, translucent materials, restrained spring-green and champagne-gold colors, and soft optical bloom. No text or watermark.",
+          "set": {
+            "459:458.seed": 202610300400,
+            "461.filename_prefix": "004_last_butterfly_06"
+          }
+        },
+        {
+          "name": "07",
+          "title_zh": "微弱的光",
+          "prompt": "A young adult woman with a softly rounded oval face, luminous natural peach-ivory skin, rosy cheeks, slightly parted pink lips and large hazel-olive eyes with intricate golden irises and fine eyelashes. Her very long dark chestnut-brown wavy hair has wispy uneven bangs, fine backlit flyaway strands, tiny white blossoms and a large translucent ivory organza bow tied behind her head. She wears the same pale ivory and sage-green dress with embroidered flowers and translucent lace sleeves. Close chest-up portrait inside the frozen greenhouse. The young woman cups the same translucent ivory butterfly carefully in both hands, looking down with tender worry. Its gold glow is fading and the delicate wing edges appear almost transparent; cool light illuminates her face while a narrow warm reflection catches her hazel-green eyes. The image blends realistic human facial anatomy and delicate Japanese fantasy illustration, with painterly botanical detail, natural skin texture, translucent materials, restrained spring-green and champagne-gold colors, and soft optical bloom. No text or watermark.",
+          "set": {
+            "459:458.seed": 202610300400,
+            "461.filename_prefix": "004_last_butterfly_07"
+          }
+        },
+        {
+          "name": "08",
+          "title_zh": "最后的花苞",
+          "prompt": "A delicate Japanese fantasy illustration. Centered still-life close-up of a single unopened ivory-white flower bud growing from a slender green stem on the greenhouse's weathered central stone pedestal. The surrounding leaves are brittle with frost, but one tiny drop of warm golden light glows at the base of the bud. Behind it, the greenhouse iron ribs recede symmetrically into pale blue mist. The image blends realistic human facial anatomy and delicate Japanese fantasy illustration, with painterly botanical detail, natural skin texture, translucent materials, restrained spring-green and champagne-gold colors, and soft optical bloom. No text or watermark.",
+          "set": {
+            "459:458.seed": 202610300400,
+            "461.filename_prefix": "004_last_butterfly_08"
+          }
+        },
+        {
+          "name": "09",
+          "title_zh": "明白",
+          "prompt": "A young adult woman with a softly rounded oval face, luminous natural peach-ivory skin, rosy cheeks, slightly parted pink lips and large hazel-olive eyes with intricate golden irises and fine eyelashes. Her very long dark chestnut-brown wavy hair has wispy uneven bangs, fine backlit flyaway strands, tiny white blossoms and a large translucent ivory organza bow tied behind her head. She wears the same pale ivory and sage-green dress with embroidered flowers and translucent lace sleeves. Extreme close-up of the young woman's eyes and upper cheeks as realization dawns. Her olive-green irises reflect the single unopened white flower bud on its pedestal. A thin tear gathers at one lower eyelid without falling; her wispy chestnut bangs and tiny white hair blossoms catch the last cold light of the greenhouse. The image blends realistic human facial anatomy and delicate Japanese fantasy illustration, with painterly botanical detail, natural skin texture, translucent materials, restrained spring-green and champagne-gold colors, and soft optical bloom. No text or watermark.",
+          "set": {
+            "459:458.seed": 202610300400,
+            "461.filename_prefix": "004_last_butterfly_09"
+          }
+        },
+        {
+          "name": "10",
+          "title_zh": "放手",
+          "prompt": "A young adult woman with a softly rounded oval face, luminous natural peach-ivory skin, rosy cheeks, slightly parted pink lips and large hazel-olive eyes with intricate golden irises and fine eyelashes. Her very long dark chestnut-brown wavy hair has wispy uneven bangs, fine backlit flyaway strands, tiny white blossoms and a large translucent ivory organza bow tied behind her head. She wears the same pale ivory and sage-green dress with embroidered flowers and translucent lace sleeves. Tender side-view medium shot inside the frozen greenhouse. The young woman leans toward the central stone pedestal and carefully brings the translucent ivory butterfly from her open palms to the unopened white flower bud. Her hands, butterfly and bud form a clear triangle at the center; her lace sleeves and sheer ivory bow catch the dim winter-blue light. The image blends realistic human facial anatomy and delicate Japanese fantasy illustration, with painterly botanical detail, natural skin texture, translucent materials, restrained spring-green and champagne-gold colors, and soft optical bloom. No text or watermark.",
+          "set": {
+            "459:458.seed": 202610300400,
+            "461.filename_prefix": "004_last_butterfly_10"
+          }
+        },
+        {
+          "name": "11",
+          "title_zh": "消散",
+          "prompt": "A delicate Japanese fantasy illustration. Macro close-up of the ivory butterfly resting on the unopened white flower bud. Its translucent wings dissolve from their outer edges into a small cloud of warm champagne-gold particles, drifting downward into the bud. The woman's still fingertips remain visible at the lower edge, conveying her reluctant farewell; the greenhouse background is softly blurred. The image blends realistic human facial anatomy and delicate Japanese fantasy illustration, with painterly botanical detail, natural skin texture, translucent materials, restrained spring-green and champagne-gold colors, and soft optical bloom. No text or watermark.",
+          "set": {
+            "459:458.seed": 202610300400,
+            "461.filename_prefix": "004_last_butterfly_11"
+          }
+        },
+        {
+          "name": "12",
+          "title_zh": "绽放",
+          "prompt": "A delicate Japanese fantasy illustration. Centered macro view of the same ivory flower bud opening its first layered petals on the old stone pedestal. Warm gold light rises from the flower's center, and tiny ice crystals break and fall from the stem. The outer greenhouse remains cool blue-gray, making the new warm light a distinct focal point. The image blends realistic human facial anatomy and delicate Japanese fantasy illustration, with painterly botanical detail, natural skin texture, translucent materials, restrained spring-green and champagne-gold colors, and soft optical bloom. No text or watermark.",
+          "set": {
+            "459:458.seed": 202610300400,
+            "461.filename_prefix": "004_last_butterfly_12"
+          }
+        },
+        {
+          "name": "13",
+          "title_zh": "春天归来",
+          "prompt": "A delicate Japanese fantasy illustration. Wide view from exactly the same camera position as the frozen greenhouse establishing shot: curved iron supports, tall glass roof, central stone pedestal and two rows of planters. The ice has vanished; delicate white flowers and fresh green vines now fill the room as warm sunlight streams through the glass. The young woman stands small near the entrance, watching the renewed garden. The image blends realistic human facial anatomy and delicate Japanese fantasy illustration, with painterly botanical detail, natural skin texture, translucent materials, restrained spring-green and champagne-gold colors, and soft optical bloom. No text or watermark.",
+          "set": {
+            "459:458.seed": 202610300400,
+            "461.filename_prefix": "004_last_butterfly_13"
+          }
+        },
+        {
+          "name": "14",
+          "title_zh": "空荡的掌心",
+          "prompt": "A young adult woman with a softly rounded oval face, luminous natural peach-ivory skin, rosy cheeks, slightly parted pink lips and large hazel-olive eyes with intricate golden irises and fine eyelashes. Her very long dark chestnut-brown wavy hair has wispy uneven bangs, fine backlit flyaway strands, tiny white blossoms and a large translucent ivory organza bow tied behind her head. She wears the same pale ivory and sage-green dress with embroidered flowers and translucent lace sleeves. Intimate medium close-up of the young woman inside the restored sunlit greenhouse. She looks down at her empty open palms with a bittersweet, restrained smile and slightly moist olive-green eyes. Golden sunlight catches individual chestnut hair strands, white blossoms in her hair, and the embroidered lace on her sleeves; lush flowers softly blur behind her. The image blends realistic human facial anatomy and delicate Japanese fantasy illustration, with painterly botanical detail, natural skin texture, translucent materials, restrained spring-green and champagne-gold colors, and soft optical bloom. No text or watermark.",
+          "set": {
+            "459:458.seed": 202610300400,
+            "461.filename_prefix": "004_last_butterfly_14"
+          }
+        },
+        {
+          "name": "15",
+          "title_zh": "新的翅膀",
+          "prompt": "A delicate Japanese fantasy illustration. Macro view of a newly opened white five-petaled flower in the restored greenhouse. From its center, a tiny ivory butterfly unfolds fresh translucent wings with fine gray veins and a gentle warm-gold shimmer. Dew droplets and delicate pollen are visible on the petals; the rest of the lush garden melts into soft green bokeh. The image blends realistic human facial anatomy and delicate Japanese fantasy illustration, with painterly botanical detail, natural skin texture, translucent materials, restrained spring-green and champagne-gold colors, and soft optical bloom. No text or watermark.",
+          "set": {
+            "459:458.seed": 202610300400,
+            "461.filename_prefix": "004_last_butterfly_15"
+          }
+        },
+        {
+          "name": "16",
+          "title_zh": "再次仰望",
+          "prompt": "A young adult woman with a softly rounded oval face, luminous natural peach-ivory skin, rosy cheeks, slightly parted pink lips and large hazel-olive eyes with intricate golden irises and fine eyelashes. Her very long dark chestnut-brown wavy hair has wispy uneven bangs, fine backlit flyaway strands, tiny white blossoms and a large translucent ivory organza bow tied behind her head. She wears the same pale ivory and sage-green dress with embroidered flowers and translucent lace sleeves. Close low-angle portrait returning to the framing of the opening shot. Beneath luminous white blossoms, the same young woman raises her face toward the ivory butterfly floating in the upper-left corner, now smiling gently with recognition. Her intricate hazel-green eyes catch the sun, individual chestnut flyaway hairs glow gold, and dappled leaf shadows play across her rosy cheeks. The image blends realistic human facial anatomy and delicate Japanese fantasy illustration, with painterly botanical detail, natural skin texture, translucent materials, restrained spring-green and champagne-gold colors, and soft optical bloom. No text or watermark.",
+          "set": {
+            "459:458.seed": 202610300400,
+            "461.filename_prefix": "004_last_butterfly_16"
+          }
+        }
+      ]
+    }
+  ]
+}
