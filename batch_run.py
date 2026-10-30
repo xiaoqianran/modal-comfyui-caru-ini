@@ -1,16 +1,16 @@
 """Run resumable ComfyUI Task JSON pipelines."""
 import argparse
-import csv
+import hashlib
+import http.client
 import json
 import mimetypes
 import os
-import random
-import sys
 import time
 import urllib.error
 import urllib.parse
 import urllib.request
 import uuid
+from contextlib import contextmanager
 from pathlib import Path
 
 IMAGE_EXT = {".png", ".jpg", ".jpeg", ".webp", ".bmp"}
@@ -40,24 +40,23 @@ def get_json(base, path):
 
 
 def upload(base, file):
-    """Upload a local file via /upload/image; returns the server-side name."""
+    """Upload under a content-addressed name to avoid cross-task collisions."""
     file = Path(file)
-    if not file.is_file():
-        raise FileNotFoundError(file)
+    data = file.read_bytes()
+    filename = f"runner_{hashlib.sha256(data).hexdigest()[:24]}{file.suffix.lower()}"
     boundary = uuid.uuid4().hex
     mime = mimetypes.guess_type(file.name)[0] or "application/octet-stream"
     parts = [
-        f'--{boundary}\r\nContent-Disposition: form-data; name="image"; filename="{file.name}"\r\n'
+        f'--{boundary}\r\nContent-Disposition: form-data; name="image"; filename="{filename}"\r\n'
         f"Content-Type: {mime}\r\n\r\n".encode(),
-        file.read_bytes(),
-        f'\r\n--{boundary}\r\nContent-Disposition: form-data; name="overwrite"\r\n\r\ntrue\r\n--{boundary}--\r\n'.encode(),
+        data,
+        f'\r\n--{boundary}\r\nContent-Disposition: form-data; name="overwrite"\r\n\r\nfalse\r\n--{boundary}--\r\n'.encode(),
     ]
     out = json.loads(request(
         base + "/upload/image", b"".join(parts),
         {"Content-Type": f"multipart/form-data; boundary={boundary}"},
     ))
     return (out["subfolder"] + "/" if out.get("subfolder") else "") + out["name"]
-
 
 def build_prompt(graph, sets, base, cache):
     prompt = json.loads(json.dumps(graph))
@@ -89,24 +88,41 @@ def download(base, item, dest):
         "filename": item["filename"], "subfolder": item.get("subfolder", ""),
         "type": item.get("type", "output"),
     })
-    dest.write_bytes(request(f"{base}/view?{q}", timeout=600))
+    data = request(f"{base}/view?{q}", timeout=600)
+    if not data:
+        raise RuntimeError("Empty download response")
+    temp = dest.with_name(dest.name + ".part")
+    temp.write_bytes(data)
+    temp.replace(dest)
 
 
-def wait_done(base, pid, timeout):
-    deadline = time.time() + timeout
-    while time.time() < deadline:
-        hist = get_json(base, f"/history/{pid}")
-        if pid in hist:
-            entry = hist[pid]
-            status = entry.get("status", {})
-            if status.get("status_str") == "error":
-                msgs = [m for m in status.get("messages", []) if m and m[0] == "execution_error"]
-                raise RuntimeError("ComfyUI execution error: " + json.dumps(msgs[-1][1] if msgs else status)[:600])
-            if entry.get("outputs"):
-                return entry["outputs"]
-        time.sleep(3)
-    raise TimeoutError(f"prompt {pid} not finished in {timeout}s")
-
+@contextmanager
+def _task_lock(out):
+    """Prevent concurrent runners for the same task output directory."""
+    out.mkdir(parents=True, exist_ok=True)
+    lock = out / ".runner.lock"
+    with lock.open("a+b") as handle:
+        handle.seek(0)
+        handle.write(b"0")
+        handle.flush()
+        handle.seek(0)
+        try:
+            if os.name == "nt":
+                import msvcrt
+                msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+            else:
+                import fcntl
+                fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except OSError as exc:
+            raise RuntimeError(f"Task already running: {out}") from exc
+        try:
+            yield
+        finally:
+            handle.seek(0)
+            if os.name == "nt":
+                msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+            else:
+                fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
 
 # Task pipeline mode: native ComfyUI graphs, independently routed endpoints.
 def _save_json(path, value):
@@ -126,7 +142,7 @@ def _safe_name(value):
     return value
 
 
-def _input_value(value, item, completed, task_dir):
+def _input_value(value, item, completed):
     """Resolve $item.key and $step.image or $step.job.image; preserve ordinary text."""
     if not isinstance(value, str) or not value.startswith("$"):
         return value
@@ -158,118 +174,190 @@ def _input_value(value, item, completed, task_dir):
     return "@" + str(matches[0].resolve())
 
 
-def run_task(task_path, endpoints_path="endpoints.json", output=None, timeout=3600):
-    """Execute sequential steps across endpoints with persisted per-job resume state."""
+def _submit_job(key, job, completed, task_path, root, upload_caches):
+    sid, jid = key
+    resolved = {k: _input_value(v, job["entry"], completed)
+                for k, v in job["settings"].items()}
+    for field, value in resolved.items():
+        if isinstance(value, str) and value.startswith("@"):
+            file = Path(value[1:])
+            if not file.is_absolute():
+                local = task_path.parent / file
+                file = local if local.is_file() else root / file
+            if not file.is_file():
+                raise FileNotFoundError(f"{sid}/{jid} input {field}: {file}")
+            resolved[field] = "@" + str(file.resolve())
+    prompt = build_prompt(job["graph"], resolved, job["base"],
+                          upload_caches.setdefault(job["base"], {}))
+    job["folder"].mkdir(parents=True, exist_ok=True)
+    _save_json(job["folder"] / "workflow.json", prompt)
+    _save_json(job["status_file"], {"status": "submitting", "endpoint": job["endpoint"]})
+    body = json.dumps({"prompt": prompt, "client_id": uuid.uuid4().hex}).encode()
+    try:
+        reply = request(job["base"] + "/prompt", body,
+                        {"Content-Type": "application/json"}, retries=1)
+        pid = json.loads(reply)["prompt_id"]
+    except Exception as exc:
+        _save_json(job["status_file"], {"status": "uncertain",
+                                        "endpoint": job["endpoint"], "error": str(exc)})
+        raise RuntimeError(f"{sid}/{jid}: submission uncertain; inspect remote queue") from exc
+    job["prompt_id"] = pid
+    job["state"] = "submitted"
+    job["submitted_at"] = time.monotonic()
+    _save_json(job["status_file"], {"status": "submitted", "endpoint": job["endpoint"],
+                                    "prompt_id": pid})
+    print(f"{sid}/{jid}: submitted {pid}", flush=True)
+
+def _check_job(key, job, completed, timeout):
+    sid, jid = key
+    if time.monotonic() - job["submitted_at"] > timeout:
+        raise TimeoutError(f"{sid}/{jid}: timed out waiting for {job['prompt_id']}")
+    history = get_json(job["base"], f"/history/{job['prompt_id']}")
+    if job["prompt_id"] not in history:
+        return False
+    record = history[job["prompt_id"]]
+    status = record.get("status", {})
+    if status.get("status_str") == "error":
+        raise RuntimeError(f"{sid}/{jid} remote error: {json.dumps(status)[:700]}")
+    if not record.get("outputs"):
+        return False
+    output_files = collect_files(record["outputs"])
+    if not output_files:
+        raise RuntimeError(f"{sid}/{jid}: no downloadable output")
+    local = []
+    used = set()
+    for i, item in enumerate(output_files):
+        filename = Path(item["filename"]).name
+        if filename in used:
+            filename = f"{i:03d}_{filename}"
+        used.add(filename)
+        target = job["folder"] / filename
+        if not target.is_file() or target.stat().st_size == 0:
+            download(job["base"], item, target)
+        local.append(target.resolve())
+    _save_json(job["status_file"], {"status": "completed",
+                                    "prompt_id": job["prompt_id"],
+                                    "endpoint": job["endpoint"],
+                                    "files": [str(p) for p in local]})
+    completed[sid][jid] = local
+    job["state"] = "completed"
+    print(f"{sid}/{jid}: completed {len(local)} output(s)", flush=True)
+    return True
+
+def _run_task_unlocked(task_path, endpoints_path="endpoints.json", output=None, timeout=3600):
+    """Run ComfyUI jobs as dependencies become ready, across independent endpoints."""
     task_path = Path(task_path).resolve()
     task = json.loads(task_path.read_text(encoding="utf-8-sig"))
     endpoints_file = Path(endpoints_path).resolve()
     endpoints = json.loads(endpoints_file.read_text(encoding="utf-8-sig"))
     root = endpoints_file.parent
-    name = _safe_name(task["name"])
+    out = Path(output).resolve() if output else root / "outputs" / _safe_name(task["name"])
     steps = task["steps"]
     if not isinstance(steps, list) or not steps:
         raise ValueError("Task must contain nonempty steps")
-    out = Path(output).resolve() if output else root / "outputs" / name
-    completed = {}
-    seen_steps = set()
-    upload_caches = {}
+    mode = task.get("mode", "stream")
+    if mode not in ("batch", "stream"):
+        raise ValueError(f"Invalid mode: {mode!r}; expected 'batch' or 'stream'")
+
+    jobs = {}
+    step_ids = set()
     for step in steps:
         sid = _safe_name(step["id"])
-        if sid in seen_steps:
+        if sid in step_ids:
             raise ValueError(f"Duplicate step id: {sid}")
-        seen_steps.add(sid)
         endpoint_name = step["endpoint"]
         if endpoint_name not in endpoints:
             raise KeyError(f"Unknown endpoint: {endpoint_name}")
         base = endpoints[endpoint_name].rstrip("/")
         if not base.startswith(("http://", "https://")):
-            raise ValueError(f"Endpoint must be an HTTP URL: {endpoint_name}")
-        wf_path = root / step["workflow"]
-        graph = json.loads(wf_path.read_text(encoding="utf-8-sig"))
+            raise ValueError(f"Invalid endpoint: {endpoint_name}")
+        graph = json.loads((root / step["workflow"]).read_text(encoding="utf-8-sig"))
         if "nodes" in graph:
-            raise ValueError(f"Workflow must be ComfyUI API JSON: {wf_path}")
+            raise ValueError("Expected ComfyUI API JSON")
         entries = step.get("foreach", [{"name": "main"}])
         if not isinstance(entries, list) or not entries:
-            raise ValueError(f"Invalid foreach for step {sid}")
-        step_results = {}
-        pending = []
-        seen_jobs = set()
+            raise ValueError(f"Empty foreach: {sid}")
         for entry in entries:
             jid = _safe_name(entry["name"])
-            if jid in seen_jobs:
-                raise ValueError(f"Duplicate job name: {sid}/{jid}")
-            seen_jobs.add(jid)
+            key = (sid, jid)
+            if key in jobs:
+                raise ValueError(f"Duplicate job: {sid}/{jid}")
+            settings = dict(step.get("set", {}))
+            settings.update(entry.get("set", {}))
+            deps = set()
+            for value in settings.values():
+                if not isinstance(value, str) or not value.startswith("$") or value.startswith("$item."):
+                    continue
+                parts = value[1:].split(".")
+                if len(parts) == 3:
+                    dep = (parts[0], parts[1])
+                elif len(parts) == 2:
+                    upstream = [k for k in jobs if k[0] == parts[0]]
+                    if len(upstream) != 1:
+                        raise ValueError(f"Ambiguous reference: {value}")
+                    dep = upstream[0]
+                else:
+                    raise ValueError(f"Bad reference: {value}")
+                if dep not in jobs:
+                    raise ValueError(f"Dependency must refer to an earlier job: {value}")
+                deps.add(dep)
             folder = out / sid / jid
-            status_file = folder / "status.json"
-            status = json.loads(status_file.read_text(encoding="utf-8")) if status_file.exists() else {}
-            # Never trust a stale DONE marker without all output files.
-            if status.get("status") == "completed" and all(Path(p).is_file() for p in status.get("files", [])) and status.get("files"):
-                step_results[jid] = [Path(p) for p in status["files"]]
-                print(f"{sid}/{jid}: resumed complete", flush=True)
+            jobs[key] = dict(entry=entry, settings=settings, deps=deps, base=base,
+                             endpoint=endpoint_name, graph=graph, folder=folder,
+                             status_file=folder / "status.json", state="pending")
+        step_ids.add(sid)
+
+    completed = {sid: {} for sid in step_ids}
+    upload_caches = {}
+    for key, job in jobs.items():
+        status_file = job["status_file"]
+        status = json.loads(status_file.read_text(encoding="utf-8")) if status_file.exists() else {}
+        files = [Path(p) for p in status.get("files", [])]
+        if status.get("status") == "completed" and files and all(p.is_file() and p.stat().st_size for p in files):
+            completed[key[0]][key[1]] = files
+            job["state"] = "completed"
+            print(f"{key[0]}/{key[1]}: resumed complete", flush=True)
+        elif status.get("prompt_id"):
+            job["state"] = "submitted"
+            job["prompt_id"] = status["prompt_id"]
+            job["submitted_at"] = time.monotonic()
+            print(f"{key[0]}/{key[1]}: recovering {status['prompt_id']}", flush=True)
+        elif status.get("status") in ("submitting", "uncertain"):
+            raise RuntimeError(f"{key[0]}/{key[1]}: uncertain prior submission, inspect remote queue")
+    while any(job["state"] != "completed" for job in jobs.values()):
+        progress = False
+        for key, job in jobs.items():
+            if job["state"] != "pending" or not all(dep[1] in completed[dep[0]] for dep in job["deps"]):
                 continue
-            # Inputs are resolved only for new submissions. Existing remote IDs are
-            # authoritative: a crash after submission must not re-submit work.
-            if status.get("status") in ("submitting", "uncertain") and not status.get("prompt_id"):
-                raise RuntimeError(f"{sid}/{jid}: submission status uncertain; inspect remote queue before retrying")
-            if status.get("prompt_id"):
-                pid = status["prompt_id"]
-                print(f"{sid}/{jid}: recovering {pid}", flush=True)
-            else:
-                settings = dict(step.get("set", {}))
-                settings.update(entry.get("set", {}))
-                resolved = {k: _input_value(v, entry, completed, task_path.parent) for k, v in settings.items()}
-                # Resolve explicit local-file inputs relative to the task file first,
-                # then the project root for convenient reusable references.
-                for key, value in resolved.items():
-                    if isinstance(value, str) and value.startswith("@"):
-                        path = Path(value[1:])
-                        if not path.is_absolute():
-                            local = task_path.parent / path
-                            path = local if local.is_file() else root / path
-                        if not path.is_file():
-                            raise FileNotFoundError(f"{sid}/{jid} input {key}: {path}")
-                        resolved[key] = "@" + str(path.resolve())
-                prompt = build_prompt(graph, resolved, base, upload_caches.setdefault(base, {}))
-                folder.mkdir(parents=True, exist_ok=True)
-                _save_json(folder / "workflow.json", prompt)
-                # A POST response and local disk write aren't transactional.
-                # Record pre-submit intent; ambiguous transport failures are not retried automatically.
-                _save_json(status_file, {"status": "submitting", "endpoint": endpoint_name})
-                body = json.dumps({"prompt": prompt, "client_id": uuid.uuid4().hex}).encode()
-                try:
-                    # One attempt here avoids hidden duplicate submits on network failure.
-                    reply = request(base + "/prompt", body, {"Content-Type": "application/json"}, retries=1)
-                    pid = json.loads(reply)["prompt_id"]
-                except Exception as e:
-                    _save_json(status_file, {"status": "uncertain", "endpoint": endpoint_name, "error": str(e)})
-                    raise RuntimeError(f"{sid}/{jid} submission uncertain; inspect remote queue before retrying") from e
-                status = {"status": "submitted", "prompt_id": pid, "endpoint": endpoint_name}
-                _save_json(status_file, status)
-                print(f"{sid}/{jid}: submitted {pid}", flush=True)
-            pending.append((jid, folder, status_file, pid))
-        # Submit the entire step before waiting; subsequent steps still depend on completion.
-        for jid, folder, status_file, pid in pending:
-            outputs = wait_done(base, pid, timeout)
-            files = collect_files(outputs)
-            if not files:
-                raise RuntimeError(f"{sid}/{jid}: no downloadable output")
-            local = []
-            used_names = set()
-            for i, file in enumerate(files):
-                filename = Path(file["filename"]).name
-                if filename in used_names:
-                    filename = f"{i:03d}_{filename}"
-                used_names.add(filename)
-                target = folder / filename
-                if not target.is_file() or target.stat().st_size == 0:
-                    download(base, file, target)
-                local.append(target.resolve())
-            _save_json(status_file, {"status": "completed", "prompt_id": pid,
-                                     "endpoint": endpoint_name, "files": [str(p) for p in local]})
-            step_results[jid] = local
-            print(f"{sid}/{jid}: completed {len(local)} output(s)", flush=True)
-        completed[sid] = step_results
+            if mode == "batch" and any(
+                other["state"] != "completed"
+                for dep_step in {dep[0] for dep in job["deps"]}
+                for other_key, other in jobs.items() if other_key[0] == dep_step
+            ):
+                continue
+            _submit_job(key, job, completed, task_path, root, upload_caches)
+            progress = True
+
+        # Poll every submitted job once. Never block later jobs behind the first job.
+        for key, job in jobs.items():
+            if job["state"] != "submitted":
+                continue
+            if _check_job(key, job, completed, timeout):
+                progress = True
+        if not progress:
+            time.sleep(3)
     return out
+
+
+def run_task(task_path, endpoints_path="endpoints.json", output=None, timeout=3600):
+    """Single runner per output directory; recover safely after process exit."""
+    if output:
+        out = Path(output).resolve()
+    else:
+        name = _safe_name(json.loads(Path(task_path).read_text(encoding="utf-8-sig"))["name"])
+        out = Path(endpoints_path).resolve().parent / "outputs" / name
+    with _task_lock(out):
+        return _run_task_unlocked(task_path, endpoints_path, output, timeout)
 
 
 def main():

@@ -1,0 +1,194 @@
+{
+  "name": "005_last_train",
+  "mode": "stream",
+  "synopsis_zh": "都市情感2D漫剧：分手七天后，林晚在末班地铁站发现熟悉的黄色雨伞，与值夜班的程屿重新开口。",
+  "production_status": "pipeline_ready_not_submitted",
+  "format": {
+    "aspect_ratio": "9:16",
+    "target_seconds": 60,
+    "video_segments": 6,
+    "seconds_per_segment": 10
+  },
+  "video_plan": {
+    "model": "MiniMax H3",
+    "mode": "I2VA",
+    "status": "configured_in_steps",
+    "shots": [
+      {
+        "name": "01",
+        "title_zh": "空荡末班车",
+        "input_image_status": "pending_qwen_output",
+        "image_output_prefix": "005_last_train_01",
+        "prompt": "For the target video, at 0.00 seconds into the target video, <Picture 1> (from [Shot 1]) is fully referenced.\n\nintegrated_multimodal_description: [Shot 1] 2D hand-drawn anime, vertical 9:16, ten seconds. Preserve the exact identities, wardrobe, scene geometry, colors and composition of <Picture 1>. Lin Wan sits still, glances down at her phone, whispers in Mandarin Chinese: “你说过，不会让我一个人回家的。” She gently turns off the screen and looks toward her reflection. Slow subtle push-in. Keep motion controlled, character anatomy stable, and continuity intact. No subtitles, captions, speech bubbles, added text, or abrupt cuts.\n\noverall_soundscape: subway wheels and ventilation; quiet female voice.\n\nnon_diegetic_music: sparse restrained melancholic piano."
+      },
+      {
+        "name": "02",
+        "title_zh": "黄色雨伞",
+        "input_image_status": "pending_qwen_output",
+        "image_output_prefix": "005_last_train_02",
+        "prompt": "For the target video, at 0.00 seconds into the target video, <Picture 1> (from [Shot 1]) is fully referenced.\n\nintegrated_multimodal_description: [Shot 1] 2D hand-drawn anime, vertical 9:16, ten seconds. Preserve the exact identities, wardrobe, scene geometry, colors and composition of <Picture 1>. As the train slows to a stop, Lin Wan leans forward slightly, her eyes widen at the recognizable yellow umbrella, and she quietly says in Mandarin Chinese: “那把伞……” A gentle lateral camera move reveals the umbrella more clearly. Keep motion controlled, character anatomy stable, and continuity intact. No subtitles, captions, speech bubbles, added text, or abrupt cuts.\n\noverall_soundscape: braking subway, station ambience, one surprised female whisper.\n\nnon_diegetic_music: very soft suspended piano notes."
+      },
+      {
+        "name": "03",
+        "title_zh": "站台身影",
+        "input_image_status": "pending_qwen_output",
+        "image_output_prefix": "005_last_train_03",
+        "prompt": "For the target video, at 0.00 seconds into the target video, <Picture 1> (from [Shot 1]) is fully referenced.\n\nintegrated_multimodal_description: [Shot 1] 2D hand-drawn anime, vertical 9:16, ten seconds. Preserve the exact identities, wardrobe, scene geometry, colors and composition of <Picture 1>. Lin Wan stops walking and recognizes Cheng Yu. He carefully straightens the papers, unaware she is watching. She hesitates, breathing shallowly. The camera stays nearly static, then moves in slightly toward the desk. Keep motion controlled, character anatomy stable, and continuity intact. No subtitles, captions, speech bubbles, added text, or abrupt cuts.\n\noverall_soundscape: soft station ventilation, footsteps stopping, paper rustle, no dialogue.\n\nnon_diegetic_music: one sustained delicate piano chord."
+      },
+      {
+        "name": "04",
+        "title_zh": "过去的雨夜",
+        "input_image_status": "pending_qwen_output",
+        "image_output_prefix": "005_last_train_04",
+        "prompt": "For the target video, at 0.00 seconds into the target video, <Picture 1> (from [Shot 1]) is fully referenced.\n\nintegrated_multimodal_description: [Shot 1] 2D hand-drawn anime, vertical 9:16, ten seconds. Preserve the exact identities, wardrobe, scene geometry, colors and composition of <Picture 1>. The station lamp flickers gently as rain traces the windows. Cheng Yu checks the last-train departure display and glances toward the exit, then returns to work. The image has a gentle memory-like glow. No sudden scene cuts. Keep motion controlled, character anatomy stable, and continuity intact. No subtitles, captions, speech bubbles, added text, or abrupt cuts.\n\noverall_soundscape: distant rain, station hum, no speech.\n\nnon_diegetic_music: gentle reflective piano."
+      },
+      {
+        "name": "05",
+        "title_zh": "终于对话",
+        "input_image_status": "pending_qwen_output",
+        "image_output_prefix": "005_last_train_05",
+        "prompt": "For the target video, at 0.00 seconds into the target video, <Picture 1> (from [Shot 1]) is fully referenced.\n\nintegrated_multimodal_description: [Shot 1] 2D hand-drawn anime, vertical 9:16, ten seconds. Preserve the exact identities, wardrobe, scene geometry, colors and composition of <Picture 1>. Lin Wan approaches the counter. Cheng Yu looks up, surprised. Lin Wan asks in Mandarin Chinese: “你为什么不告诉我？” After a short pause Cheng Yu replies softly in Mandarin Chinese: “我怕你觉得，我又在找借口。” Their facial expressions remain subtle, with believable speaking motions. Keep motion controlled, character anatomy stable, and continuity intact. No subtitles, captions, speech bubbles, added text, or abrupt cuts.\n\noverall_soundscape: two Mandarin voices, soft station hum, no additional speech.\n\nnon_diegetic_music: piano remains very quiet beneath dialogue."
+      },
+      {
+        "name": "06",
+        "title_zh": "换我等你",
+        "input_image_status": "pending_qwen_output",
+        "image_output_prefix": "005_last_train_06",
+        "prompt": "For the target video, at 0.00 seconds into the target video, <Picture 1> (from [Shot 1]) is fully referenced.\n\nintegrated_multimodal_description: [Shot 1] 2D hand-drawn anime, vertical 9:16, ten seconds. Preserve the exact identities, wardrobe, scene geometry, colors and composition of <Picture 1>. Lin Wan gently extends the folded yellow umbrella toward Cheng Yu, holds his gaze, and says in Mandarin Chinese: “那这一次，你下班以后，换我等你。” Cheng Yu smiles with quiet relief. A slow subtle camera push-in ends on their shared gaze. Keep motion controlled, character anatomy stable, and continuity intact. No subtitles, captions, speech bubbles, added text, or abrupt cuts.\n\noverall_soundscape: clear Mandarin female dialogue, faint station ambience, distant departing train.\n\nnon_diegetic_music: soft hopeful piano resolution."
+      }
+    ]
+  },
+  "steps": [
+    {
+      "id": "scenes",
+      "endpoint": "qwen",
+      "workflow": "workflows/comfyui-qwen-image-2-1/image_qwen_image_2_1_t2i.json",
+      "set": {
+        "459:452.prompt": "$item.prompt",
+        "13.aspect_ratio": "9:16 (Portrait Widescreen)",
+        "13.megapixels": 2,
+        "459:458.steps": 40
+      },
+      "foreach": [
+        {
+          "name": "01",
+          "title_zh": "空荡末班车",
+          "prompt": "Premium hand-drawn 2D anime feature-film still, consistent character design, precise anatomy, fine clean line art, painted rainy-night Tokyo-like metro environment, cool midnight-blue shadows and soft amber station lights, wet glass reflections, expressive restrained acting, cinematic composition, vertical 9:16, no captions, no text overlays, no watermark. Lin Wan, a 24-year-old woman with a short chestnut-brown bob, soft brown eyes, cream knee-length coat, burgundy scarf and light-gray canvas shoulder bag sits alone on a nearly empty late-night subway, framed waist-up by a rain-streaked window, holding a dim phone, her face reflected faintly in the glass, tired and disappointed, blue interior lights and amber distant station glow.",
+          "set": {
+            "459:458.seed": 202610300500,
+            "461.filename_prefix": "005_last_train_01"
+          }
+        },
+        {
+          "name": "02",
+          "title_zh": "黄色雨伞",
+          "prompt": "Premium hand-drawn 2D anime feature-film still, consistent character design, precise anatomy, fine clean line art, painted rainy-night Tokyo-like metro environment, cool midnight-blue shadows and soft amber station lights, wet glass reflections, expressive restrained acting, cinematic composition, vertical 9:16, no captions, no text overlays, no watermark. Over-the-shoulder view from behind Lin Wan, a 24-year-old woman with a short chestnut-brown bob, soft brown eyes, cream knee-length coat, burgundy scarf and light-gray canvas shoulder bag inside the metro car, looking through a rain-speckled window toward a stationary bright yellow umbrella with a small white rabbit charm beside a warm-lit station service desk. The umbrella is the clear focal point.",
+          "set": {
+            "459:458.seed": 202610300501,
+            "461.filename_prefix": "005_last_train_02"
+          }
+        },
+        {
+          "name": "03",
+          "title_zh": "站台身影",
+          "prompt": "Premium hand-drawn 2D anime feature-film still, consistent character design, precise anatomy, fine clean line art, painted rainy-night Tokyo-like metro environment, cool midnight-blue shadows and soft amber station lights, wet glass reflections, expressive restrained acting, cinematic composition, vertical 9:16, no captions, no text overlays, no watermark. Lin Wan, a 24-year-old woman with a short chestnut-brown bob, soft brown eyes, cream knee-length coat, burgundy scarf and light-gray canvas shoulder bag stands in the foreground of an almost empty station platform, viewed from behind; beyond a glass partition Cheng Yu, a 26-year-old slender man with neat short black hair and a dark navy metro station staff uniform quietly sorts papers at the service desk. A yellow umbrella with a white rabbit charm hangs at the desk edge. Warm light isolates him against cool blue tiles.",
+          "set": {
+            "459:458.seed": 202610300502,
+            "461.filename_prefix": "005_last_train_03"
+          }
+        },
+        {
+          "name": "04",
+          "title_zh": "过去的雨夜",
+          "prompt": "Premium hand-drawn 2D anime feature-film still, consistent character design, precise anatomy, fine clean line art, painted rainy-night Tokyo-like metro environment, cool midnight-blue shadows and soft amber station lights, wet glass reflections, expressive restrained acting, cinematic composition, vertical 9:16, no captions, no text overlays, no watermark. A memory-like view of the same subway platform on an earlier rainy night, Cheng Yu, a 26-year-old slender man with neat short black hair and a dark navy metro station staff uniform working behind the service desk beneath a warm lamp, the same yellow umbrella hanging nearby; blue-gray rain beyond glass, dreamy softened highlights, one continuous composition rather than a collage.",
+          "set": {
+            "459:458.seed": 202610300503,
+            "461.filename_prefix": "005_last_train_04"
+          }
+        },
+        {
+          "name": "05",
+          "title_zh": "终于对话",
+          "prompt": "Premium hand-drawn 2D anime feature-film still, consistent character design, precise anatomy, fine clean line art, painted rainy-night Tokyo-like metro environment, cool midnight-blue shadows and soft amber station lights, wet glass reflections, expressive restrained acting, cinematic composition, vertical 9:16, no captions, no text overlays, no watermark. Lin Wan, a 24-year-old woman with a short chestnut-brown bob, soft brown eyes, cream knee-length coat, burgundy scarf and light-gray canvas shoulder bag faces Cheng Yu, a 26-year-old slender man with neat short black hair and a dark navy metro station staff uniform across the warm-lit station service desk, medium two-shot, the yellow umbrella between them, their expressions cautious and vulnerable, consistent navy uniform, cream coat and burgundy scarf.",
+          "set": {
+            "459:458.seed": 202610300504,
+            "461.filename_prefix": "005_last_train_05"
+          }
+        },
+        {
+          "name": "06",
+          "title_zh": "换我等你",
+          "prompt": "Premium hand-drawn 2D anime feature-film still, consistent character design, precise anatomy, fine clean line art, painted rainy-night Tokyo-like metro environment, cool midnight-blue shadows and soft amber station lights, wet glass reflections, expressive restrained acting, cinematic composition, vertical 9:16, no captions, no text overlays, no watermark. Lin Wan, a 24-year-old woman with a short chestnut-brown bob, soft brown eyes, cream knee-length coat, burgundy scarf and light-gray canvas shoulder bag and Cheng Yu, a 26-year-old slender man with neat short black hair and a dark navy metro station staff uniform in an intimate two-shot beside the station desk, Lin Wan holding the folded bright yellow umbrella with white rabbit charm between them, warm golden light illuminating their faces, blue rainy platform behind, hopeful tender atmosphere.",
+          "set": {
+            "459:458.seed": 202610300505,
+            "461.filename_prefix": "005_last_train_06"
+          }
+        }
+      ]
+    },
+    {
+      "id": "videos",
+      "endpoint": "pika",
+      "workflow": "workflows/001-minimax-h3-fl2va-bf16/pika_h3_flex_fl2va_api.json",
+      "set": {
+        "115.aspect_ratio": "9:16 (Portrait Widescreen)"
+      },
+      "foreach": [
+        {
+          "name": "01",
+          "title_zh": "空荡末班车",
+          "set": {
+            "image_input.image": "$scenes.01.image",
+            "140:131.prompt": "For the target video, at 0.00 seconds into the target video, <Picture 1> (from [Shot 1]) is fully referenced.\n\nintegrated_multimodal_description: [Shot 1] 2D hand-drawn anime, vertical 9:16, ten seconds. Preserve the exact identities, wardrobe, scene geometry, colors and composition of <Picture 1>. Lin Wan sits still, glances down at her phone, whispers in Mandarin Chinese: “你说过，不会让我一个人回家的。” She gently turns off the screen and looks toward her reflection. Slow subtle push-in. Keep motion controlled, character anatomy stable, and continuity intact. No subtitles, captions, speech bubbles, added text, or abrupt cuts.\n\noverall_soundscape: subway wheels and ventilation; quiet female voice.\n\nnon_diegetic_music: sparse restrained melancholic piano.",
+            "92.filename_prefix": "video/005_last_train_01"
+          }
+        },
+        {
+          "name": "02",
+          "title_zh": "黄色雨伞",
+          "set": {
+            "image_input.image": "$scenes.02.image",
+            "140:131.prompt": "For the target video, at 0.00 seconds into the target video, <Picture 1> (from [Shot 1]) is fully referenced.\n\nintegrated_multimodal_description: [Shot 1] 2D hand-drawn anime, vertical 9:16, ten seconds. Preserve the exact identities, wardrobe, scene geometry, colors and composition of <Picture 1>. As the train slows to a stop, Lin Wan leans forward slightly, her eyes widen at the recognizable yellow umbrella, and she quietly says in Mandarin Chinese: “那把伞……” A gentle lateral camera move reveals the umbrella more clearly. Keep motion controlled, character anatomy stable, and continuity intact. No subtitles, captions, speech bubbles, added text, or abrupt cuts.\n\noverall_soundscape: braking subway, station ambience, one surprised female whisper.\n\nnon_diegetic_music: very soft suspended piano notes.",
+            "92.filename_prefix": "video/005_last_train_02"
+          }
+        },
+        {
+          "name": "03",
+          "title_zh": "站台身影",
+          "set": {
+            "image_input.image": "$scenes.03.image",
+            "140:131.prompt": "For the target video, at 0.00 seconds into the target video, <Picture 1> (from [Shot 1]) is fully referenced.\n\nintegrated_multimodal_description: [Shot 1] 2D hand-drawn anime, vertical 9:16, ten seconds. Preserve the exact identities, wardrobe, scene geometry, colors and composition of <Picture 1>. Lin Wan stops walking and recognizes Cheng Yu. He carefully straightens the papers, unaware she is watching. She hesitates, breathing shallowly. The camera stays nearly static, then moves in slightly toward the desk. Keep motion controlled, character anatomy stable, and continuity intact. No subtitles, captions, speech bubbles, added text, or abrupt cuts.\n\noverall_soundscape: soft station ventilation, footsteps stopping, paper rustle, no dialogue.\n\nnon_diegetic_music: one sustained delicate piano chord.",
+            "92.filename_prefix": "video/005_last_train_03"
+          }
+        },
+        {
+          "name": "04",
+          "title_zh": "过去的雨夜",
+          "set": {
+            "image_input.image": "$scenes.04.image",
+            "140:131.prompt": "For the target video, at 0.00 seconds into the target video, <Picture 1> (from [Shot 1]) is fully referenced.\n\nintegrated_multimodal_description: [Shot 1] 2D hand-drawn anime, vertical 9:16, ten seconds. Preserve the exact identities, wardrobe, scene geometry, colors and composition of <Picture 1>. The station lamp flickers gently as rain traces the windows. Cheng Yu checks the last-train departure display and glances toward the exit, then returns to work. The image has a gentle memory-like glow. No sudden scene cuts. Keep motion controlled, character anatomy stable, and continuity intact. No subtitles, captions, speech bubbles, added text, or abrupt cuts.\n\noverall_soundscape: distant rain, station hum, no speech.\n\nnon_diegetic_music: gentle reflective piano.",
+            "92.filename_prefix": "video/005_last_train_04"
+          }
+        },
+        {
+          "name": "05",
+          "title_zh": "终于对话",
+          "set": {
+            "image_input.image": "$scenes.05.image",
+            "140:131.prompt": "For the target video, at 0.00 seconds into the target video, <Picture 1> (from [Shot 1]) is fully referenced.\n\nintegrated_multimodal_description: [Shot 1] 2D hand-drawn anime, vertical 9:16, ten seconds. Preserve the exact identities, wardrobe, scene geometry, colors and composition of <Picture 1>. Lin Wan approaches the counter. Cheng Yu looks up, surprised. Lin Wan asks in Mandarin Chinese: “你为什么不告诉我？” After a short pause Cheng Yu replies softly in Mandarin Chinese: “我怕你觉得，我又在找借口。” Their facial expressions remain subtle, with believable speaking motions. Keep motion controlled, character anatomy stable, and continuity intact. No subtitles, captions, speech bubbles, added text, or abrupt cuts.\n\noverall_soundscape: two Mandarin voices, soft station hum, no additional speech.\n\nnon_diegetic_music: piano remains very quiet beneath dialogue.",
+            "92.filename_prefix": "video/005_last_train_05"
+          }
+        },
+        {
+          "name": "06",
+          "title_zh": "换我等你",
+          "set": {
+            "image_input.image": "$scenes.06.image",
+            "140:131.prompt": "For the target video, at 0.00 seconds into the target video, <Picture 1> (from [Shot 1]) is fully referenced.\n\nintegrated_multimodal_description: [Shot 1] 2D hand-drawn anime, vertical 9:16, ten seconds. Preserve the exact identities, wardrobe, scene geometry, colors and composition of <Picture 1>. Lin Wan gently extends the folded yellow umbrella toward Cheng Yu, holds his gaze, and says in Mandarin Chinese: “那这一次，你下班以后，换我等你。” Cheng Yu smiles with quiet relief. A slow subtle camera push-in ends on their shared gaze. Keep motion controlled, character anatomy stable, and continuity intact. No subtitles, captions, speech bubbles, added text, or abrupt cuts.\n\noverall_soundscape: clear Mandarin female dialogue, faint station ambience, distant departing train.\n\nnon_diegetic_music: soft hopeful piano resolution.",
+            "92.filename_prefix": "video/005_last_train_06"
+          }
+        }
+      ]
+    }
+  ]
+}
