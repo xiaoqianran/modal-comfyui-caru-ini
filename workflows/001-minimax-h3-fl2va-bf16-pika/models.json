@@ -27,6 +27,6 @@
     }
   ],
   "models_ext": [],
-  "gpu": "B200+",
+  "gpu": "H100",
   "min_containers": 1
 }
