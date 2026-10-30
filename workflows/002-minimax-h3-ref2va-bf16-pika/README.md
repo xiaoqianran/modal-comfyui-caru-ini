@@ -1,8 +1,6 @@
-# Pika H3 Flex Ref2VA BF16
-Based on `002-minimax-h3-ref2va-bf16`; original workflow untouched.
-Three API workflows: R2V, multiframe reference, and Fun ControlNet Union.
-Reuse the MiniMax-H3 Ref2VA base checkpoint; switch to Pika's official BF16 Ref2VA LoRA at strength 1.0.
-The LoRA enable switch is ON, LCM is selected, and ManualSigmas has seven values (six sampling intervals).
-**IMPORTANT:** These sigmas are an approximate ComfyUI configuration, not a verified implementation of the Pika sampling contract (knots 1000/750/500/250/100/40/0, video shift 12, audio shift 3, and fresh intermediate noise).
-ComfyUI end-to-end generation and compatibility of the ControlNet extension are NOT yet verified.
-Run `WORKFLOW=002-minimax-h3-ref2va-bf16-pika`; download models before Modal deploy.
+# Pika H3 Flex Ref2VA — official ComfyUI workflow, BF16 weights
+Source: https://github.com/Comfy-Org/workflow_templates/blob/main/templates/video_pika_h3_flex_ref2va.json
+This is the **official UI-format node graph** with three model references changed to existing BF16 / FP16 / Pika-Labs weights.
+Original ComfyUI graph structure, LCM sampler, ManualSigmas and LoRA-to-guider connection are preserved.
+Only models required by the official Ref2VA graph remain in models.json; unused ControlNet and SDPose models were removed from this variant's manifest.
+UI-format JSON is not directly usable with /prompt without API conversion. Real GPU rendering with the BF16 checkpoint is not yet verified.
