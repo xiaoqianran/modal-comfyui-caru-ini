@@ -361,8 +361,8 @@ def download_models():
     },
     secrets=[modal.Secret.from_name("huggingface-s3")],
     # 默认不预热：modal run download_models 时不能自动启动 GPU ComfyUI。
-    # 模型下载完成后，部署时可显式设置 MODAL_PREWARM=1 保持一个热容器。
-    min_containers=1 if os.getenv("MODAL_PREWARM", "0") == "1" else 0,
+    # 模型下载完成后，默认常驻数量由 models.json 配置，可用 MODAL_MIN_CONTAINERS 环境变量覆盖。
+    min_containers=int(os.getenv("MODAL_MIN_CONTAINERS", model_config.get("min_containers", 0))),
     scaledown_window=3600 if WORKFLOW == "comfyui-b300-image-video-suite" else 60,
     enable_memory_snapshot=True,
     experimental_options={"enable_gpu_snapshot": True},
