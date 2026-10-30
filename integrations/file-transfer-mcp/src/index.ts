@@ -94,20 +94,20 @@ function makeServer(env: Env, origin: string): McpServer {
 
   server.registerTool("upload_file", {
     title: "Upload ChatGPT file",
-    description: "Upload an explicitly authorized ChatGPT attachment (maximum 25 MiB) to private R2.",
-    inputSchema: { file: fileSchema },
+    description: "Upload a ChatGPT attachment (maximum 25 MiB) to private R2. Pass file as a JSON string containing download_url, file_id, file_name and mime_type.",
+    inputSchema: { file: z.string().describe("JSON-encoded file reference with download_url, file_id, optional file_name and mime_type") },
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
-    _meta: { "openai/fileParams": ["file"] },
   }, async ({ file }) => {
     try {
-      const response = await fetch(sourceUrl(file.download_url).toString(), {
+      const reference = fileSchema.parse(JSON.parse(file));
+      const response = await fetch(sourceUrl(reference.download_url).toString(), {
         redirect: "error", signal: AbortSignal.timeout(30_000),
       });
       const bytes = await readFile(response);
-      const key = `chatgpt/${crypto.randomUUID()}/${cleanName(file.file_name)}`;
+      const key = `chatgpt/${crypto.randomUUID()}/${cleanName(reference.file_name)}`;
       const digest = await sha256(bytes);
       await env.FILES.put(key, bytes, {
-        httpMetadata: { contentType: file.mime_type || "application/octet-stream" },
+        httpMetadata: { contentType: reference.mime_type || "application/octet-stream" },
         customMetadata: { sha256: digest },
       });
       return toolResult({ key, size: bytes.byteLength, sha256: digest });

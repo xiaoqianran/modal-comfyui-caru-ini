@@ -26,7 +26,7 @@ This setup uses the Cloudflare `OAuthProvider` one-Worker option. Clients author
 
 **Deployed** to `https://chatgpt-file-transfer-mcp.wangran.workers.dev/mcp` using Cloudflare's Worker API. The private R2 bucket and OAuth KV are bound. GitHub Actions typecheck + Worker bundle have passed.
 
-**Current endpoint returns HTTP 503 `Not configured` deliberately**. Two secret bindings must still be created by the account owner in the Cloudflare dashboard before the OAuth endpoint can be used.
+The endpoint requires two Cloudflare secret bindings. Once configured, anonymous MCP requests return HTTP 401 and OAuth authorization is available.
 
 1. Open **Cloudflare Dashboard → Workers & Pages → chatgpt-file-transfer-mcp → Settings → Variables and Secrets**.
 2. Add **Secret** `OWNER_PASSWORD`: a random 32+ character passphrase. Save it in your password manager; you will enter it when ChatGPT prompts for OAuth consent.
@@ -46,7 +46,7 @@ After deployment, open ChatGPT Plugins settings, add a private custom MCP endpoi
 
 ## End-to-end test
 
-1. In ChatGPT, select the generated `storyboard_16_frames.zip` as the `upload_file` file parameter.
+1. Fetch the generated `storyboard_16_frames.zip` file reference containing `download_url`, `file_id`, optional `file_name` and `mime_type`. Pass that reference as a **JSON-encoded string** to `upload_file(file)`. The tool schema deliberately uses a string for compatibility with the ChatGPT connector; do not send a raw object. A ChatGPT plugin refresh may be needed after updating its schema.
 2. Confirm `key` and `sha256` are returned and the private R2 object exists.
 3. Call `get_download_url` and pass its URL + SHA-256 to the connected PC2 AgentDock.
 4. AgentDock executes:
