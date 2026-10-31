@@ -381,10 +381,7 @@ def download_models():
         "/outputs": output_volume,
         "/r2-previews": preview_mount,
     },
-    secrets=[
-        modal.Secret.from_name("huggingface-s3"),
-        modal.Secret.from_name("r2-import-auth"),
-    ],
+    secrets=[modal.Secret.from_name("huggingface-s3")],
     # 所有已部署的工作流保持一个 GPU 容器常驻，不因空闲缩容至零。
     min_containers=1,
     scaledown_window=3600 if WORKFLOW == "comfyui-b300-image-video-suite" else 1800,

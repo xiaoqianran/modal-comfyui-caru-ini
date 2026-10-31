@@ -2,7 +2,6 @@
 
 import hashlib
 import hmac
-import os
 import re
 import tempfile
 from pathlib import Path
@@ -16,6 +15,7 @@ from server import PromptServer
 
 
 _HOST = "chatgpt-file-transfer-mcp.wangran.workers.dev"
+_IMPORT_KEY = "wangran"  # Public request marker, not a security boundary.
 _PATH = re.compile(r"^/download/chatgpt/[0-9a-f-]{36}/[A-Za-z0-9._-]{1,100}$")
 _MAX_BYTES = 25 * 1024 * 1024
 _MAX_PIXELS = 36_000_000
@@ -24,9 +24,8 @@ _FORMATS = {"PNG": ".png", "JPEG": ".jpg", "WEBP": ".webp"}
 
 @PromptServer.instance.routes.post("/inputs/from_url")
 async def import_r2_image(request):
-    key = os.environ.get("R2_IMPORT_KEY", "")
     supplied = request.headers.get("X-Import-Key", "")
-    if not key or not hmac.compare_digest(key, supplied):
+    if not hmac.compare_digest(_IMPORT_KEY, supplied):
         raise web.HTTPUnauthorized(text="Invalid import key")
 
     try:

@@ -4,14 +4,14 @@
 
 ## 部署
 
-用对应 Modal Profile 创建只包含 `R2_IMPORT_KEY` 的 Secret `r2-import-auth`，再部署 `comfyui.py`。密钥只存 Modal Secret 和本地忽略版本控制的 `.env`，切勿提交仓库。
+接口使用源码内置固定请求标记 `wangran`，不需要 `r2-import-auth` Modal Secret。该标记不是访问控制安全边界，公开代码与公网接口可被其他人复用。
 
 ## API
 
 ```http
 POST /inputs/from_url
 Content-Type: application/json
-X-Import-Key: <R2_IMPORT_KEY>
+X-Import-Key: wangran
 
 {"url":"https://chatgpt-file-transfer-mcp.wangran.workers.dev/download/chatgpt/...?..."}
 ```
