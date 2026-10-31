@@ -5,7 +5,7 @@ set "PYTHONIOENCODING=utf-8"
 set "PYTHONUTF8=1"
 cd /d "%~dp0"
 
-set "WORKFLOW=%~1"
+if not "%~1"=="" set "WORKFLOW=%~1"
 if not defined WORKFLOW set "WORKFLOW=comfyui-pixal3d-trellis2"
 
 if not exist "workflows\%WORKFLOW%\" (
@@ -30,5 +30,7 @@ if errorlevel 1 (
 echo Deploying Modal ComfyUI using workflow: %WORKFLOW%
 echo GPU comes from workflows\%WORKFLOW%\models.json unless MODAL_GPU overrides it.
 set "WORKFLOW=%WORKFLOW%"
+uv run modal run download-models.py --ensure
+if errorlevel 1 exit /b 1
 uv run modal deploy comfyui.py
 exit /b %ERRORLEVEL%

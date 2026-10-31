@@ -198,6 +198,33 @@ def check_cache(items: list[dict]) -> list[dict]:
     return missing
 
 
+@app.function(image=image, volumes={CACHE_DIR: volume}, timeout=300, cpu=1.0, memory=1024)
+def quick_check(config_json: str, workflow: str) -> list[str]:
+    """Fast cache check using the last successful revision record, without hashing weights."""
+    volume.reload()
+    root = Path(CACHE_DIR)
+    config = json.loads(config_json)
+    record = root / ".workflow-revisions" / f"{workflow}.json"
+    revisions = json.loads(record.read_text(encoding="utf-8")) if record.is_file() else {}
+    missing = []
+    for model in config.get("models", []):
+        key = f"{model['repo_id']}/{model['filename']}"
+        revision = revisions.get(key)
+        pinned = model.get("revision")
+        if not revision or (pinned and len(pinned) == 40 and pinned != revision):
+            missing.append(key)
+            continue
+        item = {"kind": "hf", "repo_id": model["repo_id"], "filename": model["filename"],
+                "revision": revision}
+        if not _size_valid(_cached_path(root, item), item):
+            missing.append(key)
+    for model in config.get("models_ext", []):
+        item = {"kind": "external", "filename": model["filename"], "size": model.get("size")}
+        if not _size_valid(_cached_path(root, item), item):
+            missing.append(model["filename"])
+    return missing
+
+
 @app.function(image=image, volumes={CACHE_DIR: volume}, timeout=86400, secrets=[hf_secret], cpu=4.0, memory=4096)
 def download_shard(payload: dict) -> dict:
     """Parallel containers only write disjoint per-file staging, never final cache."""
@@ -351,7 +378,7 @@ def merge_shards(payload: dict) -> dict:
 
 
 @app.local_entrypoint()
-def main(update: bool = False):
+def main(update: bool = False, check_only: bool = False, ensure: bool = False):
     import hashlib
     import time
 
@@ -359,6 +386,17 @@ def main(update: bool = False):
         raise ValueError(f"Missing workflow models.json: {CONFIG}")
     config = json.loads(CONFIG.read_text(encoding="utf-8"))
     config_json = json.dumps(config)
+    if check_only or ensure:
+        missing = quick_check.remote(config_json, WORKFLOW)
+        if missing:
+            print(f"CACHE INCOMPLETE: {len(missing)} missing model(s):", flush=True)
+            for name in missing:
+                print(f"  {name}", flush=True)
+            if check_only:
+                raise SystemExit(3)
+        else:
+            print(f"CACHE READY: {WORKFLOW} ({len(config.get('models', [])) + len(config.get('models_ext', []))} models)", flush=True)
+            return
     print(f"Workflow: {WORKFLOW} (one complete download job at a time)")
 
     t0 = time.time()
