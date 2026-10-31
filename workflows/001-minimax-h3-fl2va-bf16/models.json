@@ -24,8 +24,13 @@
       "repo_id": "Comfy-Org/MiniMax-H3",
       "filename": "text_encoders/qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
       "model_dir": "text_encoders"
+    },
+    {
+      "repo_id": "Pika-Labs/Pika-H3-Flex",
+      "filename": "comfy/loras/pika_h3_flex_fl2va_comfy_bf16.safetensors",
+      "model_dir": "loras"
     }
   ],
   "models_ext": [],
-  "gpu": "RTX-PRO-6000"
+  "gpu": "H200"
 }

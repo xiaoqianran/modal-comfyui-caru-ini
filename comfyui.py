@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 import re
 import shlex
@@ -8,8 +9,6 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 import modal
-
-import json
 
 # Modal 镜像构建与应用声明顺序（必须保持）：
 # 1. 安装 ComfyUI。
@@ -48,8 +47,9 @@ COMFY_MODELS_ROOT = Path("/root/comfy/ComfyUI/models")
 GPU_TYPE = os.getenv("MODAL_GPU") or model_config.get("gpu", "L40S")
 # 根据最终 GPU 配置（包含 MODAL_GPU 覆盖）自动决定高显存模式。
 IS_BLACKWELL = GPU_TYPE.strip().upper() in {"B200", "B200+", "B300"}
-HIGH_VRAM = IS_BLACKWELL
-DUAL_COMFYUI = IS_BLACKWELL and os.getenv("MODAL_DUAL_COMFYUI", "1") == "1"
+HIGH_VRAM = IS_BLACKWELL or GPU_TYPE.strip().upper() == "H200"
+DUAL_COMFYUI = GPU_TYPE.strip().upper() == "B300"
+COMFY_PORTS = (8000, 8001) if DUAL_COMFYUI else (8000,)
 COMFY_VER = os.getenv("COMFY_VER")
 
 # ============================================================================
@@ -326,7 +326,7 @@ preview_mount = modal.CloudBucketMount(
 )
 image = image.pip_install("boto3", "imageio-ffmpeg").add_local_file(
     root_dir / "storage" / "hf_sync.py", "/root/hf_sync.py", copy=True
-).env({"WORKFLOW": WORKFLOW, "MODAL_DUAL_COMFYUI": "1" if DUAL_COMFYUI else "0"})
+).env({"WORKFLOW": WORKFLOW})
 
 # Runtime configuration is mounted after builds; editing models.json cannot
 # invalidate the plugin installation image layers.
@@ -373,9 +373,8 @@ def download_models():
         "/r2-previews": preview_mount,
     },
     secrets=[modal.Secret.from_name("huggingface-s3")],
-    # 默认不预热：modal run download_models 时不能自动启动 GPU ComfyUI。
-    # 模型下载完成后，默认常驻数量由 models.json 配置，可用 MODAL_MIN_CONTAINERS 环境变量覆盖。
-    min_containers=int(os.getenv("MODAL_MIN_CONTAINERS", model_config.get("min_containers", 0))),
+    # 所有已部署的工作流保持一个 GPU 容器常驻，不因空闲缩容至零。
+    min_containers=1,
     scaledown_window=3600 if WORKFLOW == "comfyui-b300-image-video-suite" else 60,
     enable_memory_snapshot=True,
     experimental_options={"enable_gpu_snapshot": True},
@@ -391,7 +390,7 @@ class ComfyUI:
         vol.reload()
         link_cached_models()
         self.procs = []
-        for index, port in enumerate((8000, 8001) if DUAL_COMFYUI else (8000,), start=1):
+        for index, port in enumerate(COMFY_PORTS, start=1):
             output_dir = f"/outputs/{WORKFLOW}/instance-{index}" if DUAL_COMFYUI else f"/outputs/{WORKFLOW}"
             user_dir = f"/tmp/comfyui-user-{index}"
             temp_dir = f"/tmp/comfyui-temp-{index}"
@@ -408,7 +407,7 @@ class ComfyUI:
             if HIGH_VRAM:
                 args.append("--highvram")
             self.procs.append(subprocess.Popen(args))
-        for port in ((8000, 8001) if DUAL_COMFYUI else (8000,)):
+        for port in COMFY_PORTS:
             wait_for_port(port, timeout=300)
 
     @staticmethod
@@ -419,19 +418,17 @@ class ComfyUI:
                       ".json", ".bin", ".obj", ".mtl", ".stl"}
         root = Path("/outputs") / WORKFLOW
         snapshot = {}
-        for category in ("3d", "3dgs", "video"):
-            directory = root / category
-            if not directory.exists():
+        if not root.is_dir():
+            return snapshot
+        for path in root.rglob("*"):
+            if not path.is_file() or path.suffix.lower() not in extensions:
                 continue
-            for path in directory.rglob("*"):
-                if not path.is_file() or path.suffix.lower() not in extensions:
-                    continue
-                try:
-                    stat = path.stat()
-                except FileNotFoundError:
-                    continue
-                if stat.st_size:
-                    snapshot[str(path)] = (stat.st_size, stat.st_mtime_ns)
+            try:
+                stat = path.stat()
+            except FileNotFoundError:
+                continue
+            if stat.st_size:
+                snapshot[str(path)] = (stat.st_size, stat.st_mtime_ns)
         return snapshot
 
     def _commit_outputs_loop(self):
@@ -453,7 +450,7 @@ class ComfyUI:
 
     @modal.enter(snap=False)
     def start_restore(self):
-        for port in ((8000, 8001) if DUAL_COMFYUI else (8000,)):
+        for port in COMFY_PORTS:
             wait_for_port(port, timeout=30)
         self.sync_proc = subprocess.Popen(
             ["python", "-u", "/root/hf_sync.py"],
@@ -469,7 +466,7 @@ class ComfyUI:
     @modal.web_server(8000, startup_timeout=300, label="comfyui-1")
     def ui(self):
         print("App Ready!")
-    
+
     if DUAL_COMFYUI:
         @modal.web_server(8001, startup_timeout=300, label="comfyui-2")
         def ui_second(self):
