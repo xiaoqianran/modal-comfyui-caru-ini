@@ -64,250 +64,262 @@ def pack_shards(items: list[dict], target_bytes: int, max_shards: int) -> list[l
     return [b for b in bins if b]
 
 
+def _atomic_json(path: Path, data) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temp = path.with_name(path.name + ".tmp")
+    temp.write_text(json.dumps(data, sort_keys=True), encoding="utf-8")
+    os.replace(temp, path)
+
+
+def _safe_path(root: Path, name: str) -> Path:
+    from pathlib import PurePosixPath
+    path = PurePosixPath(name)
+    if not name or path.is_absolute() or ".." in path.parts or "\\" in name:
+        raise ValueError(f"Unsafe cache path: {name!r}")
+    return root.joinpath(*path.parts)
+
+
+def _cached_path(root: Path, item: dict) -> Path:
+    if item["kind"] == "external":
+        return _safe_path(root, item["filename"])
+    repo = _safe_path(root, "models--" + item["repo_id"].replace("/", "--"))
+    return _safe_path(repo / "snapshots" / item["revision"], item["filename"])
+
+
+def _size_valid(path: Path, item: dict) -> bool:
+    # Permission/IO errors must propagate; only missing files are ordinary misses.
+    import stat
+    try:
+        info = path.stat()
+    except FileNotFoundError:
+        return False
+    expected = item.get("size")
+    return stat.S_ISREG(info.st_mode) and info.st_size > 0 and (expected is None or info.st_size == expected)
+
+
+def _verify_content(path: Path, item: dict) -> str:
+    import hashlib
+    if not _size_valid(path, item):
+        raise ValueError(f"Missing file or size mismatch: {path}")
+    algorithm = item.get("algorithm", "sha256")
+    digest = hashlib.new(algorithm)
+    if algorithm == "sha1":
+        digest.update(f"blob {path.stat().st_size}\0".encode())
+    with path.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(8 * 1024 * 1024), b""):
+            digest.update(chunk)
+    value = digest.hexdigest()
+    if item.get("digest") and value != item["digest"]:
+        raise ValueError(f"Content hash mismatch: {path}")
+    return value
+
+
+def _stage_dir(run_root: Path, item: dict) -> Path:
+    import hashlib
+    # Stable across cache hits, changed packing, worker counts and retries.
+    key = json.dumps(item, sort_keys=True)
+    return run_root / "files" / hashlib.sha256(key.encode()).hexdigest()
+
+
 @app.function(image=image, volumes={CACHE_DIR: volume}, timeout=3600, secrets=[hf_secret], cpu=2.0, memory=4096)
-def fetch_manifest(config_json: str) -> list[dict]:
-    """Resolve every item's byte size: HF repo metadata in one API call per
-    repo, a HEAD request for external URLs. Unknown sizes come back as 0."""
-    import httpx
+def fetch_manifest(config_json: str, workflow: str = WORKFLOW, update: bool = False) -> list[dict]:
+    """Resolve pinned metadata once. One complete download job at a time."""
+    import re
     from huggingface_hub import HfApi
-
+    volume.reload()
+    if not re.fullmatch(r"[A-Za-z0-9_-]+", workflow):
+        raise ValueError("Invalid workflow name")
+    root = Path(CACHE_DIR)
+    pins = root / ".workflow-pins" / f"{workflow}.json"
+    success = root / ".workflow-revisions" / f"{workflow}.json"
+    old_file = pins if pins.exists() else success
+    old = json.loads(old_file.read_text(encoding="utf-8")) if old_file.exists() else {}
     data = json.loads(config_json)
-    token = os.environ.get("HF_TOKEN") or None
-    repo_sizes: dict[str, dict[str, int]] = {}
-    repo_revisions: dict[str, str] = {}
-    api = HfApi(token=token)
-    for repo_id in sorted({m["repo_id"] for m in data.get("models", [])}):
-        info = api.model_info(repo_id, files_metadata=True)
-        repo_sizes[repo_id] = {
-            s.rfilename: int(s.size or 0) for s in (info.siblings or []) if s.size
-        }
-        # Pin the exact commit so downloads/verifies cannot drift if the
-        # repo is updated between the manifest lookup and the downloads.
-        repo_revisions[repo_id] = info.sha
-
-    items: list[dict] = []
-    for m in data.get("models", []):
-        items.append({
-            "kind": "hf",
-            "repo_id": m["repo_id"],
-            "filename": m["filename"],
-            "revision": repo_revisions.get(m["repo_id"]),
-            "size": repo_sizes.get(m["repo_id"], {}).get(m["filename"], 0),
-        })
-    for m in data.get("models_ext", []):
-        size = 0
-        try:
-            with httpx.Client(follow_redirects=True, timeout=60) as client:
-                head = client.head(m["url"])
-                size = int(head.headers.get("content-length") or 0)
-        except Exception as exc:  # size is only a packing hint
-            print("WARN external size unknown:", m["url"], exc)
-        items.append({"kind": "external", "url": m["url"], "filename": m["filename"], "size": size})
+    api = HfApi(token=os.getenv("HF_TOKEN") or None)
+    repos, items = {}, []
+    for model in data.get("models", []):
+        repo, filename = model["repo_id"], model["filename"]
+        revision = model.get("revision") or (None if update else old.get(f"{repo}/{filename}")) or "main"
+        if (repo, revision) not in repos:
+            repos[repo, revision] = api.model_info(repo, revision=revision, files_metadata=True)
+        info = repos[repo, revision]
+        entry = next((e for e in info.siblings or [] if e.rfilename == filename), None)
+        if entry is None or entry.size is None:
+            raise ValueError(f"Missing HF file metadata: {repo}/{filename}")
+        lfs = entry.lfs
+        digest = lfs.sha256 if lfs else entry.blob_id
+        if not digest or not re.fullmatch(r"[0-9a-f]{64}" if lfs else r"[0-9a-f]{40}", digest):
+            raise ValueError(f"Missing HF content hash: {repo}/{filename}")
+        items.append(dict(kind="hf", repo_id=repo, filename=filename, revision=info.sha,
+                          size=entry.size, algorithm="sha256" if lfs else "sha1", digest=digest))
+    for model in data.get("models_ext", []):
+        import httpx
+        size = model.get("size")
+        if size is None:
+            try:
+                with httpx.Client(follow_redirects=True, timeout=60) as client:
+                    response = client.head(model["url"], headers={"Accept-Encoding": "identity"})
+                    response.raise_for_status()
+                    size = int(response.headers["content-length"]) if "content-length" in response.headers else None
+            except (httpx.HTTPError, ValueError) as exc:
+                print("WARN external size unknown:", model["url"], exc)
+        digest = model.get("sha256")
+        if digest and not re.fullmatch(r"[0-9a-fA-F]{64}", digest):
+            raise ValueError("Invalid external sha256")
+        if not digest:
+            print("WARN no upstream SHA256; external integrity limited to size/transport:", model["filename"])
+        items.append(dict(kind="external", url=model["url"], filename=model["filename"],
+                          size=size, algorithm="sha256", digest=digest.lower() if digest else None))
+    # Validate/deduplicate before packing so no two workers write the same staged file.
+    unique = {}
+    for item in items:
+        if item["kind"] == "external" and ("/" in item["filename"] or item["filename"].startswith(".")):
+            raise ValueError("External filename must be a plain filename")
+        target = str(_cached_path(root, item))
+        if target in unique and unique[target] != item:
+            raise ValueError(f"Conflicting models: {target}")
+        unique[target] = item
+    items = list(unique.values())
+    # Pending pins persist before download; readers still use last successful record.
+    _atomic_json(pins, {f"{i['repo_id']}/{i['filename']}": i["revision"] for i in items if i["kind"] == "hf"})
+    volume.commit()
     return items
 
 
 @app.function(image=image, volumes={CACHE_DIR: volume}, timeout=3600, cpu=2.0, memory=4096)
 def check_cache(items: list[dict]) -> list[dict]:
-    """Return only missing or invalid files from the shared Volume cache."""
-    from huggingface_hub import hf_hub_download
-
     volume.reload()
     missing = []
     for item in items:
-        if item["kind"] == "hf":
-            try:
-                cached = hf_hub_download(
-                    repo_id=item["repo_id"], filename=item["filename"],
-                    cache_dir=CACHE_DIR, revision=item["revision"],
-                    local_files_only=True)
-                size = int(item.get("size") or 0)
-                if not Path(cached).is_file() or (size and Path(cached).stat().st_size != size):
-                    raise ValueError("cached model size mismatch")
-            except Exception as exc:
-                print("CACHE MISS", item["repo_id"], item["filename"], str(exc)[:160], flush=True)
-                missing.append(item)
-                continue
-            print("CACHE HIT", item["repo_id"], item["filename"], flush=True)
-        else:
-            target = Path(CACHE_DIR) / item["filename"]
-            size = int(item.get("size") or 0)
-            if not target.is_file() or not target.stat().st_size or (size and target.stat().st_size != size):
-                print("CACHE MISS external", item["filename"], flush=True)
-                missing.append(item)
-            else:
-                print("CACHE HIT external", item["filename"], flush=True)
+        hit = _size_valid(_cached_path(Path(CACHE_DIR), item), item)
+        print("CACHE HIT" if hit else "CACHE MISS", item["filename"], flush=True)
+        if not hit:
+            missing.append(item)
     return missing
 
 
-# 与 comfyui.py 下载函数相同的默认资源：CPU=4 / MEMORY=4096 MiB。
 @app.function(image=image, volumes={CACHE_DIR: volume}, timeout=86400, secrets=[hf_secret], cpu=4.0, memory=4096)
 def download_shard(payload: dict) -> dict:
-    """One shard = one container. HF files go to this shard's private cache
-    directory so parallel containers never race on the shared HF cache
-    layout; external files land directly at their final path (unique names,
-    atomic .part rename)."""
+    """Parallel containers only write disjoint per-file staging, never final cache."""
     import concurrent.futures
-    import hashlib
     import time
-
     from huggingface_hub import hf_hub_download
-
-    shard_id = int(payload["shard_id"])
-    items = payload["items"]
-    shard_cache = f"{SHARD_ROOT}/{payload['run_id']}/shard-{shard_id}"
-    token = os.environ.get("HF_TOKEN") or None
-    # Read in the local entrypoint and passed via the payload: environment
-    # variables set on the caller's machine do NOT reach remote containers.
-    workers = max(1, min(8, int(payload.get("workers") or 4)))
+    volume.reload()
     started = time.time()
-    errors: list[str] = []
+    items = payload["items"]
+    run_root = Path(SHARD_ROOT) / payload["run_id"]
+    workers = max(1, min(8, int(payload.get("workers") or 2)))
+    errors = []
 
     def fetch(item):
-        kind = item["kind"]
-        if kind == "hf":
-            hf_hub_download(repo_id=item["repo_id"], filename=item["filename"],
-                            cache_dir=shard_cache, token=token, revision=item.get("revision"))
-            print("CACHED HF", item["repo_id"], item["filename"], flush=True)
+        stage = _stage_dir(run_root, item)
+        target = _cached_path(stage, item)
+        if item["kind"] == "hf":
+            # Public content-addressed blobs may already exist under another revision.
+            public_blob = Path(CACHE_DIR) / ("models--" + item["repo_id"].replace("/", "--")) / "blobs" / item["digest"]
+            candidate = target if _size_valid(target, item) else public_blob
+            if _size_valid(candidate, item):
+                try:
+                    _verify_content(candidate, item)
+                    # Hard links are not assumed across Volume directories.
+                    if candidate != target:
+                        _publish(candidate, stage, item, replace_blob=True)
+                    return
+                except ValueError:
+                    pass  # Corrupt complete cache: force a fresh native download.
+            force = target.exists()
+            for attempt in range(2):
+                cached = hf_hub_download(repo_id=item["repo_id"], filename=item["filename"],
+                    revision=item["revision"], cache_dir=str(stage), token=os.getenv("HF_TOKEN") or None,
+                    force_download=force or attempt > 0)
+                try:
+                    _verify_content(Path(cached), item)
+                    return
+                except ValueError:
+                    if attempt:
+                        raise
         else:
-            target = Path(CACHE_DIR) / item["filename"]
-            target.parent.mkdir(parents=True, exist_ok=True)
-            if target.exists() and target.stat().st_size:
-                print("CACHED external", target.name, flush=True)
-                return
+            if _size_valid(target, item):
+                try:
+                    _verify_content(target, item)
+                    return
+                except ValueError:
+                    pass
             import httpx
-
-            url = item["url"]
-            temp = target.with_name(target.name + "." + hashlib.sha256(url.encode()).hexdigest()[:10] + ".part")
-            try:
-                with httpx.stream("GET", url, follow_redirects=True, timeout=120) as response:
-                    response.raise_for_status()
-                    with temp.open("wb") as f:
-                        for chunk in response.iter_bytes(chunk_size=1024 * 1024):
-                            f.write(chunk)
-                temp.replace(target)
-            finally:
-                temp.unlink(missing_ok=True)
-            print("CACHED external", target.name, flush=True)
+            target.parent.mkdir(parents=True, exist_ok=True)
+            part = target.with_name(target.name + ".part")
+            with httpx.stream("GET", item["url"], follow_redirects=True, timeout=120,
+                              headers={"Accept-Encoding": "identity"}) as response:
+                response.raise_for_status()
+                with part.open("wb") as stream:
+                    for chunk in response.iter_bytes(chunk_size=1024 * 1024):
+                        stream.write(chunk)
+            _verify_content(part, item)
+            os.replace(part, target)
 
     def guarded(item):
         try:
             fetch(item)
         except Exception as exc:
-            errors.append(f"{item['kind']}:{item.get('repo_id', '')}/{item['filename']}: {exc}")
+            errors.append(f"{item['kind']}:{item['filename']}: {exc}")
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=min(workers, len(items) or 1)) as pool:
         list(pool.map(guarded, items))
-
-    if not errors:
-        # Fail fast inside this shard if a "successful" download is not
-        # actually resolvable from its own cache.
-        for item in items:
-            if item["kind"] == "hf":
-                try:
-                    hf_hub_download(repo_id=item["repo_id"], filename=item["filename"],
-                                    cache_dir=shard_cache, token=token, revision=item.get("revision"),
-                                    local_files_only=True)
-                except Exception as exc:
-                    errors.append(f"verify {item['repo_id']}/{item['filename']}: {exc}")
-    volume.commit()
-    seconds = time.time() - started
-    total = sum(int(it.get("size") or 0) for it in items)
-    print(f"SHARD {shard_id} done: {len(items)} files, {total / 1e9:.2f} GB, "
-          f"{seconds:.1f}s, {total / 1e6 / max(seconds, 0.1):.0f} MB/s, errors={len(errors)}", flush=True)
-    return {"shard_id": shard_id, "ok": not errors, "errors": errors,
-            "bytes": total, "seconds": seconds, "files": len(items)}
+    volume.commit()  # Completed files and HF .incomplete files remain resumable.
+    return dict(shard_id=payload["shard_id"], ok=not errors, errors=errors,
+                seconds=time.time() - started, files=len(items))
 
 
-@app.function(image=image, volumes={CACHE_DIR: volume}, timeout=3600, secrets=[hf_secret], cpu=2.0, memory=8192)
-def merge_shards(payload: dict) -> dict:
-    """Fold every shard's private HF cache into the shared /cache layout,
-    then verify every requested file resolves from the main cache and
-    delete the shard directories."""
+def _publish(source: Path, root: Path, item: dict, replace_blob: bool = False) -> None:
+    """Publish already hash-verified staging. Keep source until both commits succeed."""
     import shutil
+    if not _size_valid(source, item):
+        raise ValueError(f"Invalid staged file: {source}")
+    target = _cached_path(root, item)
+    blob = (root / ("models--" + item["repo_id"].replace("/", "--")) / "blobs" / item["digest"]
+            if item["kind"] == "hf" else target)
+    if replace_blob or not _size_valid(blob, item):
+        blob.parent.mkdir(parents=True, exist_ok=True)
+        temp = blob.with_name(blob.name + ".publish")
+        shutil.copyfile(source, temp)
+        if not _size_valid(temp, item):
+            raise ValueError(f"Copy size mismatch: {temp}")
+        os.replace(temp, blob)
+    if item["kind"] == "hf":
+        target.parent.mkdir(parents=True, exist_ok=True)
+        temp = target.with_name(target.name + ".publish")
+        temp.unlink(missing_ok=True)
+        temp.symlink_to(os.path.relpath(blob, target.parent))
+        os.replace(temp, target)
 
-    from huggingface_hub import hf_hub_download
 
+@app.function(image=image, volumes={CACHE_DIR: volume}, timeout=86400, secrets=[hf_secret], cpu=2.0, memory=8192)
+def merge_shards(payload: dict) -> dict:
+    import shutil
     volume.reload()
-    items = payload["items"]
-    shard_root = Path(SHARD_ROOT) / str(payload["run_id"])
-    main_cache = Path(CACHE_DIR)
-    moved = 0
-
-    def merge_tree(src_root: Path, dst_root: Path) -> None:
-        # Generic recursive merge of a private HF cache into the shared one.
-        # The layout is identical on both sides (repo dirs, content-addressed
-        # blobs, the Xet CAS store under blobs/<2-hex>/, snapshot symlinks,
-        # refs), so relative symlink targets stay valid verbatim. Identical
-        # destinations are skipped; the shard copy is discarded.
-        nonlocal moved
-        for src in sorted(src_root.rglob("*")):
-            if ".locks" in src.parts or src.name.endswith(".incomplete"):
-                continue
-            rel = src.relative_to(src_root)
-            dest = dst_root / rel
-            if src.is_symlink():
-                if dest.is_symlink() and os.readlink(dest) == os.readlink(src):
-                    continue
-                if dest.exists() or dest.is_symlink():
-                    dest.unlink()
-                dest.parent.mkdir(parents=True, exist_ok=True)
-                os.symlink(os.readlink(src), dest)
-                moved += 1
-            elif src.is_file():
-                if dest.exists():
-                    continue
-                dest.parent.mkdir(parents=True, exist_ok=True)
-                shutil.move(str(src), str(dest))
-                moved += 1
-
-    if shard_root.is_dir():
-        for shard_dir in sorted(shard_root.glob("shard-*")):
-            if shard_dir.is_dir():
-                merge_tree(shard_dir, main_cache)
-
-    missing: list[str] = []
-    token = os.environ.get("HF_TOKEN") or None
-    for item in items:
-        if item["kind"] == "hf":
-            try:
-                hf_hub_download(repo_id=item["repo_id"], filename=item["filename"],
-                                cache_dir=CACHE_DIR, token=token, revision=item.get("revision"),
-                                local_files_only=True)
-            except Exception as exc:
-                missing.append(f"{item['repo_id']}/{item['filename']}: {exc}")
-        else:
-            target = main_cache / item["filename"]
-            if not (target.exists() and target.stat().st_size):
-                missing.append(f"external {item['filename']} missing after merge")
+    root = Path(CACHE_DIR)
+    run_root = Path(SHARD_ROOT) / payload["run_id"]
+    # Only requested missing files are published. Every source was hash-verified
+    # by its shard; merge does cheap size checks, not another full hash pass.
+    pending = payload.get("downloaded_items", [])
+    for item in pending:
+        source = _cached_path(_stage_dir(run_root, item), item)
+        _publish(source, root, item, replace_blob=True)
+    missing = [i["filename"] for i in payload["items"] if not _size_valid(_cached_path(root, i), i)]
     if missing:
-        # Keep the shard caches and skip the commit: a re-run can resume and
-        # retry the merge instead of losing the only other copy.
-        print(f"MERGE verification failed: moved {moved} entries, missing={len(missing)}; "
-              "shard caches kept, nothing committed", flush=True)
-        return {"ok": False, "missing": missing, "moved_entries": moved}
-    # Persist per-workflow commit IDs only after all files verify.
-    revisions = {
-        f"{item['repo_id']}/{item['filename']}": item["revision"]
-        for item in items if item["kind"] == "hf"
-    }
-    revision_dir = main_cache / ".workflow-revisions"
-    revision_dir.mkdir(exist_ok=True)
-    (revision_dir / f"{payload['workflow']}.json").write_text(
-        json.dumps(revisions, sort_keys=True), encoding="utf-8")
-    # Verified: only now is it safe to drop this run's shard directories.
-    if shard_root.is_dir():
-        shutil.rmtree(shard_root)
-    try:
-        Path(SHARD_ROOT).rmdir()  # succeeds only when no other run is stored
-    except OSError:
-        pass
-    volume.commit()
-    print(f"MERGE done: moved {moved} entries, verified, shard caches cleaned", flush=True)
-    return {"ok": True, "missing": [], "moved_entries": moved}
+        return dict(ok=False, missing=missing, moved_entries=len(pending))
+    volume.commit()  # Model data durable first. Never delete sources before this.
+    revisions = {f"{i['repo_id']}/{i['filename']}": i["revision"] for i in payload["items"] if i["kind"] == "hf"}
+    _atomic_json(root / ".workflow-revisions" / f"{payload['workflow']}.json", revisions)
+    volume.commit()  # Reader's record durable second.
+    if run_root.is_dir():
+        shutil.rmtree(run_root)
+        volume.commit()  # Cleanup failure cannot invalidate the published cache.
+    return dict(ok=True, missing=[], moved_entries=len(pending))
 
 
 @app.local_entrypoint()
-def main():
+def main(update: bool = False):
     import hashlib
     import time
 
@@ -315,15 +327,13 @@ def main():
         raise ValueError(f"Missing workflow models.json: {CONFIG}")
     config = json.loads(CONFIG.read_text(encoding="utf-8"))
     config_json = json.dumps(config)
-    print(f"Workflow: {WORKFLOW}")
+    print(f"Workflow: {WORKFLOW} (one complete download job at a time)")
 
     t0 = time.time()
-    items = fetch_manifest.remote(config_json)
+    items = fetch_manifest.remote(config_json, WORKFLOW, update)
     # Same manifest (files + pinned revisions) -> same run id, so a re-run
     # resumes into the same shard dirs; a different manifest is isolated.
-    fingerprint = json.dumps(
-        [{k: it.get(k) for k in ("kind", "repo_id", "filename", "revision", "url")} for it in items],
-        sort_keys=True)
+    fingerprint = json.dumps(items, sort_keys=True)
     run_id = hashlib.sha256(fingerprint.encode()).hexdigest()[:12]
     print(f"Run id: {run_id}")
     missing_items = check_cache.remote(items)
@@ -355,7 +365,8 @@ def main():
             "Some shards failed; shard caches are kept on the volume, fix the "
             "cause and re-run — finished files resume instead of restarting.")
 
-    merged = merge_shards.remote({"items": items, "run_id": run_id, "workflow": WORKFLOW})
+    merged = merge_shards.remote({"items": items, "run_id": run_id, "workflow": WORKFLOW,
+                                  "downloaded_items": missing_items})
     if not merged["ok"]:
         for m in merged["missing"]:
             print("MISSING after merge:", m)
