@@ -45,6 +45,7 @@ comfy_plugins_ext = plugin_config.get("comfy_plugins_ext", [])
 COMFY_MODELS_ROOT = Path("/root/comfy/ComfyUI/models")
 
 GPU_TYPE = os.getenv("MODAL_GPU") or model_config.get("gpu", "L40S")
+MODAL_REGIONS = [region.strip() for region in os.getenv("MODAL_REGION", "").split(",") if region.strip()] or None
 # 根据最终 GPU 配置（包含 MODAL_GPU 覆盖）自动决定高显存模式。
 IS_BLACKWELL = GPU_TYPE.strip().upper() in {"B200", "B200+", "B300"}
 HIGH_VRAM = model_config.get("highvram", IS_BLACKWELL or GPU_TYPE.strip().upper() == "H200")
@@ -374,6 +375,7 @@ def download_models():
 @app.cls(
     max_containers=1,  # Hard cap: never start a second B300 container for this app.
     gpu=GPU_TYPE,
+    region=MODAL_REGIONS,
     volumes={
         "/cache": vol,
         "/outputs": output_volume,
