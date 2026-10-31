@@ -9,7 +9,7 @@ import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1] / "outputs/qwen21_story_16_sunset"
-DEFAULT_URL = "https://xiaotaiyangqaq--comfyui-1.us-east.modal.run"
+DEFAULT_URL = "https://xiaoyueliangqqq--comfyui-1.us-east.modal.run"
 
 
 def request(base, path, payload=None, *, binary=False, timeout=90):

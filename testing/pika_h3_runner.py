@@ -1,6 +1,6 @@
 import json, urllib.request, argparse, time
 from pathlib import Path
-URL="https://xiaotaiyangqaq--comfyui-1.us-east.modal.run"
+URL="https://xiaoyueliangqqq--comfyui-1.us-east.modal.run"
 UI=Path(__file__).resolve().parents[1]/"workflows/001-minimax-h3-fl2va-bf16/video_pika_h3_flex_t2v.json"
 def get(url,path,data=None):
     payload=None if data is None else json.dumps(data).encode()
