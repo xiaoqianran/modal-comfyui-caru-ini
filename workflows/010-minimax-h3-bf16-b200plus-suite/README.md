@@ -1,6 +1,6 @@
 # B200+ Pika H3 专用套件
 
-保留原部署标识 `010-minimax-h3-b200plus-suite`，避免改变已有 Modal 应用名称及入口。
+使用新部署标识 `010-minimax-h3-bf16-b200plus-suite`，部署后会创建不同名称的 Modal 应用。
 仅提供 Pika H3 Flex 文生视频（T2V）、FL2VA 和 Ref2VA 三个 UI 工作流；不再包含原生 MiniMax H3 工作流。
 
 - GPU：默认 B200+，单个 GPU 容器、单个 ComfyUI 进程。
@@ -14,7 +14,7 @@
 PowerShell：
 
 ```powershell
-$env:WORKFLOW = "010-minimax-h3-b200plus-suite"
+$env:WORKFLOW = "010-minimax-h3-bf16-b200plus-suite"
 Remove-Item Env:MODAL_GPU -ErrorAction SilentlyContinue
 uv run modal deploy comfyui.py
 ```
@@ -22,7 +22,7 @@ uv run modal deploy comfyui.py
 Linux：
 
 ```bash
-export WORKFLOW=010-minimax-h3-b200plus-suite
+export WORKFLOW=010-minimax-h3-bf16-b200plus-suite
 unset MODAL_GPU
 uv run modal deploy comfyui.py
 ```

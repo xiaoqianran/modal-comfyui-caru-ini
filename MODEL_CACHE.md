@@ -5,7 +5,7 @@
 没有增加服务、分布式锁、额外 Volume 或部署步骤。
 
 ```powershell
-$env:WORKFLOW = "010-minimax-h3-b200plus-suite"
+$env:WORKFLOW = "010-minimax-h3-bf16-b200plus-suite"
 uv run modal run download-models.py
 ```
 
