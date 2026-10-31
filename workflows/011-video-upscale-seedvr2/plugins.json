@@ -1,0 +1,12 @@
+{
+  "comfy_plugins_ext": [
+    {
+      "resolve_dependencies": true,
+      "requirements": [
+        "requirements.txt"
+      ],
+      "url": "https://github.com/numz/ComfyUI-SeedVR2_VideoUpscaler.git"
+    }
+  ],
+  "comfy_plugins": []
+}

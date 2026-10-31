@@ -1,0 +1,17 @@
+{
+  "gpu": "RTX-PRO-6000",
+  "min_containers": 1,
+  "highvram": true,
+  "models": [
+    {
+      "filename": "seedvr2_ema_7b_fp16.safetensors",
+      "repo_id": "numz/SeedVR2_comfyUI",
+      "model_dir": "SEEDVR2"
+    },
+    {
+      "filename": "ema_vae_fp16.safetensors",
+      "repo_id": "numz/SeedVR2_comfyUI",
+      "model_dir": "SEEDVR2"
+    }
+  ]
+}
