@@ -1,17 +1,21 @@
-# B200+ MiniMax H3 双模型聚合
+# B200+ Pika H3 专用套件
 
-单个 Modal 应用、单个 GPU 容器和单个 ComfyUI 进程，同时提供 FL2VA、Ref2VA 及对应 Pika H3 Flex 工作流。原始 001 / 002 工作流不变。
+保留原部署标识 `010-minimax-h3-b200plus-suite`，避免改变已有 Modal 应用名称及入口。
+仅提供 Pika H3 Flex FL2VA / Ref2VA 两个 UI 工作流；不再包含原生 MiniMax H3 工作流。
 
-模型清单 `models.json` 从原始 001 / 002 BF16 配置合并并按 Hugging Face repo/filename 去重，共 12 个模型文件；包含两种 H3 diffusion 权重、共用 VAE 和文本编码器、两套 Turbo LoRA、两套 Pika LoRA，以及 Ref2VA 辅助权重。
+- GPU：默认 B200+，单个 GPU 容器、单个 ComfyUI 进程。
+- `highvram=false`：此套件不传 `--highvram`，由 ComfyUI 管理 FL2VA / Ref2VA 模型切换，降低连续推理时显存溢出风险；其他工作流保持原设置。
+- 7 个模型：两套 H3 BF16 基础权重、两套 Pika LoRA、视频/音频 VAE 和 Qwen3VL 编码器。
+- 模型继续复用公共 Volume；从模型清单移除某文件**不会删除**公共缓存文件，也不会影响其他工作流。
+- 本改动不能保证绝不 OOM，需部署后测试连续 FL2VA → Ref2VA。
 
-## 下载与部署
+## 部署
 
-PowerShell（仓库根目录）：
+PowerShell：
 
 ```powershell
 $env:WORKFLOW = "010-minimax-h3-b200plus-suite"
-$env:MODAL_GPU = "B200+"
-uv run modal run download-models.py
+Remove-Item Env:MODAL_GPU -ErrorAction SilentlyContinue
 uv run modal deploy comfyui.py
 ```
 
@@ -19,16 +23,9 @@ Linux：
 
 ```bash
 export WORKFLOW=010-minimax-h3-b200plus-suite
-export MODAL_GPU=B200+
-uv run modal run download-models.py
+unset MODAL_GPU
 uv run modal deploy comfyui.py
 ```
 
-ComfyUI 左侧 Workflow 浏览器中，选择 `010-minimax-h3-b200plus-suite/001-minimax-h3-fl2va-bf16` 或 `010-minimax-h3-b200plus-suite/002-minimax-h3-ref2va-bf16` 子目录的工作流。包括 Pika 两种对应工作流。
-
-## 常驻与注意事项
-
-- `gpu=B200+`、自动 `--highvram`、`min_containers=1`、`max_containers=1`，只启动一个 ComfyUI 进程；共用现有模型 Volume。
-- 模型下载在独立 CPU Modal 任务运行，不会在 GPU 容器内下载；已缓存的文件由下载器复用。
-- 工作流按需切换模型；`--highvram` **不保证两套 BF16 diffusion 权重始终同时驻留显存**，ComfyUI 可能按显存压力卸载。
-- 部署后需在实际服务中检查模型加载及生成成功，配置验证不等同于远程生成验证。
+模型已存在于公共 Volume 时无须重新下载；若缺失，先运行 `uv run modal run download-models.py`。
+前端在该套件目录选择 `video_pika_h3_flex_fl2va.json` 或 `video_pika_h3_flex_ref2va.json`。

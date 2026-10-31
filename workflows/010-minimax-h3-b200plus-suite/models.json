@@ -8,11 +8,6 @@
     },
     {
       "repo_id": "Comfy-Org/MiniMax-H3",
-      "filename": "loras/minimax_h3_fl2v_turbo_8step_v1.0_comfyui_bf16.safetensors",
-      "model_dir": "loras"
-    },
-    {
-      "repo_id": "Comfy-Org/MiniMax-H3",
       "filename": "diffusion_models/minimax_h3_fl2va_bf16.safetensors",
       "model_dir": "diffusion_models"
     },
@@ -33,28 +28,8 @@
     },
     {
       "repo_id": "Comfy-Org/MiniMax-H3",
-      "filename": "model_patches/minimax_h3_fun_controlnet_union_pruned_bf16.safetensors",
-      "model_dir": "model_patches"
-    },
-    {
-      "repo_id": "Comfy-Org/MiniMax-H3",
-      "filename": "loras/minimax_h3_ref2v_turbo_4step_v0.1_comfyui_bf16.safetensors",
-      "model_dir": "loras"
-    },
-    {
-      "repo_id": "Comfy-Org/MiniMax-H3",
       "filename": "diffusion_models/minimax_h3_ref2va_bf16.safetensors",
       "model_dir": "diffusion_models"
-    },
-    {
-      "repo_id": "Comfy-Org/SDPose",
-      "filename": "diffusion_models/rt_detr_v4-x-hgnet_fp16.safetensors",
-      "model_dir": "diffusion_models"
-    },
-    {
-      "repo_id": "Comfy-Org/SDPose",
-      "filename": "checkpoints/sdpose_wholebody_fp16.safetensors",
-      "model_dir": "checkpoints"
     },
     {
       "repo_id": "Pika-Labs/Pika-H3-Flex",
@@ -62,5 +37,6 @@
       "model_dir": "loras"
     }
   ],
-  "models_ext": []
+  "models_ext": [],
+  "highvram": false
 }
