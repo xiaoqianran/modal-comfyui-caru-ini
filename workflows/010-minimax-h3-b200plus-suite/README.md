@@ -1,7 +1,7 @@
 # B200+ Pika H3 专用套件
 
 保留原部署标识 `010-minimax-h3-b200plus-suite`，避免改变已有 Modal 应用名称及入口。
-仅提供 Pika H3 Flex FL2VA / Ref2VA 两个 UI 工作流；不再包含原生 MiniMax H3 工作流。
+仅提供 Pika H3 Flex 文生视频（T2V）、FL2VA 和 Ref2VA 三个 UI 工作流；不再包含原生 MiniMax H3 工作流。
 
 - GPU：默认 B200+，单个 GPU 容器、单个 ComfyUI 进程。
 - `highvram=false`：此套件不传 `--highvram`，由 ComfyUI 管理 FL2VA / Ref2VA 模型切换，降低连续推理时显存溢出风险；其他工作流保持原设置。
@@ -28,4 +28,4 @@ uv run modal deploy comfyui.py
 ```
 
 模型已存在于公共 Volume 时无须重新下载；若缺失，先运行 `uv run modal run download-models.py`。
-前端在该套件目录选择 `video_pika_h3_flex_fl2va.json` 或 `video_pika_h3_flex_ref2va.json`。
+前端在该套件目录选择 `video_pika_h3_flex_t2v.json`、`video_pika_h3_flex_fl2va.json` 或 `video_pika_h3_flex_ref2va.json`。
