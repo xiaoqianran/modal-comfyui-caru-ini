@@ -1,0 +1,52 @@
+{
+  "name": "012_vga_aesthetic_h3_5s_batch_04",
+  "steps": [
+    {
+      "id": "video",
+      "workflow": "workflows/010-minimax-h3-bf16-b200plus-suite/001-minimax-h3-fl2va-bf16/pika_h3_flex_t2v_api.json",
+      "endpoint": "pika",
+      "foreach": [
+        {
+          "name": "A152",
+          "set": {
+            "140:131.prompt": "Sunlight filtered through the leaves, casting dappled spots on a young girl dressed in a white skirt. The white of her dress against the green backdrop creates a refreshing color scheme, and the shallow depth of field blurs the light spots, creating a dreamlike atmosphere.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/012_vga_aesthetic_A152"
+          }
+        },
+        {
+          "name": "A162",
+          "set": {
+            "140:131.prompt": "A ballroom scene in the palace, from a wide shot of the grand hall as the chandeliers light up to a mid-shot of a duchess dressed in elaborate Rococo attire. The crystal chandeliers highlight her jewelry, and her graceful smile as she converses with her dance partner, together with her opulent costume, defines her noble status.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/012_vga_aesthetic_A162"
+          }
+        },
+        {
+          "name": "A172",
+          "set": {
+            "140:131.prompt": "A key monologue scene in a historical film is profoundly moving as a flickering candlelight serves as the only source of illumination, casting warm shadows on the actors' faces. The actors' immersive expressions, paired with their heavy period costumes, transport the audience into the narrative, evoking strong emotional resonance.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/012_vga_aesthetic_A172"
+          }
+        },
+        {
+          "name": "A182",
+          "set": {
+            "140:131.prompt": "The close-up section of a professional makeup tutorial has clear and delicate video quality, with the focus always on the face. Under uniform lighting, it uses macro shots with shallow depth of field to showcase the color transitions and texture of eyeshadow, providing a technically detailed demonstration.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/012_vga_aesthetic_A182"
+          }
+        },
+        {
+          "name": "A192",
+          "set": {
+            "140:131.prompt": "The stage performance of a classical drama showcased a profound mastery of the craft, with spotlights tightly following the lead actor. The intricate ancient costume and makeup stood out vividly under the lights, while the surrounding environment was shrouded in darkness to highlight the performance.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/012_vga_aesthetic_A192"
+          }
+        }
+      ]
+    }
+  ]
+}

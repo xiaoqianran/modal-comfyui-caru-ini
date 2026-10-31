@@ -1,0 +1,172 @@
+{
+  "name": "022_step_ti2v_text_h3_20",
+  "steps": [
+    {
+      "id": "video",
+      "endpoint": "pika",
+      "workflow": "workflows/010-minimax-h3-bf16-b200plus-suite/001-minimax-h3-fl2va-bf16/pika_h3_flex_t2v_api.json",
+      "foreach": [
+        {
+          "name": "S01",
+          "set": {
+            "140:131.prompt": "integrated_multimodal_description: [Shot 1] 一个女巫从远处的城堡骑着扫帚飞来，向镜头露出了邪恶的笑容。。严格保留原文所要求的主体、动作先后顺序、镜头移动和背景信息。采用动漫画面风格，角色形象和服装保持稳定。 单一连续5秒镜头，主体动作清楚可见，不增加额外情节、人物、字幕或切镜。\n\noverall_soundscape: 与场景相符的轻微自然环境声，不增加人物对白。\n\nnon_diegetic_music: None.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/022_step_ti2v_text_h3_S01"
+          }
+        },
+        {
+          "name": "S02",
+          "set": {
+            "140:131.prompt": "integrated_multimodal_description: [Shot 1] 云雾缭绕间楼阁若隐若现，镜头缓缓拉近，飞鸟在天空掠过。。严格保留原文所要求的主体、动作先后顺序、镜头移动和背景信息。采用动漫画面风格，角色形象和服装保持稳定。 单一连续5秒镜头，主体动作清楚可见，不增加额外情节、人物、字幕或切镜。\n\noverall_soundscape: 与场景相符的轻微自然环境声，不增加人物对白。\n\nnon_diegetic_music: None.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/022_step_ti2v_text_h3_S02"
+          }
+        },
+        {
+          "name": "S03",
+          "set": {
+            "140:131.prompt": "integrated_multimodal_description: [Shot 1] 夕阳渐沉，城市灯火闪烁，镜头缓缓从下往上移动。。严格保留原文所要求的主体、动作先后顺序、镜头移动和背景信息。采用动漫画面风格，角色形象和服装保持稳定。 单一连续5秒镜头，主体动作清楚可见，不增加额外情节、人物、字幕或切镜。\n\noverall_soundscape: 与场景相符的轻微自然环境声，不增加人物对白。\n\nnon_diegetic_music: None.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/022_step_ti2v_text_h3_S03"
+          }
+        },
+        {
+          "name": "S04",
+          "set": {
+            "140:131.prompt": "integrated_multimodal_description: [Shot 1] 天空下着小雨，一颗流星在夜空闪烁划过，松林于微风中轻轻摇曳。严格保留原文所要求的主体、动作先后顺序、镜头移动和背景信息。采用动漫画面风格，角色形象和服装保持稳定。 单一连续5秒镜头，主体动作清楚可见，不增加额外情节、人物、字幕或切镜。\n\noverall_soundscape: 与场景相符的轻微自然环境声，不增加人物对白。\n\nnon_diegetic_music: None.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/022_step_ti2v_text_h3_S04"
+          }
+        },
+        {
+          "name": "S05",
+          "set": {
+            "140:131.prompt": "integrated_multimodal_description: [Shot 1] 夜幕中有极光闪烁，楼房中的灯光时亮时暗。。严格保留原文所要求的主体、动作先后顺序、镜头移动和背景信息。采用动漫画面风格，角色形象和服装保持稳定。 单一连续5秒镜头，主体动作清楚可见，不增加额外情节、人物、字幕或切镜。\n\noverall_soundscape: 与场景相符的轻微自然环境声，不增加人物对白。\n\nnon_diegetic_music: None.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/022_step_ti2v_text_h3_S05"
+          }
+        },
+        {
+          "name": "S06",
+          "set": {
+            "140:131.prompt": "integrated_multimodal_description: [Shot 1] 女人微笑看着镜头眨眼，然后伸出左手将左边的碎发撩到耳后。。严格保留原文所要求的主体、动作先后顺序、镜头移动和背景信息。采用动漫画面风格，角色形象和服装保持稳定。 单一连续5秒镜头，主体动作清楚可见，不增加额外情节、人物、字幕或切镜。\n\noverall_soundscape: 与场景相符的轻微自然环境声，不增加人物对白。\n\nnon_diegetic_music: None.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/022_step_ti2v_text_h3_S06"
+          }
+        },
+        {
+          "name": "S07",
+          "set": {
+            "140:131.prompt": "integrated_multimodal_description: [Shot 1] 女孩低头叹气，双手放下。。严格保留原文所要求的主体、动作先后顺序、镜头移动和背景信息。采用动漫画面风格，角色形象和服装保持稳定。 单一连续5秒镜头，主体动作清楚可见，不增加额外情节、人物、字幕或切镜。\n\noverall_soundscape: 与场景相符的轻微自然环境声，不增加人物对白。\n\nnon_diegetic_music: None.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/022_step_ti2v_text_h3_S07"
+          }
+        },
+        {
+          "name": "S08",
+          "set": {
+            "140:131.prompt": "integrated_multimodal_description: [Shot 1] 女孩双手捧脸，看着镜头傻笑歪头。。严格保留原文所要求的主体、动作先后顺序、镜头移动和背景信息。采用动漫画面风格，角色形象和服装保持稳定。 单一连续5秒镜头，主体动作清楚可见，不增加额外情节、人物、字幕或切镜。\n\noverall_soundscape: 与场景相符的轻微自然环境声，不增加人物对白。\n\nnon_diegetic_music: None.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/022_step_ti2v_text_h3_S08"
+          }
+        },
+        {
+          "name": "S09",
+          "set": {
+            "140:131.prompt": "integrated_multimodal_description: [Shot 1] 一颗导弹飞来击中飞机，飞行员惨叫着跳伞，镜头拉远。。严格保留原文所要求的主体、动作先后顺序、镜头移动和背景信息。采用动漫画面风格，角色形象和服装保持稳定。 单一连续5秒镜头，主体动作清楚可见，不增加额外情节、人物、字幕或切镜。\n\noverall_soundscape: 与场景相符的轻微自然环境声，不增加人物对白。\n\nnon_diegetic_music: None.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/022_step_ti2v_text_h3_S09"
+          }
+        },
+        {
+          "name": "S10",
+          "set": {
+            "140:131.prompt": "integrated_multimodal_description: [Shot 1] 乌龟慢慢地向右走，但是背景却快速变换风景，乌龟背上的三只小动物好奇地张望。。严格保留原文所要求的主体、动作先后顺序、镜头移动和背景信息。采用动漫画面风格，角色形象和服装保持稳定。 单一连续5秒镜头，主体动作清楚可见，不增加额外情节、人物、字幕或切镜。\n\noverall_soundscape: 与场景相符的轻微自然环境声，不增加人物对白。\n\nnon_diegetic_music: None.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/022_step_ti2v_text_h3_S10"
+          }
+        },
+        {
+          "name": "S11",
+          "set": {
+            "140:131.prompt": "integrated_multimodal_description: [Shot 1] 一双手正在弹奏钢琴，节奏欢快，双手在琴键中快速的移动。。严格保留原文所要求的主体、动作先后顺序、镜头移动和背景信息。采用写实画面风格，人物与物理运动自然。 单一连续5秒镜头，主体动作清楚可见，不增加额外情节、人物、字幕或切镜。\n\noverall_soundscape: 与场景相符的轻微自然环境声，不增加人物对白。\n\nnon_diegetic_music: None.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/022_step_ti2v_text_h3_S11"
+          }
+        },
+        {
+          "name": "S12",
+          "set": {
+            "140:131.prompt": "integrated_multimodal_description: [Shot 1] 两只动物在激烈地打斗，用嘴互相啄对方，镜头逆时针环绕两只动物。。严格保留原文所要求的主体、动作先后顺序、镜头移动和背景信息。采用写实画面风格，人物与物理运动自然。 单一连续5秒镜头，主体动作清楚可见，不增加额外情节、人物、字幕或切镜。\n\noverall_soundscape: 与场景相符的轻微自然环境声，不增加人物对白。\n\nnon_diegetic_music: None.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/022_step_ti2v_text_h3_S12"
+          }
+        },
+        {
+          "name": "S13",
+          "set": {
+            "140:131.prompt": "integrated_multimodal_description: [Shot 1] 两只小狗朝着镜头跌跌撞撞地奔跑，镜头跟随小狗。。严格保留原文所要求的主体、动作先后顺序、镜头移动和背景信息。采用写实画面风格，人物与物理运动自然。 单一连续5秒镜头，主体动作清楚可见，不增加额外情节、人物、字幕或切镜。\n\noverall_soundscape: 与场景相符的轻微自然环境声，不增加人物对白。\n\nnon_diegetic_music: None.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/022_step_ti2v_text_h3_S13"
+          }
+        },
+        {
+          "name": "S14",
+          "set": {
+            "140:131.prompt": "integrated_multimodal_description: [Shot 1] 两名男子在互相拳击，镜头环绕两人拍摄。。严格保留原文所要求的主体、动作先后顺序、镜头移动和背景信息。采用写实画面风格，人物与物理运动自然。 单一连续5秒镜头，主体动作清楚可见，不增加额外情节、人物、字幕或切镜。\n\noverall_soundscape: 与场景相符的轻微自然环境声，不增加人物对白。\n\nnon_diegetic_music: None.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/022_step_ti2v_text_h3_S14"
+          }
+        },
+        {
+          "name": "S15",
+          "set": {
+            "140:131.prompt": "integrated_multimodal_description: [Shot 1] 带翅膀的小老鼠先用爪子挠了挠脑袋，随后扑扇着翅膀飞了起来。。严格保留原文所要求的主体、动作先后顺序、镜头移动和背景信息。采用写实画面风格，人物与物理运动自然。 单一连续5秒镜头，主体动作清楚可见，不增加额外情节、人物、字幕或切镜。\n\noverall_soundscape: 与场景相符的轻微自然环境声，不增加人物对白。\n\nnon_diegetic_music: None.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/022_step_ti2v_text_h3_S15"
+          }
+        },
+        {
+          "name": "S16",
+          "set": {
+            "140:131.prompt": "integrated_multimodal_description: [Shot 1] 手拿着滚筒上上下下地涂抹颜料。严格保留原文所要求的主体、动作先后顺序、镜头移动和背景信息。采用写实画面风格，人物与物理运动自然。 单一连续5秒镜头，主体动作清楚可见，不增加额外情节、人物、字幕或切镜。\n\noverall_soundscape: 与场景相符的轻微自然环境声，不增加人物对白。\n\nnon_diegetic_music: None.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/022_step_ti2v_text_h3_S16"
+          }
+        },
+        {
+          "name": "S17",
+          "set": {
+            "140:131.prompt": "integrated_multimodal_description: [Shot 1] 机器人左顾右盼地向前走了两步，随后停住脚步，蹲下，捡起了路边的一块石头。。严格保留原文所要求的主体、动作先后顺序、镜头移动和背景信息。采用写实画面风格，人物与物理运动自然。 单一连续5秒镜头，主体动作清楚可见，不增加额外情节、人物、字幕或切镜。\n\noverall_soundscape: 与场景相符的轻微自然环境声，不增加人物对白。\n\nnon_diegetic_music: None.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/022_step_ti2v_text_h3_S17"
+          }
+        },
+        {
+          "name": "S18",
+          "set": {
+            "140:131.prompt": "integrated_multimodal_description: [Shot 1] 猫咪先动耳朵，然后转头看着镜头舔爪子。。严格保留原文所要求的主体、动作先后顺序、镜头移动和背景信息。采用写实画面风格，人物与物理运动自然。 单一连续5秒镜头，主体动作清楚可见，不增加额外情节、人物、字幕或切镜。\n\noverall_soundscape: 与场景相符的轻微自然环境声，不增加人物对白。\n\nnon_diegetic_music: None.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/022_step_ti2v_text_h3_S18"
+          }
+        },
+        {
+          "name": "S19",
+          "set": {
+            "140:131.prompt": "integrated_multimodal_description: [Shot 1] 一个羽毛球飞来，小男孩用力挥拍将羽毛球击打出去。。严格保留原文所要求的主体、动作先后顺序、镜头移动和背景信息。采用写实画面风格，人物与物理运动自然。 单一连续5秒镜头，主体动作清楚可见，不增加额外情节、人物、字幕或切镜。\n\noverall_soundscape: 与场景相符的轻微自然环境声，不增加人物对白。\n\nnon_diegetic_music: None.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/022_step_ti2v_text_h3_S19"
+          }
+        },
+        {
+          "name": "S20",
+          "set": {
+            "140:131.prompt": "integrated_multimodal_description: [Shot 1] 一只黑猫_一只斑点狗和一只黄色的鹦鹉在一个巨大的饭碗面前抢饭吃，固定镜头。。严格保留原文所要求的主体、动作先后顺序、镜头移动和背景信息。采用写实画面风格，人物与物理运动自然。 单一连续5秒镜头，主体动作清楚可见，不增加额外情节、人物、字幕或切镜。\n\noverall_soundscape: 与场景相符的轻微自然环境声，不增加人物对白。\n\nnon_diegetic_music: None.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/022_step_ti2v_text_h3_S20"
+          }
+        }
+      ]
+    }
+  ]
+}

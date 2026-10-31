@@ -1,0 +1,68 @@
+{
+  "name": "013_t2f_002_h3_5s",
+  "steps": [
+    {
+      "id": "video",
+      "workflow": "workflows/010-minimax-h3-bf16-b200plus-suite/001-minimax-h3-fl2va-bf16/pika_h3_flex_t2v_api.json",
+      "endpoint": "pika",
+      "foreach": [
+        {
+          "name": "S01",
+          "set": {
+            "140:131.prompt": "Wide establishing shot of a dim hotel suite at night. A man and a woman sit across a small dinner table. Melancholic, intimate mood; subtle jazz ambience. Slow cinematic dolly inward.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/013_t2f_002_S01"
+          }
+        },
+        {
+          "name": "S02",
+          "set": {
+            "140:131.prompt": "Medium close shot of the man at the dinner table. He silently finishes his meal, wipes his mouth with a napkin, then looks toward the woman with a guarded expression. Natural restrained acting.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/013_t2f_002_S02"
+          }
+        },
+        {
+          "name": "S03",
+          "set": {
+            "140:131.prompt": "Over-the-shoulder shot from behind the man toward the seated woman. She looks up, startled and worried as he abruptly rises from the dinner table. Subtle natural facial reactions.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/013_t2f_002_S03"
+          }
+        },
+        {
+          "name": "S04",
+          "set": {
+            "140:131.prompt": "Side medium shot. The man crosses to a chair and picks up his heavy wool coat, slipping his arms into it while avoiding eye contact with the woman seated nearby.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/013_t2f_002_S04"
+          }
+        },
+        {
+          "name": "S05",
+          "set": {
+            "140:131.prompt": "Close two-shot in the dim hotel suite. The woman searches the man's face for reassurance while he slowly buttons his wool coat. Emotional tension and restrained expressions.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/013_t2f_002_S05"
+          }
+        },
+        {
+          "name": "S06",
+          "set": {
+            "140:131.prompt": "Intimate close shot. The man hesitates, then leans down and briefly kisses the top of the seated woman's head. She stays still, looking deeply troubled. No exaggerated gestures.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/013_t2f_002_S06"
+          }
+        },
+        {
+          "name": "S07",
+          "set": {
+            "140:131.prompt": "Static medium-wide shot. The man turns and walks out through the hotel suite doorway. The woman remains alone beside the dinner table and a half-empty glass, staring at the empty doorway. Lingering silence.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/013_t2f_002_S07"
+          }
+        }
+      ]
+    }
+  ]
+}

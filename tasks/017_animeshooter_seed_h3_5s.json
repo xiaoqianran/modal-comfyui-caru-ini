@@ -1,0 +1,60 @@
+{
+  "name": "017_animeshooter_seed_h3_5s",
+  "steps": [
+    {
+      "id": "video",
+      "workflow": "workflows/010-minimax-h3-bf16-b200plus-suite/001-minimax-h3-fl2va-bf16/pika_h3_flex_t2v_api.json",
+      "endpoint": "pika",
+      "foreach": [
+        {
+          "name": "S01",
+          "set": {
+            "140:131.prompt": "integrated_multimodal_description: [Shot 1] 2D hand-painted storybook animation with delicate ink outlines and subdued watercolor textures. Overcast meadow beside a scattering of grey rocks and a distant lake. In a medium-wide composition, a fair-skinned girl with short light-brown bob hair and a tiny side ponytail, white ruffled short-sleeved blouse, red skirt and white stockings walks from frame left toward a dark green bush. A second fair-skinned girl with long blonde hair, small red flower hairpins and a long white dress peeks from behind the leaves at frame right. During the first two seconds the brunette approaches; during the next two she opens her palm to reveal one small brown seed; in the final second the blonde carefully takes it and smiles. Slow push-in of small amplitude, gentle natural arm gestures, fixed costume and one seed only.\n\noverall_soundscape: Grass swishes gently in the wind, soft footsteps, a little rustle as the girl emerges from behind the bush.\n\nnon_diegetic_music: Gentle celesta notes over light sustained strings.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/017_animeshooter_seed_h3_S01"
+          }
+        },
+        {
+          "name": "S02",
+          "set": {
+            "140:131.prompt": "integrated_multimodal_description: [Shot 1] 2D storybook anime with muted watercolor palette, ink outlines and natural hand-drawn motion. In a wide lateral tracking shot across the same cloudy meadow of muted grasses, rocks and a distant lake, two girls run side-by-side from left to right. The left girl has a light-brown bob with tiny side ponytail, white ruffled blouse and red skirt; the right girl has long blonde hair with red flower clips and a flowing long white dress. From 0 to 2 seconds they break into an excited run, from 2 to 4 seconds their hair and skirts respond to the running rhythm, and by 5 seconds they move toward a distant old-fashioned two-story house. A smooth tracking camera follows their movement at walking-height, stable scale and recognizable silhouettes.\n\noverall_soundscape: Light footsteps in grass, soft rustling fabric and the girls' wordless delighted breaths, breezy outdoor ambience.\n\nnon_diegetic_music: Bouncy but restrained plucked strings with light flute accents.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/017_animeshooter_seed_h3_S02"
+          }
+        },
+        {
+          "name": "S03",
+          "set": {
+            "140:131.prompt": "integrated_multimodal_description: [Shot 1] 2D hand-painted storybook animation, cool overcast afternoon. Establishing medium-long shot of a dark old-fashioned two-story country house with a distinctive chimney and wooden porch steps. A pale middle-aged man with short dark hair, a neat dark mustache, a charcoal suit and black bow tie stands at the top of the porch stairs. He keeps his hands near the rails. From 0 to 2 seconds he looks down the path; from 2 to 4 seconds he draws a quiet sigh and lowers his shoulders; during the final second he lifts his eyes toward someone arriving outside the frame. Static camera with subtle parallax of nearby leaves, no other people in frame.\n\noverall_soundscape: Wooden porch boards creak faintly, distant birds and a restrained human sigh.\n\nnon_diegetic_music: One sustained low cello tone under sparse piano.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/017_animeshooter_seed_h3_S03"
+          }
+        },
+        {
+          "name": "S04",
+          "set": {
+            "140:131.prompt": "integrated_multimodal_description: [Shot 1] 2D dramatic storybook anime with delicate linework and muted watercolors. Close-up on the fair-skinned brunette girl with short light-brown bob hair and tiny side ponytail, wearing the same white ruffled blouse and red skirt, against a darkening meadow and rocks. At 0 to 2 seconds her eyes widen at something off-screen and her breath catches; at 2 to 3 seconds a distant storm cloud passes across the light; from 3 to 5 seconds the camera pulls back slowly with small amplitude to show the girl standing by a leafless tree, shoulders drooping and looking at a small brown seed lying on the grass near her shoes. Natural restrained emotion, no abrupt identity or costume changes.\n\noverall_soundscape: A brief low rumble of distant thunder followed by wind through grass and a quiet shaky breath.\n\nnon_diegetic_music: Soft descending piano notes and an understated string drone.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/017_animeshooter_seed_h3_S04"
+          }
+        },
+        {
+          "name": "S05",
+          "set": {
+            "140:131.prompt": "integrated_multimodal_description: [Shot 1] 2D hand-painted storybook animation, subdued ink outlines and cool grey skies. At the wooden porch of the same dark two-story old-fashioned house with a chimney, a pale man with short dark hair, neat mustache, charcoal suit and bow tie stands beside an open entrance. A fair-skinned young girl with a light-brown bob, tiny side ponytail, white ruffled blouse, red skirt, and white stockings approaches with her head lowered. From 0 to 2 seconds the man silently gestures with an open palm toward the doorway; from 2 to 4 seconds the girl passes him slowly, looking down; in the final second he turns his shoulders to follow. Medium-wide static framing at eye level, clear natural walking and consistent spatial positions.\n\noverall_soundscape: Footsteps on aged wooden steps, soft fabric movement, a quiet porch creak and distant wind.\n\nnon_diegetic_music: Sparse low piano notes at a slow tempo.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/017_animeshooter_seed_h3_S05"
+          }
+        },
+        {
+          "name": "S06",
+          "set": {
+            "140:131.prompt": "integrated_multimodal_description: [Shot 1] 2D illustrated storybook animation, quiet melancholic exterior establishing shot of the same looming two-story old-fashioned country house, dark roof, chimney and wooden porch amid a sparsely vegetated meadow. A heavy grey storm sky dominates the upper half of the picture. Over 0 to 2 seconds a single red flower petal drifts down through foreground air; over 2 to 4 seconds it twists gently and descends toward the porch path while the camera holds a wide static composition; in the final second the scene gradually fades toward black. No characters and no text overlays. Soft watercolor texture, consistent setting geometry.\n\noverall_soundscape: Faint wind moving dry grass, a distant low thunder rumble; otherwise quiet countryside air.\n\nnon_diegetic_music: A solitary piano note fades under an almost silent string harmonic.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/017_animeshooter_seed_h3_S06"
+          }
+        }
+      ]
+    }
+  ]
+}

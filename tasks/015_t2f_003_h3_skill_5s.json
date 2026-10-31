@@ -1,0 +1,68 @@
+{
+  "name": "015_t2f_003_h3_skill_5s",
+  "steps": [
+    {
+      "id": "video",
+      "workflow": "workflows/010-minimax-h3-bf16-b200plus-suite/001-minimax-h3-fl2va-bf16/pika_h3_flex_t2v_api.json",
+      "endpoint": "pika",
+      "foreach": [
+        {
+          "name": "S01",
+          "set": {
+            "140:131.prompt": "integrated_multimodal_description: [Shot 1] Live-action cinematic drama in an overcast late-1970s suburban estate driveway after rain. Wide establishing shot of an imposing black wrought-iron gate, a stone wall, a gravel-and-stone driveway, wet asphalt and two stone lions visible farther inside. A mustard-yellow taxi moves slowly from frame left and comes to a complete stop beside the locked gate. From 0 to 2 seconds the car rolls along the wet curb; from 2 to 5 seconds the wheels settle and a passenger in a vivid red coat becomes visible through the rear window. Static camera at waist height with slight natural lens depth. Realistic reflections and restrained colors.\n\noverall_soundscape: Tires whisper on damp pavement; a low idling engine and distant suburban birds are audible.\n\nnon_diegetic_music: Sparse low piano notes with a quiet cello drone.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/015_t2f_003_h3_skill_S01"
+          }
+        },
+        {
+          "name": "S02",
+          "set": {
+            "140:131.prompt": "integrated_multimodal_description: [Shot 1] Live-action cinematic drama, grey daytime at the same rain-dampened estate gate. Medium full-body three-quarter shot of Kay, a fair-haired adult woman wearing a vivid red wool coat and matching red hat, standing beside the mustard-yellow taxi. From 0 to 1.5 seconds she closes the rear passenger door; from 1.5 to 3 seconds she leans toward the open driver's window and hands over her fare; from 3 to 5 seconds she straightens while the taxi pulls slowly away toward frame left. The camera trucks right with small amplitude at slow speed to keep Kay centered, iron bars and wet driveway behind her. She looks toward the gate, never at the lens.\n\noverall_soundscape: A taxi door closes softly, banknotes brush fingertips, the engine accelerates and wheels hiss over wet road.\n\nnon_diegetic_music: Three widely spaced piano notes at a slow tempo.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/015_t2f_003_h3_skill_S02"
+          }
+        },
+        {
+          "name": "S03",
+          "set": {
+            "140:131.prompt": "integrated_multimodal_description: [Shot 1] Live-action cinematic drama, overcast daylight at the imposing black iron estate gate with wet stone pavement. Medium-wide shot looking inward between the iron bars. Two security guards in beige trench coats remain motionless inside the locked gate, with the large stone house and symmetrical stone lions farther in the background. From 0 to 2 seconds the camera holds on the guards; from 2 to 5 seconds Tom, a dark-haired middle-aged man in a grey three-piece suit, walks briskly down the stone path from the mansion while buttoning his vest. Slow push in with small amplitude, natural unhurried steps and stable geometry.\n\noverall_soundscape: Distant footsteps echo faintly on damp stone; fabric slides, faint wind moves the trees.\n\nnon_diegetic_music: A low steady cello note under subdued piano pulses.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/015_t2f_003_h3_skill_S03"
+          }
+        },
+        {
+          "name": "S04",
+          "set": {
+            "140:131.prompt": "integrated_multimodal_description: [Shot 1] Live-action cinematic drama, late-1970s exterior of the same mansion gate under a heavy grey sky. Three-quarter medium shot: Tom, middle-aged and dark-haired, in a grey three-piece suit, comes to the pedestrian gate from inside; Kay in a vivid red coat and matching red hat waits on the street side. From 0 to 1.5 seconds Tom gives a small hand signal to a trench-coated guard; from 1.5 to 3 seconds the guard unlatches the narrow gate; from 3 to 5 seconds Tom steps through and turns toward Kay, leaving the gate ajar. Static eye-level framing, stable person positions, physically realistic hand and gate movements.\n\noverall_soundscape: Metal latch clicks, hinged iron gate creaks briefly, wet footsteps and faint outdoor wind.\n\nnon_diegetic_music: Soft piano dyads spaced far apart.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/015_t2f_003_h3_skill_S04"
+          }
+        },
+        {
+          "name": "S05",
+          "set": {
+            "140:131.prompt": "integrated_multimodal_description: [Shot 1] Live-action cinematic drama, eye-level over-the-shoulder medium two-shot beside a black iron estate gate on an overcast day. Kay, fair-haired, wearing a red wool coat and matching hat, faces Tom in a grey three-piece suit. Kay stands closer to camera in left profile, Tom faces her from slightly right; both look at each other's eyes, never into the camera. From 0 to 2 seconds Tom listens with a contained, guarded expression; from 2 to 3.5 seconds Kay glances toward the street behind her; from 3.5 to 5 seconds she turns back to him, visibly tense but composed. Tiny slow camera push in, understated realistic facial acting.\n\noverall_soundscape: Light breeze passes through the gate, distant idling vehicles and soft fabric movement.\n\nnon_diegetic_music: A held low cello tone, almost inaudible.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/015_t2f_003_h3_skill_S05"
+          }
+        },
+        {
+          "name": "S06",
+          "set": {
+            "140:131.prompt": "integrated_multimodal_description: [Shot 1] Live-action cinematic drama, near the same black wrought-iron gate in cool overcast daylight. Close medium two-shot, Kay in her red coat and hat on frame left and Tom in his grey suit on frame right. From 0 to 1.5 seconds Kay reaches into her small dark handbag; from 1.5 to 3 seconds she carefully withdraws one white paper envelope and offers it to Tom; from 3 to 5 seconds Tom briefly looks down at the envelope, then raises both hands slightly with his palms open and deliberately avoids taking it. Static camera at shoulder level, anatomically natural hands, a single unchanged envelope, restrained sorrow rather than theatrical expression.\n\noverall_soundscape: Handbag material rubs softly, paper slides against cloth and a distant automobile passes.\n\nnon_diegetic_music: Quiet low piano chord with slow decay.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/015_t2f_003_h3_skill_S06"
+          }
+        },
+        {
+          "name": "S07",
+          "set": {
+            "140:131.prompt": "integrated_multimodal_description: [Shot 1] Live-action cinematic drama, medium-wide rear three-quarter shot at the same estate's partly open iron pedestrian gate. The sky remains slate grey and the stone driveway is wet. Kay, the fair-haired woman in a vivid red coat and hat, stands beside Tom, the dark-haired man in a grey suit. From 0 to 1.5 seconds Tom softens his expression and turns toward the path; from 1.5 to 3 seconds he gently places his right hand at the upper back of Kay's coat; from 3 to 5 seconds they begin walking together through the open gate toward the stone lions and large mansion, with Kay carrying the white envelope in her left hand. Slow tracking shot follows from a few steps behind, maintaining clear positions, garment continuity and natural gait.\n\noverall_soundscape: Subdued footsteps on damp stone, faint gate creak, distant birds and soft wool fabric movement.\n\nnon_diegetic_music: A few gentle piano notes over a held low string tone.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/015_t2f_003_h3_skill_S07"
+          }
+        }
+      ]
+    }
+  ]
+}

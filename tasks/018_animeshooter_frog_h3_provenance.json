@@ -1,0 +1,39 @@
+{
+  "dataset": "qiulu66/AnimeShooter",
+  "source_json": "audio_scripts_changed_keys/feA5uw9c3K8.json",
+  "video_id": "feA5uw9c3K8",
+  "segment_index": 2,
+  "source_url": "https://www.youtube.com/watch?v=feA5uw9c3K8",
+  "source_storyline": "A prince attempts to kiss several frogs, but is unsuccessful until a witch casts a spell. When the prince touches one of the frogs, it transforms into pieces, which makes the prince and other people angry. Later, Alice and a running rabbit appear in a forest.",
+  "source_shots": [
+    {
+      "id": 0,
+      "narrative": "A prince tries repeatedly to kiss different frogs, hoping one will turn into a princess, but is disgusted by each attempt and throws them away."
+    },
+    {
+      "id": 1,
+      "narrative": "As the prince continues his unsuccessful frog-kissing attempts, a witch walks up, observes him with amusement, gets an idea, and casts a spell with her wand."
+    },
+    {
+      "id": 2,
+      "narrative": "The witch's spell hits a smiling frog. The prince happily picks up the enchanted frog and pats its head, but it suddenly deflates and shatters into bloody pieces. Two men appear and laugh at the horrified prince."
+    },
+    {
+      "id": 3,
+      "narrative": "A production logo and title card for 'Alice in Wonderland' are displayed."
+    },
+    {
+      "id": 4,
+      "narrative": "Alice walks happily into the forest clearing, then stops suddenly, looking startled as she hears something off-screen."
+    },
+    {
+      "id": 5,
+      "narrative": "A white rabbit wearing clothes runs quickly out from behind a bush and across the clearing, past the startled Alice."
+    },
+    {
+      "id": 6,
+      "narrative": "Alice gasps and immediately starts running, chasing after the rabbit."
+    }
+  ],
+  "note": "Noncommercial academic benchmark; adapted to 5s H3 T2V prompts, no source frames used"
+}

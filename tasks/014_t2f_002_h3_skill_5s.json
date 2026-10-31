@@ -1,0 +1,68 @@
+{
+  "name": "014_t2f_002_h3_skill_5s",
+  "steps": [
+    {
+      "id": "video",
+      "workflow": "workflows/010-minimax-h3-bf16-b200plus-suite/001-minimax-h3-fl2va-bf16/pika_h3_flex_t2v_api.json",
+      "endpoint": "pika",
+      "foreach": [
+        {
+          "name": "S01",
+          "set": {
+            "140:131.prompt": "integrated_multimodal_description: [Shot 1] Live-action film drama, late 1970s, warm dim hotel suite at night. In a medium-wide two-shot, Michael, a dark-haired adult man in a charcoal suit and white shirt, sits screen left across a small dinner table from Kay, a fair-haired woman in a muted cream blouse, seated screen right. A half-finished meal, a folded napkin and one half-filled water glass remain fixed on the tabletop. At 0–2 seconds, hold the still tableau; at 2–5 seconds, the camera pushes in with small amplitude at slow speed while Michael lowers his eyes and Kay waits for him to speak. Amber table lamp, soft practical shadows, restrained natural acting, realistic human anatomy.\n\noverall_soundscape: Muted room tone, very quiet cutlery and fabric rustle, distant traffic behind the windows.\n\nnon_diegetic_music: Very sparse felt piano notes at slow tempo, low sustained cello tone.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/014_t2f_002_h3_skill_S01"
+          }
+        },
+        {
+          "name": "S02",
+          "set": {
+            "140:131.prompt": "integrated_multimodal_description: [Shot 1] Live-action film drama, the same late-1970s hotel suite and warm amber table lamp. Tight medium close-up on Michael, the same dark-haired adult man in a charcoal suit and white shirt, seated at the table. At 0–1.5 seconds, his right hand moves a white linen napkin from his lap toward his mouth; at 1.5–3 seconds he wipes his mouth once, then places the napkin on the table; at 3–5 seconds he quietly raises his eyes toward Kay off-camera, a brief strained hesitation passing through his jaw and eyes. Camera remains static at eye level, shallow depth of field, no gaze into the lens, subtle performance.\n\noverall_soundscape: A faint napkin rustle, ceramic plate movement, low room hum and controlled breathing.\n\nnon_diegetic_music: Sparse low piano notes with a long pause between tones.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/014_t2f_002_h3_skill_S02"
+          }
+        },
+        {
+          "name": "S03",
+          "set": {
+            "140:131.prompt": "integrated_multimodal_description: [Shot 1] Live-action film drama, late-1970s dim amber hotel suite, continuous layout. Over-the-shoulder composition from behind Michael's charcoal jacket on frame left toward Kay in a muted cream blouse seated frame right. At 0–2 seconds, Kay sits listening with her eyes on Michael, not the camera; at 2–3 seconds Michael rises slightly in the soft-focus foreground; at 3–5 seconds Kay lifts her chin and her eyes widen by a subtle degree, drawing a quiet worried breath. A gentle slow push-in toward her face while the background stays anchored. No sudden exaggerated gestures.\n\noverall_soundscape: Soft chair movement, sleeve friction, subdued breathing in a nearly silent hotel room.\n\nnon_diegetic_music: One low sustained cello note with faint piano overtones.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/014_t2f_002_h3_skill_S03"
+          }
+        },
+        {
+          "name": "S04",
+          "set": {
+            "140:131.prompt": "integrated_multimodal_description: [Shot 1] Live-action late-1970s film drama, same warm hotel suite. Side medium shot, Michael, a dark-haired man wearing a charcoal suit, stands beside a wooden chair bearing his heavy dark wool overcoat; Kay in a cream blouse remains seated at the dinner table further back. At 0–1.5 seconds, Michael reaches down with his right hand and lifts the coat by its collar; at 1.5–3.5 seconds, he slides his left arm into the sleeve; at 3.5–5 seconds, he draws the coat over his shoulder, carefully avoiding Kay's gaze. The camera trucks right with small amplitude at slow speed, keeping the chair, table and people in consistent positions. Natural garment physics.\n\noverall_soundscape: Cloth sliding over fabric, soft footsteps on carpet, faint chair creak.\n\nnon_diegetic_music: Low sustained strings with two quiet piano tones.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/014_t2f_002_h3_skill_S04"
+          }
+        },
+        {
+          "name": "S05",
+          "set": {
+            "140:131.prompt": "integrated_multimodal_description: [Shot 1] Live-action film drama, same dim hotel suite under a single amber table lamp. In a stable intimate medium two-shot, Kay, fair-haired in a cream blouse, remains seated by the dinner table at screen right while Michael stands at screen left in a heavy dark wool coat over his charcoal suit. At 0–2 seconds, he closes one coat button, looking down; at 2–3.5 seconds, Kay tilts her head slightly upward and searches his face; at 3.5–5 seconds, Michael stops moving his fingers and meets her gaze for an instant, then turns his eyes away. Camera slowly pushes in by a small distance. Underplayed facial acting, natural blinking, precise hands, no direct eye contact with lens.\n\noverall_soundscape: Single button click, coat fabric settling, soft breath and room ambience.\n\nnon_diegetic_music: Sparse piano in a minor key, held low cello underneath.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/014_t2f_002_h3_skill_S05"
+          }
+        },
+        {
+          "name": "S06",
+          "set": {
+            "140:131.prompt": "integrated_multimodal_description: [Shot 1] Live-action film drama, warm late-1970s hotel suite, realistic subtle intimacy. In a tight side two-shot, Michael, dark-haired in a dark wool overcoat, stands beside Kay seated in a cream blouse. At 0–1 second he hesitates above her; at 1–3 seconds he leans forward with a single smooth natural movement and briefly presses his lips against the crown of Kay's head; at 3–5 seconds he straightens as she stays seated, still and troubled, with her eyes cast down. Static eye-level camera with very shallow depth of field, profile view rather than facing the lens, no distorted limbs or overlapping faces.\n\noverall_soundscape: Quiet wool coat shift, a short restrained breath, low room tone.\n\nnon_diegetic_music: Single soft piano chord and a sustained cello harmonic.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/014_t2f_002_h3_skill_S06"
+          }
+        },
+        {
+          "name": "S07",
+          "set": {
+            "140:131.prompt": "integrated_multimodal_description: [Shot 1] Live-action film drama, warm dim late-1970s hotel suite. Fixed medium-wide composition shows Michael in a dark wool coat near the doorway at frame left and Kay in a cream blouse seated at the small dinner table at frame right. A half-empty glass rests at the near edge of the table under the amber lamp. At 0–2 seconds Michael turns away and crosses the doorway, leaving the frame; at 2–3 seconds the door settles; at 3–5 seconds the camera holds absolutely still on Kay in profile as she stares at the empty doorway without looking at the lens. The background layout, wardrobe and light remain constant; a quiet negative-space ending.\n\noverall_soundscape: Measured footsteps fading into the hall, a faint door latch, still room air and a soft exhale.\n\nnon_diegetic_music: A single low piano note, decaying to silence.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/014_t2f_002_h3_skill_S07"
+          }
+        }
+      ]
+    }
+  ]
+}

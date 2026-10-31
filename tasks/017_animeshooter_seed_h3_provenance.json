@@ -1,0 +1,80 @@
+{
+  "dataset": "qiulu66/AnimeShooter",
+  "dataset_subset": "AnimeShooter-audio",
+  "source_json": "audio_scripts_changed_keys/7ozRwX35fHE.json",
+  "video_id": "7ozRwX35fHE",
+  "segment_index": 1,
+  "source_url": "https://www.youtube.com/watch?v=7ozRwX35fHE",
+  "license": "CC BY-NC 4.0 / academic only",
+  "storyline": "Two girls find a brown seed. After giving the seed to one of the girls, they ran to a house and the seed girl is later called away by a man and left alone. She looks sad and regretful. The man goes inside the house. At the end of the video, it shows the house.",
+  "characters": [
+    {
+      "ID": "Girl 1",
+      "appearance": "A fair-skinned girl with short, light brown hair styled in a bob with a small ponytail on the side. She wears a white, short-sleeved shirt with ruffled edges and a red skirt, with visible white stockings and shoes."
+    },
+    {
+      "ID": "Girl 2",
+      "appearance": "A fair-skinned girl with long blonde hair, adorned with red flower-like hair accessories. She wears a white long-sleeved dress."
+    },
+    {
+      "ID": "Man",
+      "appearance": "A pale-skinned man with a dark mustache and hair, dressed in a dark suit and bow tie."
+    }
+  ],
+  "scenes": [
+    {
+      "ID": "Field",
+      "environment": "A vast field with a muted color palette, with a distant horizon and a body of water in the background. The sky is overcast with clouds, and there are some rocks scattered around."
+    },
+    {
+      "ID": "House",
+      "environment": "A two-story house with a dark color palette, with stairs leading up to a porch. The house appears to be old-fashioned and has a distinctive chimney."
+    }
+  ],
+  "shot_alignment": [
+    {
+      "generated": "S01",
+      "source_shot": 0,
+      "source_narrative": "Girl 1 approaches Girl 2, who is hiding in a bush. Girl 1 reveals a brown seed she found and gives it to Girl 2.",
+      "original_start": "00:00",
+      "original_end": "00:07"
+    },
+    {
+      "generated": "S02",
+      "source_shot": 1,
+      "source_narrative": "The two girls excitedly run together across the field towards a distant house.",
+      "original_start": "00:07",
+      "original_end": "00:12"
+    },
+    {
+      "generated": "S03",
+      "source_shot": 2,
+      "source_narrative": "A man stands on the porch of a house, looking somber, and sighs.",
+      "original_start": "00:12",
+      "original_end": "00:15"
+    },
+    {
+      "generated": "S04",
+      "source_shot": 3,
+      "source_narrative": "Girl 1 reacts with shock and sadness as the environment darkens dramatically. She is then shown standing alone and dejected in the field, the seed discarded on the ground.",
+      "original_start": "00:15",
+      "original_end": "00:26"
+    },
+    {
+      "generated": "S05",
+      "source_shot": 4,
+      "source_narrative": "The man gestures for Girl 1 to come towards the house entrance. She walks sadly past him onto the porch and towards the door, and he turns to follow her.",
+      "original_start": "00:26",
+      "original_end": "00:33"
+    },
+    {
+      "generated": "S06",
+      "source_shot": 5,
+      "source_narrative": "A wide view shows the imposing house under a dark, cloudy sky as a single petal or leaf flutters down.",
+      "original_start": "00:33",
+      "original_end": "00:41"
+    }
+  ],
+  "adaptation": "time normalized to 5 seconds per shot; original assets not downloaded; text-only T2V; no identity reference images",
+  "excluded_source_shot": 6
+}

@@ -1,0 +1,108 @@
+{
+  "name": "023_midnight_unread_modern_manhua_h3_12",
+  "steps": [
+    {
+      "id": "video",
+      "workflow": "workflows/010-minimax-h3-bf16-b200plus-suite/001-minimax-h3-fl2va-bf16/pika_h3_flex_t2v_api.json",
+      "endpoint": "pika",
+      "foreach": [
+        {
+          "name": "S01",
+          "set": {
+            "140:131.prompt": "integrated_multimodal_description: [Shot 1] Contemporary Chinese 2D manhua animated drama, polished hand-drawn anime illustration, clean expressive line art, elegant cel shading, consistent 2D faces, cinematic storyboarding, high-quality modern urban romance thriller. Landscape 16:9. Character bible: LIN WAN, Chinese woman age 26, shoulder-length straight black hair with a side part, almond-shaped dark eyes, light beige blouse under tailored navy office blazer, charcoal pleated skirt, slim build; GU YAN, Chinese man age 28, short neatly parted black hair, narrow dark eyes, tall lean build, dark gray long trench coat over a black turtleneck. Identical facial designs and clothing across all present-day shots. No photorealism, no 3D CGI, no watermarks, no subtitles, no invented additional characters. Present timeline: midnight stormy modern glass office tower in blue-gray palette. 午夜的现代都市写字楼，暴雨拍打落地窗。林晚独自坐在办公桌前盯着手机，手机突然亮起一条匿名未读消息。林晚抬头望向空荡荡的办公室。 Camera direction: Wide establishing shot slowly pushes to medium shot; rain reflections, suspense. Single continuous five-second shot. Character anatomy, pose transitions, screen direction and human emotion must remain coherent. Make one principal readable action with a clear beginning and conclusion. Do not introduce scene cuts within this shot.\n\noverall_soundscape: Subtle synchronized environmental Foley, rain, footsteps, clothing rustle and restrained atmosphere as appropriate; no spoken dialogue, no unintelligible talking.\n\nnon_diegetic_music: None.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/023_midnight_unread_S01"
+          }
+        },
+        {
+          "name": "S02",
+          "set": {
+            "140:131.prompt": "integrated_multimodal_description: [Shot 1] Contemporary Chinese 2D manhua animated drama, polished hand-drawn anime illustration, clean expressive line art, elegant cel shading, consistent 2D faces, cinematic storyboarding, high-quality modern urban romance thriller. Landscape 16:9. Character bible: LIN WAN, Chinese woman age 26, shoulder-length straight black hair with a side part, almond-shaped dark eyes, light beige blouse under tailored navy office blazer, charcoal pleated skirt, slim build; GU YAN, Chinese man age 28, short neatly parted black hair, narrow dark eyes, tall lean build, dark gray long trench coat over a black turtleneck. Identical facial designs and clothing across all present-day shots. No photorealism, no 3D CGI, no watermarks, no subtitles, no invented additional characters. Present timeline: midnight stormy modern glass office tower in blue-gray palette. 林晚点开手机中的照片，画面里是她和顾言三年前在地铁站的合影。林晚的手指停在屏幕上，神情由困惑变为震惊。照片上的具体文字不需要清晰呈现。 Camera direction: Over-shoulder to close-up on trembling fingers and eyes. Single continuous five-second shot. Character anatomy, pose transitions, screen direction and human emotion must remain coherent. Make one principal readable action with a clear beginning and conclusion. Do not introduce scene cuts within this shot.\n\noverall_soundscape: Subtle synchronized environmental Foley, rain, footsteps, clothing rustle and restrained atmosphere as appropriate; no spoken dialogue, no unintelligible talking.\n\nnon_diegetic_music: None.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/023_midnight_unread_S02"
+          }
+        },
+        {
+          "name": "S03",
+          "set": {
+            "140:131.prompt": "integrated_multimodal_description: [Shot 1] Contemporary Chinese 2D manhua animated drama, polished hand-drawn anime illustration, clean expressive line art, elegant cel shading, consistent 2D faces, cinematic storyboarding, high-quality modern urban romance thriller. Landscape 16:9. Character bible: LIN WAN, Chinese woman age 26, shoulder-length straight black hair with a side part, almond-shaped dark eyes, light beige blouse under tailored navy office blazer, charcoal pleated skirt, slim build; GU YAN, Chinese man age 28, short neatly parted black hair, narrow dark eyes, tall lean build, dark gray long trench coat over a black turtleneck. Identical facial designs and clothing across all present-day shots. No photorealism, no 3D CGI, no watermarks, no subtitles, no invented additional characters. Present timeline: midnight stormy modern glass office tower in blue-gray palette. 林晚听到走廊尽头传来脚步声。她缓慢站起，向玻璃门走去，身后的办公室灯光依次熄灭。 Camera direction: Slow tracking side shot, suspenseful light changes. Single continuous five-second shot. Character anatomy, pose transitions, screen direction and human emotion must remain coherent. Make one principal readable action with a clear beginning and conclusion. Do not introduce scene cuts within this shot.\n\noverall_soundscape: Subtle synchronized environmental Foley, rain, footsteps, clothing rustle and restrained atmosphere as appropriate; no spoken dialogue, no unintelligible talking.\n\nnon_diegetic_music: None.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/023_midnight_unread_S03"
+          }
+        },
+        {
+          "name": "S04",
+          "set": {
+            "140:131.prompt": "integrated_multimodal_description: [Shot 1] Contemporary Chinese 2D manhua animated drama, polished hand-drawn anime illustration, clean expressive line art, elegant cel shading, consistent 2D faces, cinematic storyboarding, high-quality modern urban romance thriller. Landscape 16:9. Character bible: LIN WAN, Chinese woman age 26, shoulder-length straight black hair with a side part, almond-shaped dark eyes, light beige blouse under tailored navy office blazer, charcoal pleated skirt, slim build; GU YAN, Chinese man age 28, short neatly parted black hair, narrow dark eyes, tall lean build, dark gray long trench coat over a black turtleneck. Identical facial designs and clothing across all present-day shots. No photorealism, no 3D CGI, no watermarks, no subtitles, no invented additional characters. Present timeline: midnight stormy modern glass office tower in blue-gray palette. 写字楼玻璃门外，一名穿深灰色长风衣的高个青年背对林晚站在昏暗走廊。林晚停在门内，呼吸急促，缓缓抬手触碰玻璃。 Camera direction: Medium-wide two-character composition, slow dolly forward. Single continuous five-second shot. Character anatomy, pose transitions, screen direction and human emotion must remain coherent. Make one principal readable action with a clear beginning and conclusion. Do not introduce scene cuts within this shot.\n\noverall_soundscape: Subtle synchronized environmental Foley, rain, footsteps, clothing rustle and restrained atmosphere as appropriate; no spoken dialogue, no unintelligible talking.\n\nnon_diegetic_music: None.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/023_midnight_unread_S04"
+          }
+        },
+        {
+          "name": "S05",
+          "set": {
+            "140:131.prompt": "integrated_multimodal_description: [Shot 1] Contemporary Chinese 2D manhua animated drama, polished hand-drawn anime illustration, clean expressive line art, elegant cel shading, consistent 2D faces, cinematic storyboarding, high-quality modern urban romance thriller. Landscape 16:9. Character bible: LIN WAN, Chinese woman age 26, shoulder-length straight black hair with a side part, almond-shaped dark eyes, light beige blouse under tailored navy office blazer, charcoal pleated skirt, slim build; GU YAN, Chinese man age 28, short neatly parted black hair, narrow dark eyes, tall lean build, dark gray long trench coat over a black turtleneck. Identical facial designs and clothing across all present-day shots. No photorealism, no 3D CGI, no watermarks, no subtitles, no invented additional characters. Present timeline: midnight stormy modern glass office tower in blue-gray palette. 顾言听见玻璃门内的动静，慢慢回头，露出熟悉但疲惫的面容。林晚隔着玻璃与他四目相对，两人短暂静止。 Camera direction: Reverse shot through glass, restrained emotional close-up. Single continuous five-second shot. Character anatomy, pose transitions, screen direction and human emotion must remain coherent. Make one principal readable action with a clear beginning and conclusion. Do not introduce scene cuts within this shot.\n\noverall_soundscape: Subtle synchronized environmental Foley, rain, footsteps, clothing rustle and restrained atmosphere as appropriate; no spoken dialogue, no unintelligible talking.\n\nnon_diegetic_music: None.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/023_midnight_unread_S05"
+          }
+        },
+        {
+          "name": "S06",
+          "set": {
+            "140:131.prompt": "integrated_multimodal_description: [Shot 1] Contemporary Chinese 2D manhua animated drama, polished hand-drawn anime illustration, clean expressive line art, elegant cel shading, consistent 2D faces, cinematic storyboarding, high-quality modern urban romance thriller. Landscape 16:9. Character bible: LIN WAN, Chinese woman age 26, shoulder-length straight black hair with a side part, almond-shaped dark eyes, light beige blouse under tailored navy office blazer, charcoal pleated skirt, slim build; GU YAN, Chinese man age 28, short neatly parted black hair, narrow dark eyes, tall lean build, dark gray long trench coat over a black turtleneck. Identical facial designs and clothing across all present-day shots. No photorealism, no 3D CGI, no watermarks, no subtitles, no invented additional characters. Present timeline: midnight stormy modern glass office tower in blue-gray palette. 林晚用颤抖的手推开玻璃门，试图靠近顾言。顾言却向后退了半步，低头避开她的目光。 Camera direction: Static medium two-shot, readable body language. Single continuous five-second shot. Character anatomy, pose transitions, screen direction and human emotion must remain coherent. Make one principal readable action with a clear beginning and conclusion. Do not introduce scene cuts within this shot.\n\noverall_soundscape: Subtle synchronized environmental Foley, rain, footsteps, clothing rustle and restrained atmosphere as appropriate; no spoken dialogue, no unintelligible talking.\n\nnon_diegetic_music: None.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/023_midnight_unread_S06"
+          }
+        },
+        {
+          "name": "S07",
+          "set": {
+            "140:131.prompt": "integrated_multimodal_description: [Shot 1] Contemporary Chinese 2D manhua animated drama, polished hand-drawn anime illustration, clean expressive line art, elegant cel shading, consistent 2D faces, cinematic storyboarding, high-quality modern urban romance thriller. Landscape 16:9. Character bible: LIN WAN, Chinese woman age 26, shoulder-length straight black hair with a side part, almond-shaped dark eyes, light beige blouse under tailored navy office blazer, charcoal pleated skirt, slim build; GU YAN, Chinese man age 28, short neatly parted black hair, narrow dark eyes, tall lean build, dark gray long trench coat over a black turtleneck. Identical facial designs and clothing across all present-day shots. No photorealism, no 3D CGI, no watermarks, no subtitles, no invented additional characters. Present timeline: midnight stormy modern glass office tower in blue-gray palette. 顾言从风衣内袋取出一张折旧的纸质合影递给林晚。林晚接过照片，指腹轻轻抚平折痕。 Camera direction: Close-up of clear hand-off, realistic hand-object continuity. Single continuous five-second shot. Character anatomy, pose transitions, screen direction and human emotion must remain coherent. Make one principal readable action with a clear beginning and conclusion. Do not introduce scene cuts within this shot.\n\noverall_soundscape: Subtle synchronized environmental Foley, rain, footsteps, clothing rustle and restrained atmosphere as appropriate; no spoken dialogue, no unintelligible talking.\n\nnon_diegetic_music: None.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/023_midnight_unread_S07"
+          }
+        },
+        {
+          "name": "S08",
+          "set": {
+            "140:131.prompt": "integrated_multimodal_description: [Shot 1] Contemporary Chinese 2D manhua animated drama, polished hand-drawn anime illustration, clean expressive line art, elegant cel shading, consistent 2D faces, cinematic storyboarding, high-quality modern urban romance thriller. Landscape 16:9. Character bible: LIN WAN, Chinese woman age 26, shoulder-length straight black hair with a side part, almond-shaped dark eyes, light beige blouse under tailored navy office blazer, charcoal pleated skirt, slim build; GU YAN, Chinese man age 28, short neatly parted black hair, narrow dark eyes, tall lean build, dark gray long trench coat over a black turtleneck. Identical facial designs and clothing across all present-day shots. No photorealism, no 3D CGI, no watermarks, no subtitles, no invented additional characters. Flashback only: same character identities, LIN WAN in cream cardigan and GU YAN in white shirt; bright station palette. 回忆镜头：明亮温暖的地铁站台，林晚与顾言并肩站着。顾言轻轻把一把透明雨伞倾向林晚，林晚转头露出克制的笑容。 Camera direction: Warm nostalgic medium two-shot, slow gentle orbit. Single continuous five-second shot. Character anatomy, pose transitions, screen direction and human emotion must remain coherent. Make one principal readable action with a clear beginning and conclusion. Do not introduce scene cuts within this shot.\n\noverall_soundscape: Subtle synchronized environmental Foley, rain, footsteps, clothing rustle and restrained atmosphere as appropriate; no spoken dialogue, no unintelligible talking.\n\nnon_diegetic_music: None.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/023_midnight_unread_S08"
+          }
+        },
+        {
+          "name": "S09",
+          "set": {
+            "140:131.prompt": "integrated_multimodal_description: [Shot 1] Contemporary Chinese 2D manhua animated drama, polished hand-drawn anime illustration, clean expressive line art, elegant cel shading, consistent 2D faces, cinematic storyboarding, high-quality modern urban romance thriller. Landscape 16:9. Character bible: LIN WAN, Chinese woman age 26, shoulder-length straight black hair with a side part, almond-shaped dark eyes, light beige blouse under tailored navy office blazer, charcoal pleated skirt, slim build; GU YAN, Chinese man age 28, short neatly parted black hair, narrow dark eyes, tall lean build, dark gray long trench coat over a black turtleneck. Identical facial designs and clothing across all present-day shots. No photorealism, no 3D CGI, no watermarks, no subtitles, no invented additional characters. Present timeline: midnight stormy modern glass office tower in blue-gray palette. 画面回到冰冷的写字楼走廊，林晚看着纸质照片，眼眶发红却没有落泪。顾言站在她面前，缓慢握紧拳头又松开。 Camera direction: Close two-shot, soft rack focus between faces. Single continuous five-second shot. Character anatomy, pose transitions, screen direction and human emotion must remain coherent. Make one principal readable action with a clear beginning and conclusion. Do not introduce scene cuts within this shot.\n\noverall_soundscape: Subtle synchronized environmental Foley, rain, footsteps, clothing rustle and restrained atmosphere as appropriate; no spoken dialogue, no unintelligible talking.\n\nnon_diegetic_music: None.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/023_midnight_unread_S09"
+          }
+        },
+        {
+          "name": "S10",
+          "set": {
+            "140:131.prompt": "integrated_multimodal_description: [Shot 1] Contemporary Chinese 2D manhua animated drama, polished hand-drawn anime illustration, clean expressive line art, elegant cel shading, consistent 2D faces, cinematic storyboarding, high-quality modern urban romance thriller. Landscape 16:9. Character bible: LIN WAN, Chinese woman age 26, shoulder-length straight black hair with a side part, almond-shaped dark eyes, light beige blouse under tailored navy office blazer, charcoal pleated skirt, slim build; GU YAN, Chinese man age 28, short neatly parted black hair, narrow dark eyes, tall lean build, dark gray long trench coat over a black turtleneck. Identical facial designs and clothing across all present-day shots. No photorealism, no 3D CGI, no watermarks, no subtitles, no invented additional characters. Present timeline: midnight stormy modern glass office tower in blue-gray palette. 走廊末端的电梯门缓缓打开，冷白色灯光照在两人身上。顾言忽然转身朝电梯走去，林晚急忙伸手想叫住他。 Camera direction: Lateral tracking, strong foreground-background staging. Single continuous five-second shot. Character anatomy, pose transitions, screen direction and human emotion must remain coherent. Make one principal readable action with a clear beginning and conclusion. Do not introduce scene cuts within this shot.\n\noverall_soundscape: Subtle synchronized environmental Foley, rain, footsteps, clothing rustle and restrained atmosphere as appropriate; no spoken dialogue, no unintelligible talking.\n\nnon_diegetic_music: None.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/023_midnight_unread_S10"
+          }
+        },
+        {
+          "name": "S11",
+          "set": {
+            "140:131.prompt": "integrated_multimodal_description: [Shot 1] Contemporary Chinese 2D manhua animated drama, polished hand-drawn anime illustration, clean expressive line art, elegant cel shading, consistent 2D faces, cinematic storyboarding, high-quality modern urban romance thriller. Landscape 16:9. Character bible: LIN WAN, Chinese woman age 26, shoulder-length straight black hair with a side part, almond-shaped dark eyes, light beige blouse under tailored navy office blazer, charcoal pleated skirt, slim build; GU YAN, Chinese man age 28, short neatly parted black hair, narrow dark eyes, tall lean build, dark gray long trench coat over a black turtleneck. Identical facial designs and clothing across all present-day shots. No photorealism, no 3D CGI, no watermarks, no subtitles, no invented additional characters. Present timeline: midnight stormy modern glass office tower in blue-gray palette. 林晚在电梯门即将关闭时冲过去，抓住顾言的袖口。顾言停住脚步，两人的手在门缝前清楚地接触。 Camera direction: Dramatic close-up tracking, clear grab and stop action. Single continuous five-second shot. Character anatomy, pose transitions, screen direction and human emotion must remain coherent. Make one principal readable action with a clear beginning and conclusion. Do not introduce scene cuts within this shot.\n\noverall_soundscape: Subtle synchronized environmental Foley, rain, footsteps, clothing rustle and restrained atmosphere as appropriate; no spoken dialogue, no unintelligible talking.\n\nnon_diegetic_music: None.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/023_midnight_unread_S11"
+          }
+        },
+        {
+          "name": "S12",
+          "set": {
+            "140:131.prompt": "integrated_multimodal_description: [Shot 1] Contemporary Chinese 2D manhua animated drama, polished hand-drawn anime illustration, clean expressive line art, elegant cel shading, consistent 2D faces, cinematic storyboarding, high-quality modern urban romance thriller. Landscape 16:9. Character bible: LIN WAN, Chinese woman age 26, shoulder-length straight black hair with a side part, almond-shaped dark eyes, light beige blouse under tailored navy office blazer, charcoal pleated skirt, slim build; GU YAN, Chinese man age 28, short neatly parted black hair, narrow dark eyes, tall lean build, dark gray long trench coat over a black turtleneck. Identical facial designs and clothing across all present-day shots. No photorealism, no 3D CGI, no watermarks, no subtitles, no invented additional characters. Present timeline: midnight stormy modern glass office tower in blue-gray palette. 顾言转身，把另一部黑色手机放在林晚掌心，屏幕亮起一张陌生女人的照片。林晚错愕抬头，顾言神情凝重，镜头迅速推向林晚震惊的双眼，定格式结束。 Camera direction: Push-in close-up, dramatic cliffhanger without readable text. Single continuous five-second shot. Character anatomy, pose transitions, screen direction and human emotion must remain coherent. Make one principal readable action with a clear beginning and conclusion. Do not introduce scene cuts within this shot.\n\noverall_soundscape: Subtle synchronized environmental Foley, rain, footsteps, clothing rustle and restrained atmosphere as appropriate; no spoken dialogue, no unintelligible talking.\n\nnon_diegetic_music: None.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/023_midnight_unread_S12"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,206 @@
+{
+  "official_repo": "stepfun-ai/Step-Video-TI2V",
+  "mode": "TEXT_ONLY (not official image-conditioned evaluation)",
+  "samples": [
+    {
+      "id": "ti2v_eval_ani/H/001",
+      "style": "动漫",
+      "category": "H",
+      "source_url": "https://github.com/stepfun-ai/Step-Video-TI2V/blob/main/benchmark/Step-Video-TI2V-Eval/ti2v_eval_ani/H/001.txt",
+      "original_prompt": "一个女巫从远处的城堡骑着扫帚飞来，向镜头露出了邪恶的笑容。",
+      "h3_prompt": "integrated_multimodal_description: [Shot 1] 一个女巫从远处的城堡骑着扫帚飞来，向镜头露出了邪恶的笑容。。严格保留原文所要求的主体、动作先后顺序、镜头移动和背景信息。采用动漫画面风格，角色形象和服装保持稳定。 单一连续5秒镜头，主体动作清楚可见，不增加额外情节、人物、字幕或切镜。\n\noverall_soundscape: 与场景相符的轻微自然环境声，不增加人物对白。\n\nnon_diegetic_music: None.",
+      "shot": "S01",
+      "test_dimension": "原始分类 H（官方目录标签；动作、镜头及一致性需要人工逐条核查）"
+    },
+    {
+      "id": "ti2v_eval_ani/H/007",
+      "style": "动漫",
+      "category": "H",
+      "source_url": "https://github.com/stepfun-ai/Step-Video-TI2V/blob/main/benchmark/Step-Video-TI2V-Eval/ti2v_eval_ani/H/007.txt",
+      "original_prompt": "云雾缭绕间楼阁若隐若现，镜头缓缓拉近，飞鸟在天空掠过。",
+      "h3_prompt": "integrated_multimodal_description: [Shot 1] 云雾缭绕间楼阁若隐若现，镜头缓缓拉近，飞鸟在天空掠过。。严格保留原文所要求的主体、动作先后顺序、镜头移动和背景信息。采用动漫画面风格，角色形象和服装保持稳定。 单一连续5秒镜头，主体动作清楚可见，不增加额外情节、人物、字幕或切镜。\n\noverall_soundscape: 与场景相符的轻微自然环境声，不增加人物对白。\n\nnon_diegetic_music: None.",
+      "shot": "S02",
+      "test_dimension": "原始分类 H（官方目录标签；动作、镜头及一致性需要人工逐条核查）"
+    },
+    {
+      "id": "ti2v_eval_ani/H/011",
+      "style": "动漫",
+      "category": "H",
+      "source_url": "https://github.com/stepfun-ai/Step-Video-TI2V/blob/main/benchmark/Step-Video-TI2V-Eval/ti2v_eval_ani/H/011.txt",
+      "original_prompt": "夕阳渐沉，城市灯火闪烁，镜头缓缓从下往上移动。",
+      "h3_prompt": "integrated_multimodal_description: [Shot 1] 夕阳渐沉，城市灯火闪烁，镜头缓缓从下往上移动。。严格保留原文所要求的主体、动作先后顺序、镜头移动和背景信息。采用动漫画面风格，角色形象和服装保持稳定。 单一连续5秒镜头，主体动作清楚可见，不增加额外情节、人物、字幕或切镜。\n\noverall_soundscape: 与场景相符的轻微自然环境声，不增加人物对白。\n\nnon_diegetic_music: None.",
+      "shot": "S03",
+      "test_dimension": "原始分类 H（官方目录标签；动作、镜头及一致性需要人工逐条核查）"
+    },
+    {
+      "id": "ti2v_eval_ani/H/015",
+      "style": "动漫",
+      "category": "H",
+      "source_url": "https://github.com/stepfun-ai/Step-Video-TI2V/blob/main/benchmark/Step-Video-TI2V-Eval/ti2v_eval_ani/H/015.txt",
+      "original_prompt": "天空下着小雨，一颗流星在夜空闪烁划过，松林于微风中轻轻摇曳",
+      "h3_prompt": "integrated_multimodal_description: [Shot 1] 天空下着小雨，一颗流星在夜空闪烁划过，松林于微风中轻轻摇曳。严格保留原文所要求的主体、动作先后顺序、镜头移动和背景信息。采用动漫画面风格，角色形象和服装保持稳定。 单一连续5秒镜头，主体动作清楚可见，不增加额外情节、人物、字幕或切镜。\n\noverall_soundscape: 与场景相符的轻微自然环境声，不增加人物对白。\n\nnon_diegetic_music: None.",
+      "shot": "S04",
+      "test_dimension": "原始分类 H（官方目录标签；动作、镜头及一致性需要人工逐条核查）"
+    },
+    {
+      "id": "ti2v_eval_ani/S/012",
+      "style": "动漫",
+      "category": "S",
+      "source_url": "https://github.com/stepfun-ai/Step-Video-TI2V/blob/main/benchmark/Step-Video-TI2V-Eval/ti2v_eval_ani/S/012.txt",
+      "original_prompt": "夜幕中有极光闪烁，楼房中的灯光时亮时暗。",
+      "h3_prompt": "integrated_multimodal_description: [Shot 1] 夜幕中有极光闪烁，楼房中的灯光时亮时暗。。严格保留原文所要求的主体、动作先后顺序、镜头移动和背景信息。采用动漫画面风格，角色形象和服装保持稳定。 单一连续5秒镜头，主体动作清楚可见，不增加额外情节、人物、字幕或切镜。\n\noverall_soundscape: 与场景相符的轻微自然环境声，不增加人物对白。\n\nnon_diegetic_music: None.",
+      "shot": "S05",
+      "test_dimension": "原始分类 S（官方目录标签；动作、镜头及一致性需要人工逐条核查）"
+    },
+    {
+      "id": "ti2v_eval_ani/S/019",
+      "style": "动漫",
+      "category": "S",
+      "source_url": "https://github.com/stepfun-ai/Step-Video-TI2V/blob/main/benchmark/Step-Video-TI2V-Eval/ti2v_eval_ani/S/019.txt",
+      "original_prompt": "女人微笑看着镜头眨眼，然后伸出左手将左边的碎发撩到耳后。",
+      "h3_prompt": "integrated_multimodal_description: [Shot 1] 女人微笑看着镜头眨眼，然后伸出左手将左边的碎发撩到耳后。。严格保留原文所要求的主体、动作先后顺序、镜头移动和背景信息。采用动漫画面风格，角色形象和服装保持稳定。 单一连续5秒镜头，主体动作清楚可见，不增加额外情节、人物、字幕或切镜。\n\noverall_soundscape: 与场景相符的轻微自然环境声，不增加人物对白。\n\nnon_diegetic_music: None.",
+      "shot": "S06",
+      "test_dimension": "原始分类 S（官方目录标签；动作、镜头及一致性需要人工逐条核查）"
+    },
+    {
+      "id": "ti2v_eval_ani/S/029",
+      "style": "动漫",
+      "category": "S",
+      "source_url": "https://github.com/stepfun-ai/Step-Video-TI2V/blob/main/benchmark/Step-Video-TI2V-Eval/ti2v_eval_ani/S/029.txt",
+      "original_prompt": "女孩低头叹气，双手放下。",
+      "h3_prompt": "integrated_multimodal_description: [Shot 1] 女孩低头叹气，双手放下。。严格保留原文所要求的主体、动作先后顺序、镜头移动和背景信息。采用动漫画面风格，角色形象和服装保持稳定。 单一连续5秒镜头，主体动作清楚可见，不增加额外情节、人物、字幕或切镜。\n\noverall_soundscape: 与场景相符的轻微自然环境声，不增加人物对白。\n\nnon_diegetic_music: None.",
+      "shot": "S07",
+      "test_dimension": "原始分类 S（官方目录标签；动作、镜头及一致性需要人工逐条核查）"
+    },
+    {
+      "id": "ti2v_eval_ani/S/030",
+      "style": "动漫",
+      "category": "S",
+      "source_url": "https://github.com/stepfun-ai/Step-Video-TI2V/blob/main/benchmark/Step-Video-TI2V-Eval/ti2v_eval_ani/S/030.txt",
+      "original_prompt": "女孩双手捧脸，看着镜头傻笑歪头。",
+      "h3_prompt": "integrated_multimodal_description: [Shot 1] 女孩双手捧脸，看着镜头傻笑歪头。。严格保留原文所要求的主体、动作先后顺序、镜头移动和背景信息。采用动漫画面风格，角色形象和服装保持稳定。 单一连续5秒镜头，主体动作清楚可见，不增加额外情节、人物、字幕或切镜。\n\noverall_soundscape: 与场景相符的轻微自然环境声，不增加人物对白。\n\nnon_diegetic_music: None.",
+      "shot": "S08",
+      "test_dimension": "原始分类 S（官方目录标签；动作、镜头及一致性需要人工逐条核查）"
+    },
+    {
+      "id": "ti2v_eval_ani/V/002",
+      "style": "动漫",
+      "category": "V",
+      "source_url": "https://github.com/stepfun-ai/Step-Video-TI2V/blob/main/benchmark/Step-Video-TI2V-Eval/ti2v_eval_ani/V/002.txt",
+      "original_prompt": "一颗导弹飞来击中飞机，飞行员惨叫着跳伞，镜头拉远。",
+      "h3_prompt": "integrated_multimodal_description: [Shot 1] 一颗导弹飞来击中飞机，飞行员惨叫着跳伞，镜头拉远。。严格保留原文所要求的主体、动作先后顺序、镜头移动和背景信息。采用动漫画面风格，角色形象和服装保持稳定。 单一连续5秒镜头，主体动作清楚可见，不增加额外情节、人物、字幕或切镜。\n\noverall_soundscape: 与场景相符的轻微自然环境声，不增加人物对白。\n\nnon_diegetic_music: None.",
+      "shot": "S09",
+      "test_dimension": "原始分类 V（官方目录标签；动作、镜头及一致性需要人工逐条核查）"
+    },
+    {
+      "id": "ti2v_eval_ani/V/003",
+      "style": "动漫",
+      "category": "V",
+      "source_url": "https://github.com/stepfun-ai/Step-Video-TI2V/blob/main/benchmark/Step-Video-TI2V-Eval/ti2v_eval_ani/V/003.txt",
+      "original_prompt": "乌龟慢慢地向右走，但是背景却快速变换风景，乌龟背上的三只小动物好奇地张望。",
+      "h3_prompt": "integrated_multimodal_description: [Shot 1] 乌龟慢慢地向右走，但是背景却快速变换风景，乌龟背上的三只小动物好奇地张望。。严格保留原文所要求的主体、动作先后顺序、镜头移动和背景信息。采用动漫画面风格，角色形象和服装保持稳定。 单一连续5秒镜头，主体动作清楚可见，不增加额外情节、人物、字幕或切镜。\n\noverall_soundscape: 与场景相符的轻微自然环境声，不增加人物对白。\n\nnon_diegetic_music: None.",
+      "shot": "S10",
+      "test_dimension": "原始分类 V（官方目录标签；动作、镜头及一致性需要人工逐条核查）"
+    },
+    {
+      "id": "ti2v_eval_real/H/002",
+      "style": "写实",
+      "category": "H",
+      "source_url": "https://github.com/stepfun-ai/Step-Video-TI2V/blob/main/benchmark/Step-Video-TI2V-Eval/ti2v_eval_real/H/002.txt",
+      "original_prompt": "一双手正在弹奏钢琴，节奏欢快，双手在琴键中快速的移动。",
+      "h3_prompt": "integrated_multimodal_description: [Shot 1] 一双手正在弹奏钢琴，节奏欢快，双手在琴键中快速的移动。。严格保留原文所要求的主体、动作先后顺序、镜头移动和背景信息。采用写实画面风格，人物与物理运动自然。 单一连续5秒镜头，主体动作清楚可见，不增加额外情节、人物、字幕或切镜。\n\noverall_soundscape: 与场景相符的轻微自然环境声，不增加人物对白。\n\nnon_diegetic_music: None.",
+      "shot": "S11",
+      "test_dimension": "原始分类 H（官方目录标签；动作、镜头及一致性需要人工逐条核查）"
+    },
+    {
+      "id": "ti2v_eval_real/H/006",
+      "style": "写实",
+      "category": "H",
+      "source_url": "https://github.com/stepfun-ai/Step-Video-TI2V/blob/main/benchmark/Step-Video-TI2V-Eval/ti2v_eval_real/H/006.txt",
+      "original_prompt": "两只动物在激烈地打斗，用嘴互相啄对方，镜头逆时针环绕两只动物。",
+      "h3_prompt": "integrated_multimodal_description: [Shot 1] 两只动物在激烈地打斗，用嘴互相啄对方，镜头逆时针环绕两只动物。。严格保留原文所要求的主体、动作先后顺序、镜头移动和背景信息。采用写实画面风格，人物与物理运动自然。 单一连续5秒镜头，主体动作清楚可见，不增加额外情节、人物、字幕或切镜。\n\noverall_soundscape: 与场景相符的轻微自然环境声，不增加人物对白。\n\nnon_diegetic_music: None.",
+      "shot": "S12",
+      "test_dimension": "原始分类 H（官方目录标签；动作、镜头及一致性需要人工逐条核查）"
+    },
+    {
+      "id": "ti2v_eval_real/H/007",
+      "style": "写实",
+      "category": "H",
+      "source_url": "https://github.com/stepfun-ai/Step-Video-TI2V/blob/main/benchmark/Step-Video-TI2V-Eval/ti2v_eval_real/H/007.txt",
+      "original_prompt": "两只小狗朝着镜头跌跌撞撞地奔跑，镜头跟随小狗。",
+      "h3_prompt": "integrated_multimodal_description: [Shot 1] 两只小狗朝着镜头跌跌撞撞地奔跑，镜头跟随小狗。。严格保留原文所要求的主体、动作先后顺序、镜头移动和背景信息。采用写实画面风格，人物与物理运动自然。 单一连续5秒镜头，主体动作清楚可见，不增加额外情节、人物、字幕或切镜。\n\noverall_soundscape: 与场景相符的轻微自然环境声，不增加人物对白。\n\nnon_diegetic_music: None.",
+      "shot": "S13",
+      "test_dimension": "原始分类 H（官方目录标签；动作、镜头及一致性需要人工逐条核查）"
+    },
+    {
+      "id": "ti2v_eval_real/H/008",
+      "style": "写实",
+      "category": "H",
+      "source_url": "https://github.com/stepfun-ai/Step-Video-TI2V/blob/main/benchmark/Step-Video-TI2V-Eval/ti2v_eval_real/H/008.txt",
+      "original_prompt": "两名男子在互相拳击，镜头环绕两人拍摄。",
+      "h3_prompt": "integrated_multimodal_description: [Shot 1] 两名男子在互相拳击，镜头环绕两人拍摄。。严格保留原文所要求的主体、动作先后顺序、镜头移动和背景信息。采用写实画面风格，人物与物理运动自然。 单一连续5秒镜头，主体动作清楚可见，不增加额外情节、人物、字幕或切镜。\n\noverall_soundscape: 与场景相符的轻微自然环境声，不增加人物对白。\n\nnon_diegetic_music: None.",
+      "shot": "S14",
+      "test_dimension": "原始分类 H（官方目录标签；动作、镜头及一致性需要人工逐条核查）"
+    },
+    {
+      "id": "ti2v_eval_real/S/061",
+      "style": "写实",
+      "category": "S",
+      "source_url": "https://github.com/stepfun-ai/Step-Video-TI2V/blob/main/benchmark/Step-Video-TI2V-Eval/ti2v_eval_real/S/061.txt",
+      "original_prompt": "带翅膀的小老鼠先用爪子挠了挠脑袋，随后扑扇着翅膀飞了起来。",
+      "h3_prompt": "integrated_multimodal_description: [Shot 1] 带翅膀的小老鼠先用爪子挠了挠脑袋，随后扑扇着翅膀飞了起来。。严格保留原文所要求的主体、动作先后顺序、镜头移动和背景信息。采用写实画面风格，人物与物理运动自然。 单一连续5秒镜头，主体动作清楚可见，不增加额外情节、人物、字幕或切镜。\n\noverall_soundscape: 与场景相符的轻微自然环境声，不增加人物对白。\n\nnon_diegetic_music: None.",
+      "shot": "S15",
+      "test_dimension": "原始分类 S（官方目录标签；动作、镜头及一致性需要人工逐条核查）"
+    },
+    {
+      "id": "ti2v_eval_real/S/066",
+      "style": "写实",
+      "category": "S",
+      "source_url": "https://github.com/stepfun-ai/Step-Video-TI2V/blob/main/benchmark/Step-Video-TI2V-Eval/ti2v_eval_real/S/066.txt",
+      "original_prompt": "手拿着滚筒上上下下地涂抹颜料",
+      "h3_prompt": "integrated_multimodal_description: [Shot 1] 手拿着滚筒上上下下地涂抹颜料。严格保留原文所要求的主体、动作先后顺序、镜头移动和背景信息。采用写实画面风格，人物与物理运动自然。 单一连续5秒镜头，主体动作清楚可见，不增加额外情节、人物、字幕或切镜。\n\noverall_soundscape: 与场景相符的轻微自然环境声，不增加人物对白。\n\nnon_diegetic_music: None.",
+      "shot": "S16",
+      "test_dimension": "原始分类 S（官方目录标签；动作、镜头及一致性需要人工逐条核查）"
+    },
+    {
+      "id": "ti2v_eval_real/S/073",
+      "style": "写实",
+      "category": "S",
+      "source_url": "https://github.com/stepfun-ai/Step-Video-TI2V/blob/main/benchmark/Step-Video-TI2V-Eval/ti2v_eval_real/S/073.txt",
+      "original_prompt": "机器人左顾右盼地向前走了两步，随后停住脚步，蹲下，捡起了路边的一块石头。",
+      "h3_prompt": "integrated_multimodal_description: [Shot 1] 机器人左顾右盼地向前走了两步，随后停住脚步，蹲下，捡起了路边的一块石头。。严格保留原文所要求的主体、动作先后顺序、镜头移动和背景信息。采用写实画面风格，人物与物理运动自然。 单一连续5秒镜头，主体动作清楚可见，不增加额外情节、人物、字幕或切镜。\n\noverall_soundscape: 与场景相符的轻微自然环境声，不增加人物对白。\n\nnon_diegetic_music: None.",
+      "shot": "S17",
+      "test_dimension": "原始分类 S（官方目录标签；动作、镜头及一致性需要人工逐条核查）"
+    },
+    {
+      "id": "ti2v_eval_real/S/094",
+      "style": "写实",
+      "category": "S",
+      "source_url": "https://github.com/stepfun-ai/Step-Video-TI2V/blob/main/benchmark/Step-Video-TI2V-Eval/ti2v_eval_real/S/094.txt",
+      "original_prompt": "猫咪先动耳朵，然后转头看着镜头舔爪子。",
+      "h3_prompt": "integrated_multimodal_description: [Shot 1] 猫咪先动耳朵，然后转头看着镜头舔爪子。。严格保留原文所要求的主体、动作先后顺序、镜头移动和背景信息。采用写实画面风格，人物与物理运动自然。 单一连续5秒镜头，主体动作清楚可见，不增加额外情节、人物、字幕或切镜。\n\noverall_soundscape: 与场景相符的轻微自然环境声，不增加人物对白。\n\nnon_diegetic_music: None.",
+      "shot": "S18",
+      "test_dimension": "原始分类 S（官方目录标签；动作、镜头及一致性需要人工逐条核查）"
+    },
+    {
+      "id": "ti2v_eval_real/V/001",
+      "style": "写实",
+      "category": "V",
+      "source_url": "https://github.com/stepfun-ai/Step-Video-TI2V/blob/main/benchmark/Step-Video-TI2V-Eval/ti2v_eval_real/V/001.txt",
+      "original_prompt": "一个羽毛球飞来，小男孩用力挥拍将羽毛球击打出去。",
+      "h3_prompt": "integrated_multimodal_description: [Shot 1] 一个羽毛球飞来，小男孩用力挥拍将羽毛球击打出去。。严格保留原文所要求的主体、动作先后顺序、镜头移动和背景信息。采用写实画面风格，人物与物理运动自然。 单一连续5秒镜头，主体动作清楚可见，不增加额外情节、人物、字幕或切镜。\n\noverall_soundscape: 与场景相符的轻微自然环境声，不增加人物对白。\n\nnon_diegetic_music: None.",
+      "shot": "S19",
+      "test_dimension": "原始分类 V（官方目录标签；动作、镜头及一致性需要人工逐条核查）"
+    },
+    {
+      "id": "ti2v_eval_real/V/003",
+      "style": "写实",
+      "category": "V",
+      "source_url": "https://github.com/stepfun-ai/Step-Video-TI2V/blob/main/benchmark/Step-Video-TI2V-Eval/ti2v_eval_real/V/003.txt",
+      "original_prompt": "一只黑猫_一只斑点狗和一只黄色的鹦鹉在一个巨大的饭碗面前抢饭吃，固定镜头。",
+      "h3_prompt": "integrated_multimodal_description: [Shot 1] 一只黑猫_一只斑点狗和一只黄色的鹦鹉在一个巨大的饭碗面前抢饭吃，固定镜头。。严格保留原文所要求的主体、动作先后顺序、镜头移动和背景信息。采用写实画面风格，人物与物理运动自然。 单一连续5秒镜头，主体动作清楚可见，不增加额外情节、人物、字幕或切镜。\n\noverall_soundscape: 与场景相符的轻微自然环境声，不增加人物对白。\n\nnon_diegetic_music: None.",
+      "shot": "S20",
+      "test_dimension": "原始分类 V（官方目录标签；动作、镜头及一致性需要人工逐条核查）"
+    }
+  ]
+}

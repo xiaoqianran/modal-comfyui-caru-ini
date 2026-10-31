@@ -1,0 +1,36 @@
+{
+  "name": "011_vgabench_h3_5s_pilot",
+  "steps": [
+    {
+      "id": "video",
+      "workflow": "workflows/010-minimax-h3-bf16-b200plus-suite/001-minimax-h3-fl2va-bf16/pika_h3_flex_t2v_api.json",
+      "endpoint": "pika",
+      "foreach": [
+        {
+          "name": "base_B002",
+          "set": {
+            "140:131.prompt": "Under high-resolution magnification, an ant is carrying a leaf.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/011_vgabench_base_B002"
+          }
+        },
+        {
+          "name": "aesthetic_001",
+          "set": {
+            "140:131.prompt": "A poet stands beneath a cherry blossom tree, with the composition following the golden ratio, harmoniously blending the figure with the natural scenery. The overall atmosphere is serene and poetic, highlighting a visual beauty.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/011_vgabench_aesthetic_001"
+          }
+        },
+        {
+          "name": "tag_T003",
+          "set": {
+            "140:131.prompt": "The forest path extends into the distance in a leading line composition, with soft dappled light filtering through the leaves from above. The scene has low saturation and is captured from a mid-range perspective, emphasizing the depth of the path.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/011_vgabench_tag_T003"
+          }
+        }
+      ]
+    }
+  ]
+}

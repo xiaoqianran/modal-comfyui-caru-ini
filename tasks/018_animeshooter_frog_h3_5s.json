@@ -1,0 +1,68 @@
+{
+  "name": "018_animeshooter_frog_h3_5s",
+  "steps": [
+    {
+      "id": "video",
+      "workflow": "workflows/010-minimax-h3-bf16-b200plus-suite/001-minimax-h3-fl2va-bf16/pika_h3_flex_t2v_api.json",
+      "endpoint": "pika",
+      "foreach": [
+        {
+          "name": "S01",
+          "set": {
+            "140:131.prompt": "integrated_multimodal_description: [Shot 1] 2D storybook cartoon animation with clean outlines and hand-painted green forest textures. A thin brown-haired prince wearing a gold crown, light blue shirt, dark blue trousers and red cape stands in a sunny clearing beside three green frogs. At 0–2 seconds he carefully lifts one frog; at 2–3.5 seconds he leans forward for an awkward kiss; at 3.5–5 seconds he recoils in disgust and lowers it. Eye-level medium-wide fixed camera, expressive cartoon timing, stable crown and frog anatomy.\n\noverall_soundscape: Birdsong, light breeze, a comic squeak and a short disgusted gasp.\n\nnon_diegetic_music: Light pizzicato strings and playful woodwind notes.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/018_animeshooter_frog_h3_S01"
+          }
+        },
+        {
+          "name": "S02",
+          "set": {
+            "140:131.prompt": "integrated_multimodal_description: [Shot 1] 2D storybook cartoon animation in the same sunlit forest clearing. The thin prince in a gold crown, blue shirt, dark blue trousers and red cape holds a frog at frame right. A skinny green-skinned witch with a pointed green nose, stringy black hair, dark blue dress and tall black pointed hat enters from frame left. At 0–2 seconds she approaches; at 2–4 seconds she pauses and watches the frustrated prince; at 4–5 seconds she smiles as an idea occurs to her. Static medium-wide two-shot with clean consistent silhouettes.\n\noverall_soundscape: Rustling leaves, soft footsteps on grass, faint mischievous chuckle.\n\nnon_diegetic_music: Playful clarinet over light pizzicato strings.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/018_animeshooter_frog_h3_S02"
+          }
+        },
+        {
+          "name": "S03",
+          "set": {
+            "140:131.prompt": "integrated_multimodal_description: [Shot 1] 2D storybook cartoon animation in a sunlit forest clearing. A green-skinned witch in a dark blue dress and tall pointed black hat stands near the brown-haired prince in his golden crown and red cape. At 0–1.5 seconds she raises one finger with sudden inspiration; at 1.5–3 seconds she draws a thin wand; at 3–5 seconds she waves it in a single arc, sending bright sparkling magic toward the frogs. The prince watches in confusion. Medium two-shot with small slow camera push-in and legible hand movements.\n\noverall_soundscape: Soft wand swish, tiny shimmering chimes, distant forest birds.\n\nnon_diegetic_music: Celesta sparkle with a restrained mischievous woodwind motif.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/018_animeshooter_frog_h3_S03"
+          }
+        },
+        {
+          "name": "S04",
+          "set": {
+            "140:131.prompt": "integrated_multimodal_description: [Shot 1] 2D hand-painted cartoon animation, same forest clearing with yellow-green sunlight and dark green ground. A cheerful green frog sits on a small patch of moss as a few magic sparkles descend. The thin brown-haired prince wearing a golden crown, light blue shirt, dark blue trousers and red cape kneels next to it. At 0–2 seconds he looks hopeful; at 2–3.5 seconds he carefully lifts the frog with both hands; at 3.5–5 seconds he gently pats its head once and smiles. Stable medium close-up, one frog only, natural animated hand contact.\n\noverall_soundscape: Fading magic twinkle, soft fabric rustle, forest birds.\n\nnon_diegetic_music: Light hopeful flute and gentle strings.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/018_animeshooter_frog_h3_S04"
+          }
+        },
+        {
+          "name": "S05",
+          "set": {
+            "140:131.prompt": "integrated_multimodal_description: [Shot 1] 2D hand-painted cartoon comedy in the same green forest clearing. The thin prince with brown hair, gold crown, blue shirt and red cape holds one enchanted green frog near his chest. At 0–2 seconds the frog inflates like a rubber balloon; at 2–3.5 seconds it bursts into a few stylized harmless green confetti fragments with a comic pop; at 3.5–5 seconds the prince freezes in shock and raises one hand to his mouth while two distant onlookers laugh. Eye-level static medium shot, exaggerated cartoon squash and stretch, no realistic gore.\n\noverall_soundscape: Comic rubber squeak, loud soft pop, distant surprised gasps and laughter.\n\nnon_diegetic_music: A quick rising orchestral comic cue ending in a short staccato hit.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/018_animeshooter_frog_h3_S05"
+          }
+        },
+        {
+          "name": "S06",
+          "set": {
+            "140:131.prompt": "integrated_multimodal_description: [Shot 1] 2D whimsical hand-painted storybook cartoon animation, a new chapter in the same green forest. Alice is a thin blonde girl with long hair, blue dress and white apron. At 0–2 seconds she walks cheerfully into the clearing from frame right; at 2–3 seconds she stops when she hears rustling; at 3–5 seconds she turns toward a bush at frame left, widening her eyes in surprise. Eye-level medium-wide fixed camera, consistent costume, clean natural hand-drawn walking animation.\n\noverall_soundscape: Light birdsong, soft footsteps, sudden rustling from the left bush and a surprised breath.\n\nnon_diegetic_music: Airy flute and light whimsical strings.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/018_animeshooter_frog_h3_S06"
+          }
+        },
+        {
+          "name": "S07",
+          "set": {
+            "140:131.prompt": "integrated_multimodal_description: [Shot 1] 2D whimsical storybook cartoon animation in the same forest clearing. Alice, a blonde girl wearing a blue dress and white apron, stands on frame right beside green bushes. At 0–1.5 seconds a large bush on frame left rustles; at 1.5–3 seconds a grey rabbit wearing a red waistcoat and yellow shirt darts from the bush and races across the foreground toward frame left; at 3–5 seconds Alice gasps, pivots and starts chasing the rabbit toward frame left. Static wide camera preserves their paths and positions; lively clean cartoon run cycles.\n\noverall_soundscape: Bush rustle, quick rabbit footfalls, Alice's gasp and accelerating footsteps.\n\nnon_diegetic_music: Whimsical woodwinds and fast light strings.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/018_animeshooter_frog_h3_S07"
+          }
+        }
+      ]
+    }
+  ]
+}

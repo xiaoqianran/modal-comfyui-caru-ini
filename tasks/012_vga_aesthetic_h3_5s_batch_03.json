@@ -1,0 +1,52 @@
+{
+  "name": "012_vga_aesthetic_h3_5s_batch_03",
+  "steps": [
+    {
+      "id": "video",
+      "workflow": "workflows/010-minimax-h3-bf16-b200plus-suite/001-minimax-h3-fl2va-bf16/pika_h3_flex_t2v_api.json",
+      "endpoint": "pika",
+      "foreach": [
+        {
+          "name": "A102",
+          "set": {
+            "140:131.prompt": "A close-up of a clown actor's face with vibrant makeup shows an instant shift from laughter to sorrow, amplifying the dramatic change in expression through color and makeup, making it highly infectious.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/012_vga_aesthetic_A102"
+          }
+        },
+        {
+          "name": "A112",
+          "set": {
+            "140:131.prompt": "By the campfire, the scene pushes in from a mid-shot of the gathered crowd to a close-up of a storyteller's face illuminated by the warm glow of the fire. The rich hues and heartfelt emotions make their expressive features warm and infectious.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/012_vga_aesthetic_A112"
+          }
+        },
+        {
+          "name": "A122",
+          "set": {
+            "140:131.prompt": "A solo dance video of a ballet dancer in a rehearsal studio is overall elegant and captivating. The top lighting outlines her graceful figure, and the dancer's devoted expression, paired with her white tutu, appears even more ethereal and beautiful under the light.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/012_vga_aesthetic_A122"
+          }
+        },
+        {
+          "name": "A132",
+          "set": {
+            "140:131.prompt": "A professional makeup tutorial video, with overall high-quality production, features shots ranging from full-face views to close-ups of the eyes and lips. Under the even and bright circular lighting, every detail of the model's makeup is perfectly presented, showcasing strong technical skills.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/012_vga_aesthetic_A132"
+          }
+        },
+        {
+          "name": "A142",
+          "set": {
+            "140:131.prompt": "The dimly lit corridor of an ancient castle, from the faint light at the end to the close-up of the flickering flames of torches on the walls, with shifting lights and a somber tone, the changes in depth of field enhance the sense of depth and mystery of the space.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/012_vga_aesthetic_A142"
+          }
+        }
+      ]
+    }
+  ]
+}

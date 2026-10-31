@@ -1,0 +1,52 @@
+{
+  "name": "012_vga_aesthetic_h3_5s_batch_02",
+  "steps": [
+    {
+      "id": "video",
+      "workflow": "workflows/010-minimax-h3-bf16-b200plus-suite/001-minimax-h3-fl2va-bf16/pika_h3_flex_t2v_api.json",
+      "endpoint": "pika",
+      "foreach": [
+        {
+          "name": "A052",
+          "set": {
+            "140:131.prompt": "Switching from a wide-angle shot of an autumn forest to a macro close-up of a red leaf, the low saturation tones create a tranquil atmosphere, with warm yellow and dark red colors harmoniously blending together in a poetic manner.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/012_vga_aesthetic_A052"
+          }
+        },
+        {
+          "name": "A062",
+          "set": {
+            "140:131.prompt": "The spring garden stroll video exudes vitality with its vibrant colors and lush flowers filling the frame. By utilizing depth of field changes, it alternately highlights the blooming flowers in the foreground and showcases the greenery in the background, providing a visual treat.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/012_vga_aesthetic_A062"
+          }
+        },
+        {
+          "name": "A072",
+          "set": {
+            "140:131.prompt": "Inside the abandoned factory, the composition emphasizes the geometric feel of the steel structures, with a range from wide-angle shots of the vast space to close-ups of rusted details, all unified in a cold, gray tonality, creating a oppressive atmosphere.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/012_vga_aesthetic_A072"
+          }
+        },
+        {
+          "name": "A082",
+          "set": {
+            "140:131.prompt": "The thriving wheat fields, with a composition divided by curved lines, transition from a distant view of the golden wheat waves to a close-up of the wheat grains, offering a rich variation in framing. The unified and warm colors bring joy to the viewer.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/012_vga_aesthetic_A082"
+          }
+        },
+        {
+          "name": "A092",
+          "set": {
+            "140:131.prompt": "In the long corridor of an ancient castle, the silhouette of a woman in a vintage dress creates an air of mystery, enhanced by the deep shadows and strong depth of field. The details of her attire are barely visible through the haze.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/012_vga_aesthetic_A092"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,245 @@
+{
+  "source": "KaiyueSun98/T2V-CompBench V2",
+  "samples": [
+    {
+      "shot": "S01",
+      "category": "dynamic_attr",
+      "source_file": "2_dynamic_attr.txt",
+      "source_line": 1,
+      "original_prompt": "A timelapse of a leaf transitioning from green to bright red as autumn progresses.",
+      "h3_prompt": "integrated_multimodal_description: [Shot 1] A timelapse of a leaf transitioning from green to bright red as autumn progresses. Preserve the original subjects, their exact attributes, quantities, spatial relations, actions, and interactions. A single continuous five-second shot; frame all relevant subjects clearly and keep their identities stable. Use coherent physical motion, realistic timing and a stable cinematic camera. Do not add events, characters, objects, cuts or visual overlays.\n\noverall_soundscape: Natural subtle environmental ambience appropriate to the described scene; no spoken dialogue.\n\nnon_diegetic_music: None."
+    },
+    {
+      "shot": "S02",
+      "category": "dynamic_attr",
+      "source_file": "2_dynamic_attr.txt",
+      "source_line": 2,
+      "original_prompt": "A timelapse of a piece of metal gradually rusting when exposed to moisture.",
+      "h3_prompt": "integrated_multimodal_description: [Shot 1] A timelapse of a piece of metal gradually rusting when exposed to moisture. Preserve the original subjects, their exact attributes, quantities, spatial relations, actions, and interactions. A single continuous five-second shot; frame all relevant subjects clearly and keep their identities stable. Use coherent physical motion, realistic timing and a stable cinematic camera. Do not add events, characters, objects, cuts or visual overlays.\n\noverall_soundscape: Natural subtle environmental ambience appropriate to the described scene; no spoken dialogue.\n\nnon_diegetic_music: None."
+    },
+    {
+      "shot": "S03",
+      "category": "dynamic_attr",
+      "source_file": "2_dynamic_attr.txt",
+      "source_line": 3,
+      "original_prompt": "A timelapse of a caterpillar morphing into a butterfly inside a cocoon.",
+      "h3_prompt": "integrated_multimodal_description: [Shot 1] A timelapse of a caterpillar morphing into a butterfly inside a cocoon. Preserve the original subjects, their exact attributes, quantities, spatial relations, actions, and interactions. A single continuous five-second shot; frame all relevant subjects clearly and keep their identities stable. Use coherent physical motion, realistic timing and a stable cinematic camera. Do not add events, characters, objects, cuts or visual overlays.\n\noverall_soundscape: Natural subtle environmental ambience appropriate to the described scene; no spoken dialogue.\n\nnon_diegetic_music: None."
+    },
+    {
+      "shot": "S04",
+      "category": "dynamic_attr",
+      "source_file": "2_dynamic_attr.txt",
+      "source_line": 4,
+      "original_prompt": "A timelapse of a flower bud blooming into a full flower.",
+      "h3_prompt": "integrated_multimodal_description: [Shot 1] A timelapse of a flower bud blooming into a full flower. Preserve the original subjects, their exact attributes, quantities, spatial relations, actions, and interactions. A single continuous five-second shot; frame all relevant subjects clearly and keep their identities stable. Use coherent physical motion, realistic timing and a stable cinematic camera. Do not add events, characters, objects, cuts or visual overlays.\n\noverall_soundscape: Natural subtle environmental ambience appropriate to the described scene; no spoken dialogue.\n\nnon_diegetic_music: None."
+    },
+    {
+      "shot": "S05",
+      "category": "dynamic_attr",
+      "source_file": "2_dynamic_attr.txt",
+      "source_line": 5,
+      "original_prompt": "A timelapse of a snowman melting under the afternoon sun.",
+      "h3_prompt": "integrated_multimodal_description: [Shot 1] A timelapse of a snowman melting under the afternoon sun. Preserve the original subjects, their exact attributes, quantities, spatial relations, actions, and interactions. A single continuous five-second shot; frame all relevant subjects clearly and keep their identities stable. Use coherent physical motion, realistic timing and a stable cinematic camera. Do not add events, characters, objects, cuts or visual overlays.\n\noverall_soundscape: Natural subtle environmental ambience appropriate to the described scene; no spoken dialogue.\n\nnon_diegetic_music: None."
+    },
+    {
+      "shot": "S06",
+      "category": "dynamic_attr",
+      "source_file": "2_dynamic_attr.txt",
+      "source_line": 6,
+      "original_prompt": "A timelapse of an apple decaying over time.",
+      "h3_prompt": "integrated_multimodal_description: [Shot 1] A timelapse of an apple decaying over time. Preserve the original subjects, their exact attributes, quantities, spatial relations, actions, and interactions. A single continuous five-second shot; frame all relevant subjects clearly and keep their identities stable. Use coherent physical motion, realistic timing and a stable cinematic camera. Do not add events, characters, objects, cuts or visual overlays.\n\noverall_soundscape: Natural subtle environmental ambience appropriate to the described scene; no spoken dialogue.\n\nnon_diegetic_music: None."
+    },
+    {
+      "shot": "S07",
+      "category": "dynamic_attr",
+      "source_file": "2_dynamic_attr.txt",
+      "source_line": 7,
+      "original_prompt": "A timelapse of a wall painting fading due to prolonged sun exposure.",
+      "h3_prompt": "integrated_multimodal_description: [Shot 1] A timelapse of a wall painting fading due to prolonged sun exposure. Preserve the original subjects, their exact attributes, quantities, spatial relations, actions, and interactions. A single continuous five-second shot; frame all relevant subjects clearly and keep their identities stable. Use coherent physical motion, realistic timing and a stable cinematic camera. Do not add events, characters, objects, cuts or visual overlays.\n\noverall_soundscape: Natural subtle environmental ambience appropriate to the described scene; no spoken dialogue.\n\nnon_diegetic_music: None."
+    },
+    {
+      "shot": "S08",
+      "category": "dynamic_attr",
+      "source_file": "2_dynamic_attr.txt",
+      "source_line": 8,
+      "original_prompt": "A timelapse of ice cream melting during a hot day.",
+      "h3_prompt": "integrated_multimodal_description: [Shot 1] A timelapse of ice cream melting during a hot day. Preserve the original subjects, their exact attributes, quantities, spatial relations, actions, and interactions. A single continuous five-second shot; frame all relevant subjects clearly and keep their identities stable. Use coherent physical motion, realistic timing and a stable cinematic camera. Do not add events, characters, objects, cuts or visual overlays.\n\noverall_soundscape: Natural subtle environmental ambience appropriate to the described scene; no spoken dialogue.\n\nnon_diegetic_music: None."
+    },
+    {
+      "shot": "S09",
+      "category": "dynamic_attr",
+      "source_file": "2_dynamic_attr.txt",
+      "source_line": 9,
+      "original_prompt": "A timelapse of a candle burning down.",
+      "h3_prompt": "integrated_multimodal_description: [Shot 1] A timelapse of a candle burning down. Preserve the original subjects, their exact attributes, quantities, spatial relations, actions, and interactions. A single continuous five-second shot; frame all relevant subjects clearly and keep their identities stable. Use coherent physical motion, realistic timing and a stable cinematic camera. Do not add events, characters, objects, cuts or visual overlays.\n\noverall_soundscape: Natural subtle environmental ambience appropriate to the described scene; no spoken dialogue.\n\nnon_diegetic_music: None."
+    },
+    {
+      "shot": "S10",
+      "category": "dynamic_attr",
+      "source_file": "2_dynamic_attr.txt",
+      "source_line": 10,
+      "original_prompt": "A timelapse of a puddle drying up and disappearing on a hot day.",
+      "h3_prompt": "integrated_multimodal_description: [Shot 1] A timelapse of a puddle drying up and disappearing on a hot day. Preserve the original subjects, their exact attributes, quantities, spatial relations, actions, and interactions. A single continuous five-second shot; frame all relevant subjects clearly and keep their identities stable. Use coherent physical motion, realistic timing and a stable cinematic camera. Do not add events, characters, objects, cuts or visual overlays.\n\noverall_soundscape: Natural subtle environmental ambience appropriate to the described scene; no spoken dialogue.\n\nnon_diegetic_music: None."
+    },
+    {
+      "shot": "S11",
+      "category": "action_binding",
+      "source_file": "5_action_binding.txt",
+      "source_line": 1,
+      "original_prompt": "A dog runs through a field while a cat climbs a tree",
+      "h3_prompt": "integrated_multimodal_description: [Shot 1] A dog runs through a field while a cat climbs a tree Preserve the original subjects, their exact attributes, quantities, spatial relations, actions, and interactions. A single continuous five-second shot; frame all relevant subjects clearly and keep their identities stable. Use coherent physical motion, realistic timing and a stable cinematic camera. Do not add events, characters, objects, cuts or visual overlays.\n\noverall_soundscape: Natural subtle environmental ambience appropriate to the described scene; no spoken dialogue.\n\nnon_diegetic_music: None."
+    },
+    {
+      "shot": "S12",
+      "category": "action_binding",
+      "source_file": "5_action_binding.txt",
+      "source_line": 2,
+      "original_prompt": "A fish swims gracefully in a tank as a horse gallops outside",
+      "h3_prompt": "integrated_multimodal_description: [Shot 1] A fish swims gracefully in a tank as a horse gallops outside Preserve the original subjects, their exact attributes, quantities, spatial relations, actions, and interactions. A single continuous five-second shot; frame all relevant subjects clearly and keep their identities stable. Use coherent physical motion, realistic timing and a stable cinematic camera. Do not add events, characters, objects, cuts or visual overlays.\n\noverall_soundscape: Natural subtle environmental ambience appropriate to the described scene; no spoken dialogue.\n\nnon_diegetic_music: None."
+    },
+    {
+      "shot": "S13",
+      "category": "action_binding",
+      "source_file": "5_action_binding.txt",
+      "source_line": 3,
+      "original_prompt": "An elephant sprays water with its trunk, a lion sitting nearby",
+      "h3_prompt": "integrated_multimodal_description: [Shot 1] An elephant sprays water with its trunk, a lion sitting nearby Preserve the original subjects, their exact attributes, quantities, spatial relations, actions, and interactions. A single continuous five-second shot; frame all relevant subjects clearly and keep their identities stable. Use coherent physical motion, realistic timing and a stable cinematic camera. Do not add events, characters, objects, cuts or visual overlays.\n\noverall_soundscape: Natural subtle environmental ambience appropriate to the described scene; no spoken dialogue.\n\nnon_diegetic_music: None."
+    },
+    {
+      "shot": "S14",
+      "category": "action_binding",
+      "source_file": "5_action_binding.txt",
+      "source_line": 4,
+      "original_prompt": "A panda eats bamboo while a monkey swings from branch to branch",
+      "h3_prompt": "integrated_multimodal_description: [Shot 1] A panda eats bamboo while a monkey swings from branch to branch Preserve the original subjects, their exact attributes, quantities, spatial relations, actions, and interactions. A single continuous five-second shot; frame all relevant subjects clearly and keep their identities stable. Use coherent physical motion, realistic timing and a stable cinematic camera. Do not add events, characters, objects, cuts or visual overlays.\n\noverall_soundscape: Natural subtle environmental ambience appropriate to the described scene; no spoken dialogue.\n\nnon_diegetic_music: None."
+    },
+    {
+      "shot": "S15",
+      "category": "action_binding",
+      "source_file": "5_action_binding.txt",
+      "source_line": 5,
+      "original_prompt": "A deer grazes in the meadow as a rabbit hops by",
+      "h3_prompt": "integrated_multimodal_description: [Shot 1] A deer grazes in the meadow as a rabbit hops by Preserve the original subjects, their exact attributes, quantities, spatial relations, actions, and interactions. A single continuous five-second shot; frame all relevant subjects clearly and keep their identities stable. Use coherent physical motion, realistic timing and a stable cinematic camera. Do not add events, characters, objects, cuts or visual overlays.\n\noverall_soundscape: Natural subtle environmental ambience appropriate to the described scene; no spoken dialogue.\n\nnon_diegetic_music: None."
+    },
+    {
+      "shot": "S16",
+      "category": "action_binding",
+      "source_file": "5_action_binding.txt",
+      "source_line": 6,
+      "original_prompt": "A kangaroo bounds across the plain and a cow grazes",
+      "h3_prompt": "integrated_multimodal_description: [Shot 1] A kangaroo bounds across the plain and a cow grazes Preserve the original subjects, their exact attributes, quantities, spatial relations, actions, and interactions. A single continuous five-second shot; frame all relevant subjects clearly and keep their identities stable. Use coherent physical motion, realistic timing and a stable cinematic camera. Do not add events, characters, objects, cuts or visual overlays.\n\noverall_soundscape: Natural subtle environmental ambience appropriate to the described scene; no spoken dialogue.\n\nnon_diegetic_music: None."
+    },
+    {
+      "shot": "S17",
+      "category": "action_binding",
+      "source_file": "5_action_binding.txt",
+      "source_line": 7,
+      "original_prompt": "A chicken pecks at the ground, a bee flies overhead",
+      "h3_prompt": "integrated_multimodal_description: [Shot 1] A chicken pecks at the ground, a bee flies overhead Preserve the original subjects, their exact attributes, quantities, spatial relations, actions, and interactions. A single continuous five-second shot; frame all relevant subjects clearly and keep their identities stable. Use coherent physical motion, realistic timing and a stable cinematic camera. Do not add events, characters, objects, cuts or visual overlays.\n\noverall_soundscape: Natural subtle environmental ambience appropriate to the described scene; no spoken dialogue.\n\nnon_diegetic_music: None."
+    },
+    {
+      "shot": "S18",
+      "category": "action_binding",
+      "source_file": "5_action_binding.txt",
+      "source_line": 8,
+      "original_prompt": "A snail crosses the path as a butterfly flutters above",
+      "h3_prompt": "integrated_multimodal_description: [Shot 1] A snail crosses the path as a butterfly flutters above Preserve the original subjects, their exact attributes, quantities, spatial relations, actions, and interactions. A single continuous five-second shot; frame all relevant subjects clearly and keep their identities stable. Use coherent physical motion, realistic timing and a stable cinematic camera. Do not add events, characters, objects, cuts or visual overlays.\n\noverall_soundscape: Natural subtle environmental ambience appropriate to the described scene; no spoken dialogue.\n\nnon_diegetic_music: None."
+    },
+    {
+      "shot": "S19",
+      "category": "action_binding",
+      "source_file": "5_action_binding.txt",
+      "source_line": 9,
+      "original_prompt": "A penguin waddles on the ice, a camel treks by",
+      "h3_prompt": "integrated_multimodal_description: [Shot 1] A penguin waddles on the ice, a camel treks by Preserve the original subjects, their exact attributes, quantities, spatial relations, actions, and interactions. A single continuous five-second shot; frame all relevant subjects clearly and keep their identities stable. Use coherent physical motion, realistic timing and a stable cinematic camera. Do not add events, characters, objects, cuts or visual overlays.\n\noverall_soundscape: Natural subtle environmental ambience appropriate to the described scene; no spoken dialogue.\n\nnon_diegetic_music: None."
+    },
+    {
+      "shot": "S20",
+      "category": "action_binding",
+      "source_file": "5_action_binding.txt",
+      "source_line": 10,
+      "original_prompt": "A squirrel scurries up a tree as a bat flies out from the leaves",
+      "h3_prompt": "integrated_multimodal_description: [Shot 1] A squirrel scurries up a tree as a bat flies out from the leaves Preserve the original subjects, their exact attributes, quantities, spatial relations, actions, and interactions. A single continuous five-second shot; frame all relevant subjects clearly and keep their identities stable. Use coherent physical motion, realistic timing and a stable cinematic camera. Do not add events, characters, objects, cuts or visual overlays.\n\noverall_soundscape: Natural subtle environmental ambience appropriate to the described scene; no spoken dialogue.\n\nnon_diegetic_music: None."
+    },
+    {
+      "shot": "S21",
+      "category": "interaction",
+      "source_file": "6_interaction.txt",
+      "source_line": 1,
+      "original_prompt": "Two cars collide at an intersection",
+      "h3_prompt": "integrated_multimodal_description: [Shot 1] Two cars collide at an intersection Preserve the original subjects, their exact attributes, quantities, spatial relations, actions, and interactions. A single continuous five-second shot; frame all relevant subjects clearly and keep their identities stable. Use coherent physical motion, realistic timing and a stable cinematic camera. Do not add events, characters, objects, cuts or visual overlays.\n\noverall_soundscape: Natural subtle environmental ambience appropriate to the described scene; no spoken dialogue.\n\nnon_diegetic_music: None."
+    },
+    {
+      "shot": "S22",
+      "category": "interaction",
+      "source_file": "6_interaction.txt",
+      "source_line": 2,
+      "original_prompt": "Football players bump into each other during a game",
+      "h3_prompt": "integrated_multimodal_description: [Shot 1] Football players bump into each other during a game Preserve the original subjects, their exact attributes, quantities, spatial relations, actions, and interactions. A single continuous five-second shot; frame all relevant subjects clearly and keep their identities stable. Use coherent physical motion, realistic timing and a stable cinematic camera. Do not add events, characters, objects, cuts or visual overlays.\n\noverall_soundscape: Natural subtle environmental ambience appropriate to the described scene; no spoken dialogue.\n\nnon_diegetic_music: None."
+    },
+    {
+      "shot": "S23",
+      "category": "interaction",
+      "source_file": "6_interaction.txt",
+      "source_line": 3,
+      "original_prompt": "A swimmer dives into a pool, creating ripples.",
+      "h3_prompt": "integrated_multimodal_description: [Shot 1] A swimmer dives into a pool, creating ripples. Preserve the original subjects, their exact attributes, quantities, spatial relations, actions, and interactions. A single continuous five-second shot; frame all relevant subjects clearly and keep their identities stable. Use coherent physical motion, realistic timing and a stable cinematic camera. Do not add events, characters, objects, cuts or visual overlays.\n\noverall_soundscape: Natural subtle environmental ambience appropriate to the described scene; no spoken dialogue.\n\nnon_diegetic_music: None."
+    },
+    {
+      "shot": "S24",
+      "category": "interaction",
+      "source_file": "6_interaction.txt",
+      "source_line": 4,
+      "original_prompt": "Iron presses down on wrinkled fabric",
+      "h3_prompt": "integrated_multimodal_description: [Shot 1] Iron presses down on wrinkled fabric Preserve the original subjects, their exact attributes, quantities, spatial relations, actions, and interactions. A single continuous five-second shot; frame all relevant subjects clearly and keep their identities stable. Use coherent physical motion, realistic timing and a stable cinematic camera. Do not add events, characters, objects, cuts or visual overlays.\n\noverall_soundscape: Natural subtle environmental ambience appropriate to the described scene; no spoken dialogue.\n\nnon_diegetic_music: None."
+    },
+    {
+      "shot": "S25",
+      "category": "interaction",
+      "source_file": "6_interaction.txt",
+      "source_line": 5,
+      "original_prompt": "Drum skin vibrates when struck by a drumstick",
+      "h3_prompt": "integrated_multimodal_description: [Shot 1] Drum skin vibrates when struck by a drumstick Preserve the original subjects, their exact attributes, quantities, spatial relations, actions, and interactions. A single continuous five-second shot; frame all relevant subjects clearly and keep their identities stable. Use coherent physical motion, realistic timing and a stable cinematic camera. Do not add events, characters, objects, cuts or visual overlays.\n\noverall_soundscape: Natural subtle environmental ambience appropriate to the described scene; no spoken dialogue.\n\nnon_diegetic_music: None."
+    },
+    {
+      "shot": "S26",
+      "category": "interaction",
+      "source_file": "6_interaction.txt",
+      "source_line": 6,
+      "original_prompt": "A horse jumps over a fence",
+      "h3_prompt": "integrated_multimodal_description: [Shot 1] A horse jumps over a fence Preserve the original subjects, their exact attributes, quantities, spatial relations, actions, and interactions. A single continuous five-second shot; frame all relevant subjects clearly and keep their identities stable. Use coherent physical motion, realistic timing and a stable cinematic camera. Do not add events, characters, objects, cuts or visual overlays.\n\noverall_soundscape: Natural subtle environmental ambience appropriate to the described scene; no spoken dialogue.\n\nnon_diegetic_music: None."
+    },
+    {
+      "shot": "S27",
+      "category": "interaction",
+      "source_file": "6_interaction.txt",
+      "source_line": 7,
+      "original_prompt": "Raindrops hit a tin roof",
+      "h3_prompt": "integrated_multimodal_description: [Shot 1] Raindrops hit a tin roof Preserve the original subjects, their exact attributes, quantities, spatial relations, actions, and interactions. A single continuous five-second shot; frame all relevant subjects clearly and keep their identities stable. Use coherent physical motion, realistic timing and a stable cinematic camera. Do not add events, characters, objects, cuts or visual overlays.\n\noverall_soundscape: Natural subtle environmental ambience appropriate to the described scene; no spoken dialogue.\n\nnon_diegetic_music: None."
+    },
+    {
+      "shot": "S28",
+      "category": "interaction",
+      "source_file": "6_interaction.txt",
+      "source_line": 8,
+      "original_prompt": "Rope tugs against a boat",
+      "h3_prompt": "integrated_multimodal_description: [Shot 1] Rope tugs against a boat Preserve the original subjects, their exact attributes, quantities, spatial relations, actions, and interactions. A single continuous five-second shot; frame all relevant subjects clearly and keep their identities stable. Use coherent physical motion, realistic timing and a stable cinematic camera. Do not add events, characters, objects, cuts or visual overlays.\n\noverall_soundscape: Natural subtle environmental ambience appropriate to the described scene; no spoken dialogue.\n\nnon_diegetic_music: None."
+    },
+    {
+      "shot": "S29",
+      "category": "interaction",
+      "source_file": "6_interaction.txt",
+      "source_line": 9,
+      "original_prompt": "Car brakes abruptly, stopping at a red light",
+      "h3_prompt": "integrated_multimodal_description: [Shot 1] Car brakes abruptly, stopping at a red light Preserve the original subjects, their exact attributes, quantities, spatial relations, actions, and interactions. A single continuous five-second shot; frame all relevant subjects clearly and keep their identities stable. Use coherent physical motion, realistic timing and a stable cinematic camera. Do not add events, characters, objects, cuts or visual overlays.\n\noverall_soundscape: Natural subtle environmental ambience appropriate to the described scene; no spoken dialogue.\n\nnon_diegetic_music: None."
+    },
+    {
+      "shot": "S30",
+      "category": "interaction",
+      "source_file": "6_interaction.txt",
+      "source_line": 10,
+      "original_prompt": "Bird lands on a branch causing it to dip",
+      "h3_prompt": "integrated_multimodal_description: [Shot 1] Bird lands on a branch causing it to dip Preserve the original subjects, their exact attributes, quantities, spatial relations, actions, and interactions. A single continuous five-second shot; frame all relevant subjects clearly and keep their identities stable. Use coherent physical motion, realistic timing and a stable cinematic camera. Do not add events, characters, objects, cuts or visual overlays.\n\noverall_soundscape: Natural subtle environmental ambience appropriate to the described scene; no spoken dialogue.\n\nnon_diegetic_music: None."
+    }
+  ]
+}

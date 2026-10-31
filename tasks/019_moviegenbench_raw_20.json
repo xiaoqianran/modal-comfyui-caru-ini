@@ -1,0 +1,172 @@
+{
+  "name": "019_moviegenbench_raw_20",
+  "steps": [
+    {
+      "id": "video",
+      "workflow": "workflows/010-minimax-h3-bf16-b200plus-suite/001-minimax-h3-fl2va-bf16/pika_h3_flex_t2v_api.json",
+      "endpoint": "pika",
+      "foreach": [
+        {
+          "name": "S01",
+          "set": {
+            "140:131.prompt": "An extreme close-up of an gray-haired man with a beard in his 60s, he is deep in thought pondering the history of the universe as he sits at a cafe in Paris, his eyes focus on people offscreen as they walk as he sits mostly motionless, he is dressed in a wool coat suit coat with a button-down shirt , he wears a brown beret and glasses and has a very professorial appearance, and the end he offers a subtle closed-mouth smile as if he found the answer to the mystery of life, the lighting is very cinematic with the golden light and the Parisian streets and city in the background, depth of field, cinematic 35mm film.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/019_moviegenbench_raw_S01"
+          }
+        },
+        {
+          "name": "S02",
+          "set": {
+            "140:131.prompt": "A close up portrait of a woman lit by the side, the camera pulls back.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/019_moviegenbench_raw_S02"
+          }
+        },
+        {
+          "name": "S03",
+          "set": {
+            "140:131.prompt": "The person's cheeks flushed with embarrassment as he tripped in public.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/019_moviegenbench_raw_S03"
+          }
+        },
+        {
+          "name": "S04",
+          "set": {
+            "140:131.prompt": "A cinematic wide portrait of a man with his face lit by the glow of a TV.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/019_moviegenbench_raw_S04"
+          }
+        },
+        {
+          "name": "S05",
+          "set": {
+            "140:131.prompt": "A grandmother with neatly combed grey hair stands behind a colorful birthday cake with numerous candles at a wood dining room table, expression is one of pure joy and happiness, with a happy glow in her eye. She leans forward and blows out the candles with a gentle puff, the cake has pink frosting and sprinkles and the candles cease to flicker, the grandmother wears a light blue blouse adorned with floral patterns, several happy friends and family sitting at the table can be seen celebrating, out of focus. The scene is beautifully captured, cinematic, showing a 3/4 view of the grandmother and the dining room. Warm color tones and soft lighting enhance the mood.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/019_moviegenbench_raw_S05"
+          }
+        },
+        {
+          "name": "S06",
+          "set": {
+            "140:131.prompt": "A singer is performing on stage, their mouth open wide as they hit a high note.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/019_moviegenbench_raw_S06"
+          }
+        },
+        {
+          "name": "S07",
+          "set": {
+            "140:131.prompt": "A Chinese boy wearing glasses enjoys a delicious cheeseburger with his eyes closed in a fast food restaurant",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/019_moviegenbench_raw_S07"
+          }
+        },
+        {
+          "name": "S08",
+          "set": {
+            "140:131.prompt": "A Chinese man sits at a table and eats noodles with chopsticks",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/019_moviegenbench_raw_S08"
+          }
+        },
+        {
+          "name": "S09",
+          "set": {
+            "140:131.prompt": "Zoom in shot to the face of a young woman sitting on a bench in the middle of an empty school gym.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/019_moviegenbench_raw_S09"
+          }
+        },
+        {
+          "name": "S10",
+          "set": {
+            "140:131.prompt": "The camera rotates around a large stack of vintage televisions all showing different programs — 1950s sci-fi movies, horror movies, news, static, a 1970s sitcom, etc, set inside a large New York museum gallery.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/019_moviegenbench_raw_S10"
+          }
+        },
+        {
+          "name": "S11",
+          "set": {
+            "140:131.prompt": "The camera follows behind a white vintage SUV with a black roof rack as it speeds up a steep dirt road surrounded by pine trees on a steep mountain slope, dust kicks up from it’s tires, the sunlight shines on the SUV as it speeds along the dirt road, casting a warm glow over the scene. The dirt road curves gently into the distance, with no other cars or vehicles in sight. The trees on either side of the road are redwoods, with patches of greenery scattered throughout. The car is seen from the rear following the curve with ease, making it seem as if it is on a rugged drive through the rugged terrain. The dirt road itself is surrounded by steep hills and mountains, with a clear blue sky above with wispy clouds.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/019_moviegenbench_raw_S11"
+          }
+        },
+        {
+          "name": "S12",
+          "set": {
+            "140:131.prompt": "A close up of an older man in a warehouse, camera zoom out.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/019_moviegenbench_raw_S12"
+          }
+        },
+        {
+          "name": "S13",
+          "set": {
+            "140:131.prompt": "Drone view of waves crashing against the rugged cliffs along Big Sur’s garay point beach. The crashing blue waters create white-tipped waves, while the golden light of the setting sun illuminates the rocky shore. A small island with a lighthouse sits in the distance, and green shrubbery covers the cliff’s edge. The steep drop from the road down to the beach is a dramatic feat, with the cliff’s edges jutting out over the sea. This is a view that captures the raw beauty of the coast and the rugged landscape of the Pacific Coast Highway.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/019_moviegenbench_raw_S13"
+          }
+        },
+        {
+          "name": "S14",
+          "set": {
+            "140:131.prompt": "An adorable happy otter confidently stands on a surfboard wearing a yellow lifejacket, riding along turquoise tropical waters near lush tropical islands, 3D digital render art style.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/019_moviegenbench_raw_S14"
+          }
+        },
+        {
+          "name": "S15",
+          "set": {
+            "140:131.prompt": "Photorealistic closeup video of two pirate ships battling each other as they sail inside a cup of coffee.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/019_moviegenbench_raw_S15"
+          }
+        },
+        {
+          "name": "S16",
+          "set": {
+            "140:131.prompt": "Carefully pouring the milk into the cup, the milk flowed smoothly and the cup was gradually filled with a milky white color",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/019_moviegenbench_raw_S16"
+          }
+        },
+        {
+          "name": "S17",
+          "set": {
+            "140:131.prompt": "A cartoon kangaroo disco dances.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/019_moviegenbench_raw_S17"
+          }
+        },
+        {
+          "name": "S18",
+          "set": {
+            "140:131.prompt": "A flock of paper airplanes flutters through a dense jungle, weaving around trees as if they were migrating birds.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/019_moviegenbench_raw_S18"
+          }
+        },
+        {
+          "name": "S19",
+          "set": {
+            "140:131.prompt": "New York City submerged like Atlantis. Fish, whales, sea turtles and sharks swim through the streets of New York.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/019_moviegenbench_raw_S19"
+          }
+        },
+        {
+          "name": "S20",
+          "set": {
+            "140:131.prompt": "A litter of golden retriever puppies playing in the snow. Their heads pop out of the snow, covered in.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/019_moviegenbench_raw_S20"
+          }
+        }
+      ]
+    }
+  ]
+}

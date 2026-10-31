@@ -1,0 +1,52 @@
+{
+  "name": "012_vga_aesthetic_h3_5s_batch_01",
+  "steps": [
+    {
+      "id": "video",
+      "workflow": "workflows/010-minimax-h3-bf16-b200plus-suite/001-minimax-h3-fl2va-bf16/pika_h3_flex_t2v_api.json",
+      "endpoint": "pika",
+      "foreach": [
+        {
+          "name": "A002",
+          "set": {
+            "140:131.prompt": "A grand panoramic view of an ancient palace gradually zooms in to a close-up of the carved windows and doors, showcasing both the overall grandeur and the intricate details of the architecture, with rich variations in framing that tell a story.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/012_vga_aesthetic_A002"
+          }
+        },
+        {
+          "name": "A012",
+          "set": {
+            "140:131.prompt": "The composition of books stacked in the study, with low-key lighting to emphasize a tranquil atmosphere, creates a sense of depth in the picture.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/012_vga_aesthetic_A012"
+          }
+        },
+        {
+          "name": "A022",
+          "set": {
+            "140:131.prompt": "From a wide shot of the crowd, the focus shifts to a close-up of a person's joyful expression, highlighting the emotional impact.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/012_vga_aesthetic_A022"
+          }
+        },
+        {
+          "name": "A032",
+          "set": {
+            "140:131.prompt": "Misty bamboo forest, with a shallow depth of field highlighting the bamboo leaves and low contrast enhancing the hazy beauty.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/012_vga_aesthetic_A032"
+          }
+        },
+        {
+          "name": "A042",
+          "set": {
+            "140:131.prompt": "Close up of eye makeup, depth of field makes eyelashes clear, delicate and charming makeup.",
+            "140:133.value": 5,
+            "92.filename_prefix": "video/012_vga_aesthetic_A042"
+          }
+        }
+      ]
+    }
+  ]
+}
