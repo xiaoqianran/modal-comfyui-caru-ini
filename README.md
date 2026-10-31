@@ -14,6 +14,11 @@ This project builds on [caru-ini/modal-comfyui](https://github.com/caru-ini/moda
 
 > 本项目是社区 Fork，并非原作者的官方发布。部分工作流依赖第三方自定义节点和云端凭据；部署前请自行核对依赖与权限。
 
+## 命名约定
+
+- `tasks/` 批量任务：参见 [TASK_NAMING.md](TASK_NAMING.md)，新任务统一以三位序号开头，日期放在编号之后。
+- `workflows/` 模型工作流：参见 [WORKFLOW_NAMING.md](WORKFLOW_NAMING.md)，按工作流来源分类。两套规则不要混用。
+
 ## Prerequisites
 
 - A Modal account
