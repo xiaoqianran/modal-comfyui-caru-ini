@@ -413,7 +413,7 @@ def download_models():
 # ============================================================================
 # 8. ComfyUI 生命周期：启动 Web 服务、恢复快照、执行退出清理
 # ============================================================================
-@modal.concurrent(max_inputs=10)
+@modal.concurrent(max_inputs=100)
 class ComfyUI:
     @modal.enter(snap=True)
     def start_checkpoint(self):
