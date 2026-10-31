@@ -5,6 +5,7 @@ import os
 import re
 import shlex
 import subprocess
+import sys
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -41,6 +42,27 @@ comfy_plugins = plugin_config.get("comfy_plugins", [])
 comfy_plugins_ext = plugin_config.get("comfy_plugins_ext", [])
 # Workflow files are intentionally not validated at module import time:
 # Modal may import the module in a remote container where workflow mounts differ.
+
+
+def _deploy_model_preflight():
+    """Fail a direct Modal CLI deploy before GPU allocation if weights are missing."""
+    # Modal imports the module on remote workers too; only the local CLI deploy
+    # may perform this networked, CPU-only preparation.
+    args = sys.argv[1:]
+    if not modal.is_local() or not args or args[0] != "deploy":
+        return
+    if not any(Path(arg).name == "comfyui.py" for arg in args[1:]):
+        return
+    env = {**os.environ, "WORKFLOW": WORKFLOW}
+    for flag in ("--ensure", "--check-only"):
+        print(f"MODEL PREFLIGHT: {WORKFLOW} {flag}", flush=True)
+        subprocess.run(
+            [sys.executable, "-m", "modal", "run", "download-models.py", flag],
+            cwd=root_dir, env=env, check=True,
+        )
+
+
+_deploy_model_preflight()
 
 COMFY_MODELS_ROOT = Path("/root/comfy/ComfyUI/models")
 
@@ -396,8 +418,17 @@ class ComfyUI:
     @modal.enter(snap=True)
     def start_checkpoint(self):
         # Reload the shared model Volume before resolving newly committed weights.
-        vol.reload()
-        link_cached_models()
+        import time
+        for attempt in range(3):
+            try:
+                vol.reload()
+                link_cached_models()
+                break
+            except RuntimeError as exc:
+                if "Model not cached:" not in str(exc) or attempt == 2:
+                    raise
+                print(f"Model Volume not ready ({attempt + 1}/3): {exc}", flush=True)
+                time.sleep(5)
         self.procs = []
         for index, port in enumerate(COMFY_PORTS, start=1):
             output_dir = f"/outputs/{WORKFLOW}/instance-{index}" if DUAL_COMFYUI else f"/outputs/{WORKFLOW}"

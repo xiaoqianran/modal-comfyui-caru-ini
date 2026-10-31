@@ -30,7 +30,6 @@ if errorlevel 1 (
 echo Deploying Modal ComfyUI using workflow: %WORKFLOW%
 echo GPU comes from workflows\%WORKFLOW%\models.json unless MODAL_GPU overrides it.
 set "WORKFLOW=%WORKFLOW%"
-uv run modal run download-models.py --ensure
-if errorlevel 1 exit /b 1
+rem comfyui.py performs the same CPU-only preflight for direct Modal deploys.
 uv run modal deploy comfyui.py
 exit /b %ERRORLEVEL%

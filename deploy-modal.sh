@@ -22,5 +22,5 @@ if ! find "workflows/$WORKFLOW" -type f -name '*.json' ! -name 'models.json' ! -
 fi
 
 echo "Deploying Modal ComfyUI workflow: $WORKFLOW"
-uv run modal run download-models.py --ensure
+# comfyui.py performs the same CPU-only preflight for direct Modal deploys.
 uv run modal deploy comfyui.py
