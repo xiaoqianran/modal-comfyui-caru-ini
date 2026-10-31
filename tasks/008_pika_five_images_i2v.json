@@ -1,0 +1,62 @@
+{
+  "name": "008_pika_five_images_i2v",
+  "steps": [
+    {
+      "id": "video",
+      "workflow": "workflows/001-minimax-h3-fl2va-bf16/pika_h3_flex_fl2va_api.json",
+      "endpoint": "pika",
+      "foreach": [
+        {
+          "set": {
+            "image_input.image": "@inputs/storyboard_16/01.png",
+            "140:131.prompt": "Preserve first frame exactly. Cinematic shot. Gentle wind stirs hair, garments and foliage; subject breathes and shifts weight naturally. Slow lateral camera drift. No cuts, no distortions, no added objects, no subtitles. Natural ambient sound, no music.",
+            "92.filename_prefix": "video/008_pika_i2v_01",
+            "140:131.width": 1280,
+            "140:131.height": 720
+          },
+          "name": "01"
+        },
+        {
+          "set": {
+            "image_input.image": "@inputs/storyboard_16/02.png",
+            "140:131.prompt": "Begin from exact reference image. Natural subtle character movement and fabric physics, a slow smooth dolly forward, realistic depth and light changes. Continuous coherent shot, maintain all identities and composition. No cuts or text. Ambient sound only.",
+            "92.filename_prefix": "video/008_pika_i2v_02",
+            "140:131.width": 1280,
+            "140:131.height": 720
+          },
+          "name": "02"
+        },
+        {
+          "set": {
+            "image_input.image": "@inputs/storyboard_16/03.png",
+            "140:131.prompt": "Match original image precisely. The subject gently turns or shifts posture while background elements move with soft wind. Slow cinematic tracking shot, realistic anatomy and stable environment. No morphing, no camera-facing posing, no cuts.",
+            "92.filename_prefix": "video/008_pika_i2v_03",
+            "140:131.width": 1280,
+            "140:131.height": 720
+          },
+          "name": "03"
+        },
+        {
+          "set": {
+            "image_input.image": "@inputs/storyboard_16/04.png",
+            "140:131.prompt": "Use supplied image as exact opening frame. Small realistic movements in hands, clothing and surrounding atmosphere. Smooth restrained camera arc, stable subject proportions and lighting, natural cinematic motion, one uninterrupted take.",
+            "92.filename_prefix": "video/008_pika_i2v_04",
+            "140:131.width": 1280,
+            "140:131.height": 720
+          },
+          "name": "04"
+        },
+        {
+          "set": {
+            "image_input.image": "@inputs/storyboard_16/05.png",
+            "140:131.prompt": "Keep all original visual details. Gentle progression of action, realistic atmospheric motion and subtle depth parallax, smooth slow camera pullback. Avoid exaggerated motion, warping, changes of identity, text or scene transitions.",
+            "92.filename_prefix": "video/008_pika_i2v_05",
+            "140:131.width": 1280,
+            "140:131.height": 720
+          },
+          "name": "05"
+        }
+      ]
+    }
+  ]
+}

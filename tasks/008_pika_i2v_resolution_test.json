@@ -1,0 +1,22 @@
+{
+  "name": "008_pika_i2v_resolution_test",
+  "steps": [
+    {
+      "id": "video",
+      "workflow": "workflows/001-minimax-h3-fl2va-bf16/pika_h3_flex_fl2va_api.json",
+      "endpoint": "pika",
+      "foreach": [
+        {
+          "set": {
+            "image_input.image": "@inputs/storyboard_16/01.png",
+            "140:131.prompt": "Preserve first frame exactly. Cinematic shot. Gentle wind stirs hair, garments and foliage; subject breathes and shifts weight naturally. Slow lateral camera drift. No cuts, no distortions, no added objects, no subtitles. Natural ambient sound, no music.",
+            "92.filename_prefix": "video/008_pika_i2v_fix_test",
+            "140:131.width": 1280,
+            "140:131.height": 704
+          },
+          "name": "01"
+        }
+      ]
+    }
+  ]
+}
