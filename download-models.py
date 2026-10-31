@@ -106,6 +106,39 @@ def fetch_manifest(config_json: str) -> list[dict]:
     return items
 
 
+@app.function(image=image, volumes={CACHE_DIR: volume}, timeout=3600, cpu=2.0, memory=4096)
+def check_cache(items: list[dict]) -> list[dict]:
+    """Return only missing or invalid files from the shared Volume cache."""
+    from huggingface_hub import hf_hub_download
+
+    volume.reload()
+    missing = []
+    for item in items:
+        if item["kind"] == "hf":
+            try:
+                cached = hf_hub_download(
+                    repo_id=item["repo_id"], filename=item["filename"],
+                    cache_dir=CACHE_DIR, revision=item["revision"],
+                    local_files_only=True)
+                size = int(item.get("size") or 0)
+                if not Path(cached).is_file() or (size and Path(cached).stat().st_size != size):
+                    raise ValueError("cached model size mismatch")
+            except Exception as exc:
+                print("CACHE MISS", item["repo_id"], item["filename"], str(exc)[:160], flush=True)
+                missing.append(item)
+                continue
+            print("CACHE HIT", item["repo_id"], item["filename"], flush=True)
+        else:
+            target = Path(CACHE_DIR) / item["filename"]
+            size = int(item.get("size") or 0)
+            if not target.is_file() or not target.stat().st_size or (size and target.stat().st_size != size):
+                print("CACHE MISS external", item["filename"], flush=True)
+                missing.append(item)
+            else:
+                print("CACHE HIT external", item["filename"], flush=True)
+    return missing
+
+
 # 与 comfyui.py 下载函数相同的默认资源：CPU=4 / MEMORY=4096 MiB。
 @app.function(image=image, volumes={CACHE_DIR: volume}, timeout=86400, secrets=[hf_secret], cpu=4.0, memory=4096)
 def download_shard(payload: dict) -> dict:
@@ -293,16 +326,18 @@ def main():
         sort_keys=True)
     run_id = hashlib.sha256(fingerprint.encode()).hexdigest()[:12]
     print(f"Run id: {run_id}")
+    missing_items = check_cache.remote(items)
     workers = _env_int("MODEL_DOWNLOAD_WORKERS", 2, 1, 8)
-    total = sum(int(it.get("size") or 0) for it in items)
+    total = sum(int(it.get("size") or 0) for it in missing_items)
+    print(f"Cache: {len(items) - len(missing_items)} hit(s), {len(missing_items)} missing")
     target_gb = _env_int("MODEL_DOWNLOAD_SHARD_TARGET_GB", 16, 1, 1024)
     forced = _env_int("MODEL_DOWNLOAD_SHARDS", 0, 0, MAX_SHARDS)
     if forced:
         target = -(-total // forced) if total else 0
-        shards = pack_shards(items, target, forced)
+        shards = pack_shards(missing_items, target, forced)
     else:
-        shards = pack_shards(items, target_gb * 1_000_000_000, MAX_SHARDS)
-    print(f"Models: {len(items)} files, {total / 1e9:.1f} GB total, {len(shards)} shard(s)")
+        shards = pack_shards(missing_items, target_gb * 1_000_000_000, MAX_SHARDS)
+    print(f"Models: {len(items)} requested, {len(missing_items)} to download, {total / 1e9:.1f} GB, {len(shards)} shard(s)")
     payloads = []
     for i, shard in enumerate(shards):
         shard_bytes = sum(int(it.get("size") or 0) for it in shard)
@@ -327,6 +362,6 @@ def main():
         raise SystemExit("Merge verification failed; see lines above.")
 
     wall = time.time() - t0
-    print(f"Downloaded: {len(items)} files, {total / 1e9:.1f} GB in {wall:.1f}s "
+    print(f"Downloaded: {len(missing_items)} files, {total / 1e9:.1f} GB in {wall:.1f}s "
           f"({total / 1e6 / max(wall, 0.1):.0f} MB/s aggregate) across {len(shards)} container(s)")
     print("Model cache Volume: modal-comfyui-models-v2 (Volumes v2)")
