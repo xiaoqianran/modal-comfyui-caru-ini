@@ -284,6 +284,13 @@ image = image.add_local_dir(
     copy=True,
 )
 
+# Import signed R2 attachments directly in ComfyUI without routing via PC2.
+image = image.add_local_dir(
+    root_dir / "vendor_nodes" / "r2_input",
+    "/root/comfy/ComfyUI/custom_nodes/r2_input",
+    copy=True,
+)
+
 
 
 # ============================================================================
@@ -372,7 +379,10 @@ def download_models():
         "/outputs": output_volume,
         "/r2-previews": preview_mount,
     },
-    secrets=[modal.Secret.from_name("huggingface-s3")],
+    secrets=[
+        modal.Secret.from_name("huggingface-s3"),
+        modal.Secret.from_name("r2-import-auth"),
+    ],
     # 所有已部署的工作流保持一个 GPU 容器常驻，不因空闲缩容至零。
     min_containers=1,
     scaledown_window=3600 if WORKFLOW == "comfyui-b300-image-video-suite" else 1800,
