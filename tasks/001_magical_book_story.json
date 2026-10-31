@@ -1,0 +1,67 @@
+{
+  "name": "magical_book_story",
+  "steps": [
+    {
+      "id": "scenes",
+      "endpoint": "qwen",
+      "workflow": "workflows/comfyui-qwen-image-2-1/image_qwen_image_2_1_t2i.json",
+      "set": {
+        "459:452.prompt": "$item.prompt",
+        "459:452.negative_prompt": "extra fingers, deformed hands, distorted faces",
+        "13.aspect_ratio": "3:4 (Portrait Standard)",
+        "13.megapixels": 2,
+        "459:458.steps": 40
+      },
+      "foreach": [
+        {
+          "name": "01",
+          "prompt": "A cinematic photorealistic fantasy scene with a coherent recurring protagonist, subtle film grain, vivid sky blue, honey-gold sunlight, pink petals, deep layered perspective, believable anatomy and elegant natural lighting. No captions, no typography, no watermark. A young adult woman with long chestnut brown hair braided over one shoulder, wearing a black dress embroidered with cream flowers, enters an old timber bookshop at golden hour. Seven illustrated books float around her, sparkling gold trails, flower petals and fountain pens suspended in the air. She looks astonished, warm backlight, cinematic realistic photography, deep layered composition.",
+          "set": {
+            "459:458.seed": 202610300101,
+            "461.filename_prefix": "magical_book_story_01"
+          }
+        },
+        {
+          "name": "02",
+          "prompt": "A cinematic photorealistic fantasy scene with a coherent recurring protagonist, subtle film grain, vivid sky blue, honey-gold sunlight, pink petals, deep layered perspective, believable anatomy and elegant natural lighting. No captions, no typography, no watermark. The same young woman in the same black embroidered dress gently opens a glowing cobalt blue storybook at an old wooden desk inside the magical bookstore. Golden letters transform into fireflies, luminous pages whirl around her, close three-quarter portrait, sunlight through windows, realistic skin and warm magical light.",
+          "set": {
+            "459:458.seed": 202610300102,
+            "461.filename_prefix": "magical_book_story_02"
+          }
+        },
+        {
+          "name": "03",
+          "prompt": "A cinematic photorealistic fantasy scene with a coherent recurring protagonist, subtle film grain, vivid sky blue, honey-gold sunlight, pink petals, deep layered perspective, believable anatomy and elegant natural lighting. No captions, no typography, no watermark. The same braided chestnut-haired woman in her black cream-floral dress stands on a floating platform above a sea of peach clouds. A tiny vintage train crosses a luminous bridge toward a magnificent castle in the sky, floating books follow her, sunrise rays and golden sparkles, cinematic wide environmental portrait, photorealistic fantasy.",
+          "set": {
+            "459:458.seed": 202610300103,
+            "461.filename_prefix": "magical_book_story_03"
+          }
+        },
+        {
+          "name": "04",
+          "prompt": "A cinematic photorealistic fantasy scene with a coherent recurring protagonist, subtle film grain, vivid sky blue, honey-gold sunlight, pink petals, deep layered perspective, believable anatomy and elegant natural lighting. No captions, no typography, no watermark. The same young woman in her black cream-floral dress walks through a vast field of white daisies on a floating island. A doorway made of old book pages stands among the flowers, blue sky and golden sunbeams, petals swirling around her hair, peaceful smile, dreamy cinematic photography with soft foreground bokeh.",
+          "set": {
+            "459:458.seed": 202610300104,
+            "461.filename_prefix": "magical_book_story_04"
+          }
+        },
+        {
+          "name": "05",
+          "prompt": "A cinematic photorealistic fantasy scene with a coherent recurring protagonist, subtle film grain, vivid sky blue, honey-gold sunlight, pink petals, deep layered perspective, believable anatomy and elegant natural lighting. No captions, no typography, no watermark. The same chestnut-braided young woman in her black cream-floral dress sits beside a friendly golden retriever on a wooden balcony above a coastal town at sunset. A closed blue magic book rests on her lap, amber lanterns glow, ocean reflects the setting sun, contemplative warm cinematic portrait with rich atmosphere.",
+          "set": {
+            "459:458.seed": 202610300105,
+            "461.filename_prefix": "magical_book_story_05"
+          }
+        },
+        {
+          "name": "06",
+          "prompt": "A cinematic photorealistic fantasy scene with a coherent recurring protagonist, subtle film grain, vivid sky blue, honey-gold sunlight, pink petals, deep layered perspective, believable anatomy and elegant natural lighting. No captions, no typography, no watermark. The same young woman with chestnut braided hair and black cream-floral dress returns to the timber bookstore at golden hour. She hugs three illustrated books to her chest and smiles with her eyes closed, floating books and glowing particles settle around her, warm sunlight catches loose hair strands, optimistic cinematic fantasy photograph.",
+          "set": {
+            "459:458.seed": 202610300106,
+            "461.filename_prefix": "magical_book_story_06"
+          }
+        }
+      ]
+    }
+  ]
+}

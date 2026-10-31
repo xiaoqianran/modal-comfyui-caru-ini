@@ -1,6 +1,6 @@
 # 工作流命名规范
 
-适用于 `workflows/` 与 Cloudflare R2 的输出分类。前缀描述**工作流来源**，而非模型开发者。
+适用于 `workflows/` 与输出归档的分类。前缀描述**工作流来源**，而非模型开发者。
 
 ## 格式
 
@@ -42,16 +42,16 @@ workflows/community-sharp/
 
 ## 输出映射
 
-目录名直接用于输出分类和 R2 对象键，无需额外映射：
+目录名直接用于 HF 归档对象键，R2 仅保留预览与按需下载副本：
 
 ```text
 workflows/comfyui-pixal3d-trellis2/
 ComfyUI/output/3d/<filename>.glb
-R2: comfyui/comfyui-pixal3d-trellis2/3d/<filename>.glb
+HF: comfyui/comfyui-pixal3d-trellis2/3d/<filename>.glb
 ```
 
-输出文件名必须唯一，避免覆盖历史结果。R2 路径首段 `comfyui/` 是项目命名空间；第二段的 `comfyui-` 是来源前缀。
+输出文件名必须唯一，避免覆盖历史结果。HF 对象键首段 `comfyui/` 是项目命名空间；第二段的 `comfyui-` 是来源前缀。
 
 ## 实现状态
 
-文件识别规则已接入部署代码；`ComfyUI/output/3d` 通过 Modal CloudBucketMount 直连 R2。需要先配置 `cloudflare-r2` Modal Secret，实际远端写入仍需部署验证。
+文件识别规则已接入部署代码；输出文件经 Modal Volume V2 暂存，再由 `hf_sync.py` 归档到 HF。需要先配置 `cloudflare-r2` Modal Secret，实际远端写入仍需部署验证。

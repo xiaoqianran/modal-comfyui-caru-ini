@@ -1,0 +1,10 @@
+A cinematic fantasy portrait photograph of a beautiful young adult woman standing in the middle of a magical outdoor bookstore, surrounded by books, handwritten pages, and delicate fountain pens floating weightlessly in the air. She has long chestnut-brown hair loosely braided over one shoulder, with fine strands illuminated by afternoon sunlight. She wears a black floral dress with delicate cream-colored embroidered flowers, looking downward in a graceful three-quarter profile with a quiet, dreamy expression.
+
+The bookstore is an old wooden pavilion with dark timber beams, weathered shelves, and an open view of a bright blue sky filled with soft white clouds. Seven colorful illustrated books float at different distances and angles, with delicate watercolor covers depicting gardens, spring flowers, little houses, and imaginary landscapes. Several slender fountain pens hover diagonally between the books. Loose pages, pink petals, fresh green leaves, and fine ribbons drift through the scene.
+
+Brilliant golden sunlight enters from the upper right, creating luminous rim lighting around her hair, soft translucent highlights on her skin, and diagonal shafts of light across the frame. Thousands of tiny golden particles and delicate swirling trails of sparkling light weave through the floating objects. Nearby books and petals are softly blurred in the foreground, while her face and upper body remain sharply focused.
+
+The camera is positioned slightly below eye level, using a natural wide-angle environmental portrait perspective with layered foreground, middle ground, and background. The composition feels dynamic and immersive, with objects extending beyond the edges of the frame. The color palette combines warm honey-gold sunlight, deep chestnut brown, vivid sky blue, pastel pink, and fresh spring green. The overall atmosphere is romantic, whimsical, airy, and dreamlike, blending realistic fashion photography with subtle magical realism.
+
+Suggested parameters: 1792x2400, 40 steps, true CFG 4.0 (if supported).
+Negative prompt: extra fingers, deformed hands, distorted face, duplicate objects.

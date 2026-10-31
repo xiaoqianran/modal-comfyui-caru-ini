@@ -14,6 +14,8 @@ from contextlib import contextmanager
 from pathlib import Path
 
 IMAGE_EXT = {".png", ".jpg", ".jpeg", ".webp", ".bmp"}
+VIDEO_EXT = {".mp4", ".webm", ".mov", ".mkv"}
+MODEL_EXT = {".glb", ".gltf", ".obj", ".stl", ".ply", ".splat", ".ksplat", ".spz"}
 
 
 def request(url, data=None, headers=None, timeout=300, retries=6):
@@ -40,8 +42,12 @@ def get_json(base, path):
 
 
 def upload(base, file):
-    """Upload under a content-addressed name to avoid cross-task collisions."""
+    """Upload images through ComfyUI's standard image API."""
     file = Path(file)
+    if file.suffix.lower() not in IMAGE_EXT:
+        raise ValueError(
+            f"Cannot upload {file.suffix} via standard ComfyUI /upload/image. "
+            "Non-image inputs require a workflow-specific upload API.")
     data = file.read_bytes()
     filename = f"runner_{hashlib.sha256(data).hexdigest()[:24]}{file.suffix.lower()}"
     boundary = uuid.uuid4().hex
@@ -58,12 +64,13 @@ def upload(base, file):
     ))
     return (out["subfolder"] + "/" if out.get("subfolder") else "") + out["name"]
 
+
 def build_prompt(graph, sets, base, cache):
     prompt = json.loads(json.dumps(graph))
     for key, value in sets.items():
         node, _, field = key.partition(".")
-        if node not in prompt or not field:
-            raise KeyError(f"Bad target '{key}' (expected <node_id>.<input>, node must exist in graph)")
+        if node not in prompt or not field or field not in prompt[node].get("inputs", {}):
+            raise KeyError(f"Bad target '{key}': node and existing input field are required")
         if isinstance(value, str) and value.startswith("@"):
             path = value[1:]
             if path not in cache:
@@ -167,11 +174,61 @@ def _input_value(value, item, completed):
     paths = jobs[job]
     matches = [path for path in paths if
                (kind == "image" and path.suffix.lower() in IMAGE_EXT)
-               or (kind == "video" and path.suffix.lower() in {".mp4", ".webm", ".mov"})
+               or (kind == "video" and path.suffix.lower() in VIDEO_EXT)
+               or (kind == "model" and path.suffix.lower() in MODEL_EXT)
                or (kind == "file")]
     if len(matches) != 1:
         raise ValueError(f"Reference {value}: expected one {kind}, found {len(matches)}")
     return "@" + str(matches[0].resolve())
+
+
+def _validate_graph(graph, settings, output_nodes=None):
+    """Validate local API graph structure and task overrides before submission."""
+    if not isinstance(graph, dict) or not graph:
+        raise ValueError("Workflow must be a nonempty ComfyUI API graph")
+    for node_id, node in graph.items():
+        if not isinstance(node, dict) or not isinstance(node.get("inputs"), dict):
+            raise ValueError(f"Invalid graph node {node_id}: missing inputs")
+        for field, value in node["inputs"].items():
+            if isinstance(value, list) and len(value) == 2 and isinstance(value[0], str) and isinstance(value[1], int):
+                if value[0] not in graph:
+                    raise ValueError(f"Broken node link {node_id}.{field} -> {value[0]}")
+    for key in settings:
+        node_id, sep, field = key.partition(".")
+        if not sep or node_id not in graph or field not in graph[node_id]["inputs"]:
+            raise ValueError(f"Invalid task target {key}: node/input not found in workflow")
+    for node_id in output_nodes or ():
+        if str(node_id) not in graph:
+            raise ValueError(f"Invalid output node {node_id}: node not found in workflow")
+
+
+def _job_intent_hash(job, jobs, task_dir, root):
+    """Hash the requested graph, inputs and upstream jobs, not the saved output."""
+    local_inputs = {}
+    for field, raw in job["settings"].items():
+        value = _input_value(raw, job["entry"], {}) if (
+            isinstance(raw, str) and raw.startswith("$item.")) else raw
+        if not isinstance(value, str) or not value.startswith("@"):
+            continue
+        path = Path(value[1:])
+        if not path.is_absolute():
+            candidate = task_dir / path
+            path = candidate if candidate.is_file() else root / path
+        if not path.is_file():
+            raise FileNotFoundError(f"Input file for {field}: {path}")
+        sha = hashlib.sha256()
+        with path.open("rb") as f:
+            for chunk in iter(lambda: f.read(1024 * 1024), b""):
+                sha.update(chunk)
+        local_inputs[field] = sha.hexdigest()
+    payload = {
+        "version": 1, "endpoint": job["base"], "graph": job["graph"],
+        "settings": job["settings"], "item": job["entry"],
+        "local_inputs": local_inputs,
+        "upstream": [(list(dep), jobs[dep]["intent_hash"]) for dep in sorted(job["deps"])],
+    }
+    raw = json.dumps(payload, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 
 def _submit_job(key, job, completed, task_path, root, upload_caches):
@@ -191,7 +248,8 @@ def _submit_job(key, job, completed, task_path, root, upload_caches):
                           upload_caches.setdefault(job["base"], {}))
     job["folder"].mkdir(parents=True, exist_ok=True)
     _save_json(job["folder"] / "workflow.json", prompt)
-    _save_json(job["status_file"], {"status": "submitting", "endpoint": job["endpoint"]})
+    _save_json(job["status_file"], {"status": "submitting", "endpoint": job["endpoint"],
+                                    "intent_hash": job["intent_hash"]})
     body = json.dumps({"prompt": prompt, "client_id": uuid.uuid4().hex}).encode()
     try:
         reply = request(job["base"] + "/prompt", body,
@@ -199,13 +257,14 @@ def _submit_job(key, job, completed, task_path, root, upload_caches):
         pid = json.loads(reply)["prompt_id"]
     except Exception as exc:
         _save_json(job["status_file"], {"status": "uncertain",
-                                        "endpoint": job["endpoint"], "error": str(exc)})
+                                        "endpoint": job["endpoint"], "error": str(exc),
+                                        "intent_hash": job["intent_hash"]})
         raise RuntimeError(f"{sid}/{jid}: submission uncertain; inspect remote queue") from exc
     job["prompt_id"] = pid
     job["state"] = "submitted"
     job["submitted_at"] = time.monotonic()
     _save_json(job["status_file"], {"status": "submitted", "endpoint": job["endpoint"],
-                                    "prompt_id": pid})
+                                    "prompt_id": pid, "intent_hash": job["intent_hash"]})
     print(f"{sid}/{jid}: submitted {pid}", flush=True)
 
 def _check_job(key, job, completed, timeout):
@@ -238,13 +297,15 @@ def _check_job(key, job, completed, timeout):
     _save_json(job["status_file"], {"status": "completed",
                                     "prompt_id": job["prompt_id"],
                                     "endpoint": job["endpoint"],
-                                    "files": [str(p) for p in local]})
+                                    "files": [str(p) for p in local],
+                                    "intent_hash": job["intent_hash"]})
     completed[sid][jid] = local
     job["state"] = "completed"
     print(f"{sid}/{jid}: completed {len(local)} output(s)", flush=True)
     return True
 
-def _run_task_unlocked(task_path, endpoints_path="endpoints.json", output=None, timeout=3600):
+def _run_task_unlocked(task_path, endpoints_path="endpoints.json", output=None,
+                       timeout=3600, trust_legacy_status=False):
     """Run ComfyUI jobs as dependencies become ready, across independent endpoints."""
     task_path = Path(task_path).resolve()
     task = json.loads(task_path.read_text(encoding="utf-8-sig"))
@@ -274,6 +335,7 @@ def _run_task_unlocked(task_path, endpoints_path="endpoints.json", output=None, 
         graph = json.loads((root / step["workflow"]).read_text(encoding="utf-8-sig"))
         if "nodes" in graph:
             raise ValueError("Expected ComfyUI API JSON")
+        _validate_graph(graph, {}, step.get("output_nodes"))
         entries = step.get("foreach", [{"name": "main"}])
         if not isinstance(entries, list) or not entries:
             raise ValueError(f"Empty foreach: {sid}")
@@ -284,6 +346,7 @@ def _run_task_unlocked(task_path, endpoints_path="endpoints.json", output=None, 
                 raise ValueError(f"Duplicate job: {sid}/{jid}")
             settings = dict(step.get("set", {}))
             settings.update(entry.get("set", {}))
+            _validate_graph(graph, settings, step.get("output_nodes"))
             deps = set()
             for value in settings.values():
                 if not isinstance(value, str) or not value.startswith("$") or value.startswith("$item."):
@@ -307,11 +370,34 @@ def _run_task_unlocked(task_path, endpoints_path="endpoints.json", output=None, 
                              status_file=folder / "status.json", state="pending")
         step_ids.add(sid)
 
+    for job in jobs.values():
+        job["intent_hash"] = _job_intent_hash(job, jobs, task_path.parent, root)
+
+    # Validate *every* persisted job before submitting anything or adopting legacy state.
+    statuses = {}
+    for key, job in jobs.items():
+        path = job["status_file"]
+        status = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
+        statuses[key] = status
+        if not status:
+            continue
+        saved = status.get("intent_hash")
+        if saved and saved != job["intent_hash"]:
+            raise RuntimeError(
+                f"{key[0]}/{key[1]}: Task/Workflow/input changed since last run. "
+                "Existing outputs are untouched; use a new task name or --out path.")
+        if not saved and not trust_legacy_status:
+            raise RuntimeError(
+                f"{key[0]}/{key[1]}: legacy status without intent hash. "
+                "Review the old task and rerun with --trust-legacy-status to adopt it.")
+
     completed = {sid: {} for sid in step_ids}
     upload_caches = {}
     for key, job in jobs.items():
-        status_file = job["status_file"]
-        status = json.loads(status_file.read_text(encoding="utf-8")) if status_file.exists() else {}
+        status = statuses[key]
+        if status and "intent_hash" not in status:
+            status["intent_hash"] = job["intent_hash"]
+            _save_json(job["status_file"], status)
         files = [Path(p) for p in status.get("files", [])]
         if status.get("status") == "completed" and files and all(p.is_file() and p.stat().st_size for p in files):
             completed[key[0]][key[1]] = files
@@ -349,7 +435,8 @@ def _run_task_unlocked(task_path, endpoints_path="endpoints.json", output=None, 
     return out
 
 
-def run_task(task_path, endpoints_path="endpoints.json", output=None, timeout=3600):
+def run_task(task_path, endpoints_path="endpoints.json", output=None,
+             timeout=3600, trust_legacy_status=False):
     """Single runner per output directory; recover safely after process exit."""
     if output:
         out = Path(output).resolve()
@@ -357,7 +444,8 @@ def run_task(task_path, endpoints_path="endpoints.json", output=None, timeout=36
         name = _safe_name(json.loads(Path(task_path).read_text(encoding="utf-8-sig"))["name"])
         out = Path(endpoints_path).resolve().parent / "outputs" / name
     with _task_lock(out):
-        return _run_task_unlocked(task_path, endpoints_path, output, timeout)
+        return _run_task_unlocked(task_path, endpoints_path, output, timeout,
+                                  trust_legacy_status=trust_legacy_status)
 
 
 def main():
@@ -366,8 +454,10 @@ def main():
     ap.add_argument("--endpoints", default="endpoints.json")
     ap.add_argument("--out", help="Output directory (default: outputs/<task name>)")
     ap.add_argument("--timeout", type=int, default=3600, help="Seconds per job")
+    ap.add_argument("--trust-legacy-status", action="store_true",
+                    help="Explicitly adopt old status files that have no task fingerprint")
     args = ap.parse_args()
-    run_task(args.task, args.endpoints, args.out, args.timeout)
+    run_task(args.task, args.endpoints, args.out, args.timeout, args.trust_legacy_status)
 
 
 if __name__ == "__main__":

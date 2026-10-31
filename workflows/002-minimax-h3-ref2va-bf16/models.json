@@ -39,6 +39,11 @@
       "repo_id": "Comfy-Org/SDPose",
       "filename": "checkpoints/sdpose_wholebody_fp16.safetensors",
       "model_dir": "checkpoints"
+    },
+    {
+      "repo_id": "Pika-Labs/Pika-H3-Flex",
+      "filename": "comfy/loras/pika_h3_flex_ref2va_comfy_bf16.safetensors",
+      "model_dir": "loras"
     }
   ],
   "models_ext": [],

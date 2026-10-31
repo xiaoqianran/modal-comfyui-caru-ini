@@ -5,6 +5,15 @@
   "compatibility_date": "2026-10-30",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "workers_dev": true,
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1,
+    "redact_query_string": true,
+    "logs": {
+      "enabled": true,
+      "invocation_logs": false
+    }
+  },
   "vars": {
     "MCP_RESOURCE": "https://chatgpt-file-transfer-mcp.wangran.workers.dev/mcp"
   },

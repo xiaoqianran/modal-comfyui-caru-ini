@@ -1,5 +1,7 @@
+import type { OAuthHelpers } from "@cloudflare/workers-oauth-provider";
+
 interface AuthEnv {
-  OAUTH_PROVIDER: any;
+  OAUTH_PROVIDER: OAuthHelpers;
   OWNER_PASSWORD?: string;
 }
 
@@ -41,13 +43,15 @@ export const authHandler = {
 <body><main style="max-width:30rem;margin:5rem auto;font:16px system-ui">
 <h1>Authorize file transfer</h1>
 <p>Client: <strong>${escapeHtml(details.clientName)}</strong></p>
+<p>${details.clientDomain ? `Published by <strong>${escapeHtml(details.clientDomain)}</strong>` : "Client name is self-asserted and unverified."}</p>
 <p>Redirect: <strong>${escapeHtml(details.redirectHost)}</strong></p>
-<p>Scopes: ${escapeHtml(details.scope?.join?.(" ") ?? details.scope)}</p>
+${details.redirectIsLoopback ? "<p><strong>This sends access to an app on your computer. Continue only if you started signing in from it.</strong></p>" : ""}
+<p>Scopes: ${escapeHtml(details.scope.join(" "))}</p>
 <form method="POST" action="/authorize">
 <input type="hidden" name="handle" value="${escapeHtml(consent.handle)}">
 <label>Owner passphrase <input type="password" name="password" required minlength="24" autocomplete="off"></label>
 <p><button type="submit" name="decision" value="approve">Approve</button>
-<button type="submit" name="decision" value="deny">Deny</button></p>
+<button type="submit" name="decision" value="deny" formnovalidate>Deny</button></p>
 </form></main></body></html>`;
       return new Response(page, { headers: consent.headers });
     }

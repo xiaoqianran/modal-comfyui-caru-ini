@@ -1,0 +1,65 @@
+{
+  "name": "007-003_before_sunset_locations",
+  "mode": "batch",
+  "steps": [
+    {
+      "id": "scenes",
+      "endpoint": "qwen",
+      "workflow": "workflows/comfyui-qwen-image-2-1/image_qwen_image_2_1_t2i.json",
+      "set": {
+        "13.aspect_ratio": "16:9 (Widescreen)",
+        "459:458.steps": 25
+      },
+      "foreach": [
+        {
+          "name": "apartment",
+          "set": {
+            "459:452.prompt": "A cinematic establishing photograph of a modest old seaside apartment interior in a contemporary East Asian coastal town. Warm worn wooden floorboards, a small wooden table, an open window with sheer curtains moving in the sea breeze, a packed dark brown suitcase beside the doorway, subtle traces of a family home, late afternoon sunlight falling across the room. Quiet, emotionally restrained atmosphere, photorealistic natural textures, 35mm cinema still, wide horizontal composition, no people, no writing, no watermark.",
+            "459:458.seed": 202610300730,
+            "461.filename_prefix": "007-003_apartment"
+          }
+        },
+        {
+          "name": "street",
+          "set": {
+            "459:452.prompt": "A wide cinematic establishing photograph of a quiet old seaside street in a contemporary East Asian coastal town, low weathered houses, narrow road gently sloping toward the ocean, overhead utility lines, a few old shopfronts, soft sea haze, warm late afternoon sun and long shadows. Ordinary believable location, nostalgic but not picturesque fantasy, photorealistic 35mm drama film still, wide horizontal composition, no people, no writing, no watermark.",
+            "459:458.seed": 202610300731,
+            "461.filename_prefix": "007-003_street"
+          }
+        },
+        {
+          "name": "crossroads",
+          "set": {
+            "459:452.prompt": "A cinematic wide photograph of a fork in a coastal road: one path leads toward a small passenger ferry harbor, the other winds uphill toward a distant weathered white lighthouse. Coastal grasses, old houses and glimpses of sea, clear readable geography, late afternoon sunlight, gentle breeze, restrained naturalistic 35mm film color, photorealistic wide horizontal composition, no people, no legible signs or text.",
+            "459:458.seed": 202610300732,
+            "461.filename_prefix": "007-003_crossroads"
+          }
+        },
+        {
+          "name": "lighthouse",
+          "set": {
+            "459:452.prompt": "A cinematic wide establishing photograph of a slightly weathered white lighthouse on a quiet grassy coastal headland. A simple old wooden bench sits beside the lighthouse overlooking the ocean, recognizable composition for an old family photograph. Golden-hour side lighting, sea breeze moving grasses, warm low sun, distant sea haze, emotional stillness, believable contemporary East Asian coastline, photorealistic 35mm drama film still, wide horizontal composition, no people, no text.",
+            "459:458.seed": 202610300733,
+            "461.filename_prefix": "007-003_lighthouse"
+          }
+        },
+        {
+          "name": "ferry",
+          "set": {
+            "459:452.prompt": "A cinematic establishing photograph of a modest ordinary passenger ferry at a small seaside harbor in a contemporary East Asian coastal town, open passenger deck, metal railings, boarding gangway, low pier, calm ocean and distant white lighthouse visible across the bay. Sun approaching horizon, amber reflections on water, believable working harbor, natural restrained 35mm film color, photorealistic wide horizontal composition, no people, no text.",
+            "459:458.seed": 202610300734,
+            "461.filename_prefix": "007-003_ferry"
+          }
+        },
+        {
+          "name": "deck",
+          "set": {
+            "459:452.prompt": "A cinematic wide photograph from the open upper deck of an ordinary passenger ferry heading out to sea at sunset, weathered metal railing in foreground, small white lighthouse receding on the coastline behind, broad open horizon ahead, soft golden light fading into blue dusk, gentle sea haze, quiet hopeful atmosphere, realistic 35mm cinema still, wide horizontal composition, no people, no text.",
+            "459:458.seed": 202610300735,
+            "461.filename_prefix": "007-003_deck"
+          }
+        }
+      ]
+    }
+  ]
+}

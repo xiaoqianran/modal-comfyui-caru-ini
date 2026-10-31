@@ -61,6 +61,43 @@ def test_job_level_pipeline(mode="stream"):
             assert len(list((root / "outputs" / "trial").rglob("status.json"))) == 4
             batch_run.run_task(root / "task.json", root / "endpoints.json")
             assert len(submitted) == 4, "Resume must not resubmit jobs"
+            status_path = root / "outputs" / "trial" / "scenes" / "01" / "status.json"
+            legacy = json.loads(status_path.read_text())
+            legacy.pop("intent_hash")
+            status_path.write_text(json.dumps(legacy))
+            try:
+                batch_run.run_task(root / "task.json", root / "endpoints.json")
+                raise AssertionError("Legacy result must require explicit trust")
+            except RuntimeError as exc:
+                assert "legacy status" in str(exc)
+            batch_run.run_task(root / "task.json", root / "endpoints.json",
+                               trust_legacy_status=True)
+            assert "intent_hash" in json.loads(status_path.read_text())
+            assert len(submitted) == 4
+            task["steps"][0]["foreach"][0]["set"] = {"1.prompt": "changed prompt"}
+            (root / "task.json").write_text(json.dumps(task))
+            try:
+                batch_run.run_task(root / "task.json", root / "endpoints.json")
+                raise AssertionError("Changed prompt must not reuse existing result")
+            except RuntimeError as exc:
+                assert "changed" in str(exc)
+            assert len(submitted) == 4, "Config mismatch must not submit GPU jobs"
+
+
+def test_local_file_fingerprint():
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        picture = root / "input.png"
+        picture.write_bytes(b"image one")
+        job = {
+            "base": "https://q.example", "graph": {"1": {"inputs": {}}},
+            "settings": {"1.image": "@input.png"}, "entry": {"name": "01"},
+            "deps": set(),
+        }
+        one = batch_run._job_intent_hash(job, {}, root, root)
+        picture.write_bytes(b"image two")
+        two = batch_run._job_intent_hash(job, {}, root, root)
+        assert one != two, "Changing local image content must invalidate result"
 
 
 def test_lock_and_upload_safety():
@@ -89,8 +126,39 @@ def test_lock_and_upload_safety():
         assert payloads[0] != payloads[1]
 
 
+def test_preflight_and_model_reference():
+    graph = {"1": {"inputs": {"image": "", "prompt": ""}},
+             "2": {"inputs": {"image": ["1", 0]}}}
+    batch_run._validate_graph(graph, {"1.prompt": "text"}, ["2"])
+    for settings, outputs in [({"9.prompt": "x"}, None),
+                              ({"1.nonexistent": "x"}, None),
+                              ({}, ["99"])]:
+        try:
+            batch_run._validate_graph(graph, settings, outputs)
+            raise AssertionError("Expected invalid graph to fail preflight")
+        except ValueError:
+            pass
+    try:
+        batch_run._validate_graph({"1": {"inputs": {"image": ["99", 0]}}}, {})
+        raise AssertionError("Broken node link should fail")
+    except ValueError:
+        pass
+    with tempfile.TemporaryDirectory() as tmp:
+        model = Path(tmp) / "mesh.glb"
+        model.write_bytes(b"glb")
+        result = batch_run._input_value("$mesh.01.model", {}, {"mesh": {"01": [model]}})
+        assert result == "@" + str(model.resolve())
+        try:
+            batch_run.upload("https://example.com", model)
+            raise AssertionError("Non-image upload must not use image endpoint")
+        except ValueError as exc:
+            assert "upload" in str(exc)
+
+
 if __name__ == "__main__":
     test_job_level_pipeline("stream")
     test_job_level_pipeline("batch")
     test_lock_and_upload_safety()
+    test_local_file_fingerprint()
+    test_preflight_and_model_reference()
     print("PASS stream/batch scheduling, cross-endpoint upload, local download, resume")

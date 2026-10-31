@@ -1,6 +1,5 @@
 """Local-only workflow control and private asset browser. No cloud management port."""
 import json
-import mimetypes
 import os
 import re
 import socket
@@ -23,25 +22,13 @@ LOCK = threading.Lock()
 RUNNING = set()
 LINKS = {}
 LOG_DIR = Path(__file__).resolve().parent / "logs"
-_WORKSPACE = None
-
-def workspace():
-    """Active Modal workspace name; the frontend composes ComfyUI URLs from it."""
-    global _WORKSPACE
-    if _WORKSPACE is None:
-        p = command(["profile","list","--json"],timeout=30)
-        if p.returncode != 0:
-            raise RuntimeError(p.stderr[-300:])
-        _WORKSPACE = next((x["workspace"] for x in json.loads(p.stdout) if x.get("active")), "")
-    return _WORKSPACE
-
 def workflows():
     items = []
     for folder in sorted((ROOT / "workflows").iterdir()):
         if not folder.is_dir() or not (folder / "models.json").is_file() or not (folder / "plugins.json").is_file():
             continue
-        names = [x for x in folder.glob("*.json") if x.name.lower() not in {"models.json","plugins.json","model.json"}]
-        if not names:
+        if not any(x.name.lower() not in {"models.json", "plugins.json", "model.json"}
+                   for x in folder.rglob("*.json")):
             continue
         config = json.loads((folder / "models.json").read_text(encoding="utf-8"))
         items.append({"id":folder.name,"gpu":config.get("gpu","L40S"),"app":"modal-"+folder.name})
@@ -64,6 +51,23 @@ def command(args, env=None, timeout=30):
     return subprocess.run(["uv","run","modal",*args], cwd=ROOT, env=env or modal_env(),
                           capture_output=True, text=True, encoding="utf-8",
                           errors="replace", timeout=timeout)
+
+def saved_links():
+    """Recover actual ComfyUI URLs from local successful deployment logs."""
+    links = dict(LINKS)
+    for item in workflows():
+        if item["id"] in links:
+            continue
+        log_path = LOG_DIR / f'{item["id"]}.log'
+        if not log_path.is_file():
+            continue
+        log = log_path.read_text(encoding="utf-8", errors="replace")
+        urls = re.findall(r"https://[^\s]+\.modal\.run[^\s]*", log)
+        if urls and "Deployment" in log:
+            parsed = urlsplit(urls[-1].rstrip("),"))
+            links[item["id"]] = f"https://{parsed.netloc}/"
+    return links
+
 
 def statuses():
     p = command(["app","list","--json"],timeout=30)
@@ -151,7 +155,7 @@ class Handler(BaseHTTPRequestHandler):
             if path.path == "/api/workflows":
                 return self.send_data(workflows())
             if path.path == "/api/status":
-                return self.send_data({"apps":statuses(),"links":LINKS,"workspace":workspace()})
+                return self.send_data({"apps":statuses(),"links":saved_links()})
             if path.path == "/api/tasks":
                 latest = {}
                 for tid, t in TASKS.items():

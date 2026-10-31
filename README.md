@@ -40,7 +40,7 @@ This project builds on [caru-ini/modal-comfyui](https://github.com/caru-ini/moda
 
 ### Workflow configuration
 
-Each `workflows/<name>/` folder contains exactly one **ComfyUI API graph** plus `models.json` and `plugins.json`. The graph can have any name. Do not put extra JSON examples in this folder because the loader detects the graph by excluding only `models.json`, `model.json`, and `plugins.json`.
+Each `workflows/<name>/` defines one ComfyUI deployment with `models.json` and `plugins.json`. Multiple UI workflow JSONs are allowed, including nested directories; deployment mounts these files recursively. The Task Runner separately requires a **ComfyUI API-format JSON**. Do not mix unrelated test JSONs into an active workflow directory.
 
 #### `models.json`
 
@@ -55,21 +55,23 @@ Each `workflows/<name>/` folder contains exactly one **ComfyUI API graph** plus 
     }
   ],
   "models_ext": [],
-  "gpu": "L40S",
-  "cuda_devel": true
+  "gpu": "L40S"
 }
 ```
 
 - `models`: Hugging Face Hub models. Each requires `repo_id`, `filename`, and `model_dir`; `local_filename` optionally renames the linked file.
 - `models_ext`: external direct downloads. Each requires `url`, `filename`, and `model_dir`; use `[]` if none.
 - `model_dir`: relative to `/root/comfy/ComfyUI/models/`, or an absolute destination.
-- `gpu`: Modal GPU specification; `MODAL_GPU` overrides it. Current workflows target `L40S`.
-- `cuda_devel`: optional boolean, enabling a CUDA 12.6 development image for compiling custom extensions.
+- `gpu`: Modal GPU specification; `MODAL_GPU` overrides it. GPU type varies by workflow.
+- GPU-specific CUDA/PyTorch versions are currently selected in `comfyui.py`, not by `cuda_devel`.
 
 #### `plugins.json`
 
 ```json
-{\n  "comfy_plugins": [],\n  "comfy_plugins_ext": []\n}
+{
+  "comfy_plugins": [],
+  "comfy_plugins_ext": []
+}
 ```
 
 - `comfy_plugins`: optional list of node names/IDs for `comfy node install`.
@@ -209,34 +211,22 @@ uv run modal secret list
 - **Model Caching**: Uses Modal Volumes to cache models across runs.
 - **Custom Node Management**: Integrated with `comfy-cli` for easy plugin installation.
 
-## Cloudflare R2 GLB storage
+## 输出持久化与对象存储
 
-GLB files saved under `ComfyUI/output/3d/` are written directly to Cloudflare R2
-through `modal.CloudBucketMount` (no background upload process).
+ComfyUI 保存到 Modal Volume V2 的 `/outputs/<workflow>/`。单实例可以直接生成图片或按 `video/`、`3d/` 等子目录保存；B300 双实例分别保存至 `instance-1/`、`instance-2/`。
 
-- Bucket: `modal-studio-assets` (verified in Cloudflare).
-- Object key: `comfyui/<workflow>/3d/<filename>.glb`.
-- In **Modal Dashboard → Secrets**, create `cloudflare-r2` containing
-  `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` from an R2 Object Read & Write
-  API token scoped to this bucket. No access keys belong in this Git repository.
-- The R2 endpoint defaults to the configured Cloudflare account; override via
-  the local `R2_ENDPOINT` environment variable before deployment if necessary.
-- Deploy with `./deploy-modal.bat <workflow>` on Windows.
-- Download persisted GLB files using R2 Dashboard, a configured public custom
-  domain, or presigned URLs; ComfyUI's built-in download still uses its UI.
+`storage/hf_sync.py` 定期扫描稳定文件，按 `comfyui/<workflow>/<image|video|3d|3dgs>/...` 归档到 Hugging Face Storage Bucket。双实例的实例名保留在类别目录之后，例如 `comfyui/<workflow>/video/instance-1/clip.mp4`。云端对象的 SHA-256 元数据用于核对内容；旧对象缺少校验元数据时，会重新上传一次。
 
-Only `output/3d/` is persisted to R2; other ComfyUI outputs remain ephemeral.
-File writes need to complete normally. Modal/S3 mounts do not support all POSIX
-filesystem operations, and a real GLB write must be verified after deployment.
+Cloudflare R2 仅保存图片和视频的预览，以及用户请求下载时的临时副本。原始文件以 HF 存储为准。详细路径与注意事项参见 [storage/README.md](storage/README.md)。
 
 ## Local console
 
 Run `uv run python frontend/server.py` and open http://127.0.0.1:8768 .
 The console manages Modal workflows and previews private R2 / Hugging Face S3
 assets. It binds only to localhost and reads local credentials from `.env`.
-The original `deploy-modal.bat` remains available independently.
+The original `deploy-modal.bat` remains available independently. The frontend only shows real ComfyUI URLs discovered from deployment logs, not guessed subdomains.
 
-Cloud output uses `storage/hf_sync.py` (R2 to HF replication).
+Cloud output uses `storage/hf_sync.py` (Modal Volume to HF archive and R2 previews).
 Build and deployment remain in `comfyui.py`. The web UI is not baked into
 the Modal image.
 
@@ -247,31 +237,25 @@ Performance improvements/optimizations are very welcome.
 
 ## Separate Modal Secret setup
 
-参见上文 **Windows / Linux 命令行操作速查 → 1. 上传 / 初始化 Modal Secrets**，分别运行 setup-secrets.bat 或 ash setup-secrets.sh。
-
-## Preview private R2 GLB files
-
-The unified asset browser is available via `uv run python frontend/server.py` at http://127.0.0.1:8768.
-Legacy `preview_r2.py` and `preview_hf.py` remain optional standalone previews for now.
-
-
+参见上文 **Windows / Linux 命令行操作速查 → 1. 上传 / 初始化 Modal Secrets**，分别运行 setup-secrets.bat 或 bash setup-secrets.sh。
 
 ## 致谢 / Acknowledgements
 
 特别感谢 [caru-ini](https://github.com/caru-ini) 和原项目 [modal-comfyui](https://github.com/caru-ini/modal-comfyui) 的贡献。本 Fork 以其开源实现为基础，持续增加工作流部署、资产存储与可视化管理功能；原项目的设计与贡献归属于原作者及其贡献者。
 
 
-## Multi-endpoint Task Pipeline
+## 多 Endpoint Task Runner
 
-Only the `--task` interface is supported; the legacy `--graph/--jobs` mode has been removed.
-For sequential pipelines spanning multiple Modal ComfyUI services, run:
+统一入口为 `batch_run.py --task`，支持跨 Modal 账号的 Qwen 图片生成与 H3 视频生成：
 
 ```powershell
-uv run python batch_run.py --task tasks/sunset_story.json --endpoints endpoints.json
+uv run python batch_run.py --task tasks/005_last_train.json --endpoints endpoints.json
 ```
 
-- `endpoints.json` maps endpoint aliases to ComfyUI URLs. A URL identifies a **running server**, not necessarily a model; multiple workflows may share it. Keep tokens and private URLs out of committed configs.
-- Each Task has a `name` and ordered `steps`. Each step has an `id`, `endpoint`, `workflow` (project-relative ComfyUI API JSON), `set` (node-ID/input overrides), and optional `foreach` array with named jobs and per-job `set`.
-- `$item.prompt` reads the current foreach item. `$step.image` reads the sole image from an earlier single-job step. For a batch, use `$step.jobname.image`. `video` and `file` selectors are also available and require an unambiguous single match. Any referenced file is downloaded and uploaded to the destination endpoint before use. Local image inputs use `@path/to/image.png`.
-- Results and status are stored under `outputs/<task>/<step>/<job>/`. Each submission saves the exact API graph and returned `prompt_id`; reruns query unfinished remote jobs and skip validated completed ones. If a submission response times out before its ID can be saved, the job enters `uncertain` and **will not automatically resubmit**: inspect the remote queue first.
-- This is a sequential step runner, not a general DAG scheduler. It does not add model-specific branches. A completed step is required before a later step can use its output.
+- `endpoints.json` 为每个 ComfyUI 实际地址定义别名。不同别名可以属于不同 Modal 账号。
+- 每个 Task 定义 `name`、`mode` 和有序 `steps`。每个 step 使用 `endpoint`、`workflow`（API JSON）、`set` 和可选的 `foreach`。
+- `"mode": "stream"`（默认）表示上游单个 job 完成后立即触发对应下游；`"mode": "batch"` 表示等引用的整个上游 step 完成后才触发视频任务。
+- `$item.prompt` 引用当前镜头字段；`$scenes.01.image` 引用上游图片；`@path/to/image.png` 使用本地图片。Runner 自动下载和跨 Endpoint 上传。
+- 状态保存在 `outputs/<task>/<step>/<job>/status.json`，包含 `prompt_id` 和 `intent_hash`。恢复前校验提示词、Workflow、Endpoint、上游 job 和本地输入文件内容，发生变更时**拒绝复用旧结果**，不会自动重复付费提交；应使用新 Task 名或 `--out` 目录重新运行。
+- 旧版 `status.json` 没有 `intent_hash` 时，默认拒绝恢复。确认旧结果与当前任务匹配后，可显式加 `--trust-legacy-status` 采纳旧状态（仅为旧状态补充指纹，不重新生成）。提交响应不确定的任务仍必须先人工核查远程队列。
+- 两种模式均由一个轻量调度器运行，并使用本地状态文件和任务锁；不依赖 Celery、Redis 或跨账号共享 Volume。

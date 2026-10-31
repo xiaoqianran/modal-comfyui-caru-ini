@@ -1,18 +1,19 @@
 {
   "name": "chatgpt-file-transfer-mcp",
   "private": true,
-  "version": "0.4.0",
+  "version": "0.5.0",
   "type": "module",
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
     "typecheck": "tsc --noEmit",
-    "check": "npm run typecheck && wrangler deploy --dry-run"
+    "test": "node --test tests/*.test.mjs",
+    "check": "npm run typecheck && npm test && wrangler deploy --dry-run"
   },
   "dependencies": {
-    "@modelcontextprotocol/server": "2.0.0",
     "@cloudflare/workers-oauth-provider": "^1.2.4",
-    "agents": "0.22.0",
+    "@modelcontextprotocol/server": "2.4.0",
+    "agents": "0.32.0",
     "zod": "^4.0.0"
   },
   "devDependencies": {

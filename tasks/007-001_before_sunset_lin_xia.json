@@ -1,0 +1,18 @@
+{
+  "name": "007-001_before_sunset_lin_xia",
+  "mode": "batch",
+  "steps": [
+    {
+      "id": "character",
+      "endpoint": "qwen",
+      "workflow": "workflows/comfyui-qwen-image-2-1/image_qwen_image_2_1_t2i.json",
+      "set": {
+        "459:452.prompt": "A cinematic three-quarter portrait of Lin Xia, a strikingly beautiful but believable 24-year-old East Asian woman in a quiet seaside town at golden hour. She has a refined softly oval face, graceful cheekbones, expressive almond-shaped dark brown eyes with subtle natural eyelid definition, delicately arched brows, an elegant straight nose, naturally shaped soft lips, and luminous realistic skin with fine texture. Her silky black collarbone-length hair moves slightly in the sea breeze, with a subtle off-center part. She wears a cream cotton blouse and a light khaki jacket. Her expression is thoughtful and quietly melancholic, her gaze directed slightly past the camera. Framed from mid-thigh upward, she stands at a relaxed three-quarter angle along a weathered seaside lane with softly blurred old coastal houses and the sea in the distance. Gentle warm side light models her face beautifully, natural cinematic contrast, restrained sophisticated film color grading, authentic contemporary drama film still, attractive memorable lead actress appearance, believable human anatomy. No studio backdrop, no ID-photo posture, no artificial beauty filter, no exaggerated makeup, no text or watermark.",
+        "13.aspect_ratio": "2:3 (Portrait Photo)",
+        "459:458.steps": 25,
+        "459:458.seed": 202610300702,
+        "461.filename_prefix": "007_lin_xia_master"
+      }
+    }
+  ]
+}

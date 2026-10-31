@@ -14,7 +14,7 @@ load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 EXTENSIONS = {".glb", ".gltf", ".ply", ".splat", ".ksplat", ".spz",
               ".mp4", ".webm", ".mov", ".mkv", ".png", ".jpg", ".jpeg",
               ".json", ".bin", ".obj", ".mtl", ".stl"}
-CATEGORIES = ("3d", "3dgs", "video")
+CATEGORIES = ("3d", "3dgs", "video", "image")
 
 
 def client(source):

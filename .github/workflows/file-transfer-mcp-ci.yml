@@ -21,9 +21,11 @@ jobs:
         with:
           node-version: '24'
       - name: Install
-        run: npm install --no-audit --no-fund
-      - name: Typecheck and bundle
-        run: npm run check
+        run: npm ci --no-audit --no-fund
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Verify file contract and uploads
+        run: npm test
       - name: Bundle distributable Worker
         run: npx wrangler deploy --dry-run --outdir dist
       - uses: actions/upload-artifact@v4

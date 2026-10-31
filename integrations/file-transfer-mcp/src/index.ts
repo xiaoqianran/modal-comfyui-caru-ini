@@ -1,78 +1,22 @@
 import { McpServer } from "@modelcontextprotocol/server";
 import { createMcpHandler } from "agents/mcp/server";
-import { OAuthProvider, insufficientScope, type OAuthResourceContext } from "@cloudflare/workers-oauth-provider";
+import { OAuthProvider, insufficientScope, type OAuthHelpers, type OAuthResourceContext } from "@cloudflare/workers-oauth-provider";
 import { authHandler } from "./auth";
 import { z } from "zod";
+import { fileSchema, uploadFile, UploadError } from "./upload";
 
 interface Env {
   FILES: R2Bucket;
   OAUTH_KV: KVNamespace;
-  OAUTH_PROVIDER: any;
+  OAUTH_PROVIDER: OAuthHelpers;
   OWNER_PASSWORD?: string;
   DOWNLOAD_SECRET?: string;
   MCP_RESOURCE: string;
 }
 
-const MAX_BYTES = 25 * 1024 * 1024;
 const DOWNLOAD_TTL_SECONDS = 600;
-const HOSTS = ["chatgpt.com", "openai.com", "oaiusercontent.com"] as const;
 const KEY_PATTERN = /^chatgpt\/[0-9a-f-]{36}\/[A-Za-z0-9._-]{1,100}$/;
 const encoder = new TextEncoder();
-
-const fileSchema = z.object({
-  download_url: z.string(),
-  file_id: z.string().min(1),
-  mime_type: z.string().optional(),
-  file_name: z.string().optional(),
-}).strict();
-
-function sourceUrl(value: string): URL {
-  const url = new URL(value);
-  if (url.protocol !== "https:" || url.username || url.password || url.port ||
-    !HOSTS.some(host => url.hostname === host || url.hostname.endsWith("." + host))) {
-    throw new Error("Untrusted file download host");
-  }
-  return url;
-}
-
-function cleanName(value = "upload.bin"): string {
-  return value.replace(/[^A-Za-z0-9._-]/g, "_").replace(/^\.+/, "").slice(0, 100) || "upload.bin";
-}
-
-async function readFile(response: Response): Promise<Uint8Array> {
-  if (!response.ok || !response.body) throw new Error("File download failed");
-  const contentLength = response.headers.get("content-length");
-  if (contentLength !== null && (!Number.isFinite(+contentLength) || +contentLength > MAX_BYTES)) {
-    throw new Error("File exceeds size limit");
-  }
-  const reader = response.body.getReader();
-  const chunks: Uint8Array[] = [];
-  let total = 0;
-  try {
-    for (;;) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      total += value.byteLength;
-      if (total > MAX_BYTES) throw new Error("File exceeds size limit");
-      chunks.push(value);
-    }
-  } finally {
-    await reader.cancel().catch(() => {});
-    reader.releaseLock();
-  }
-  const result = new Uint8Array(total);
-  let offset = 0;
-  for (const chunk of chunks) {
-    result.set(chunk, offset);
-    offset += chunk.byteLength;
-  }
-  return result;
-}
-
-async function sha256(bytes: Uint8Array): Promise<string> {
-  const hash = new Uint8Array(await crypto.subtle.digest("SHA-256", bytes.buffer as ArrayBuffer));
-  return [...hash].map(byte => byte.toString(16).padStart(2, "0")).join("");
-}
 
 async function hmac(secret: string, payload: string): Promise<string> {
   const key = await crypto.subtle.importKey(
@@ -89,30 +33,25 @@ function toolResult(result: Record<string, unknown>) {
   };
 }
 
-function makeServer(env: Env, origin: string): McpServer {
-  const server = new McpServer({ name: "chatgpt-file-transfer", version: "0.3.0" });
+function makeServer(env: Env, origin: string, requestId: string): McpServer {
+  const server = new McpServer({ name: "chatgpt-file-transfer", version: "0.5.0" });
 
   server.registerTool("upload_file", {
     title: "Upload ChatGPT file",
-    description: "Upload a ChatGPT attachment (maximum 25 MiB) to private R2. Pass file as a JSON string containing download_url, file_id, file_name and mime_type.",
-    inputSchema: { file: z.string().describe("JSON-encoded file reference with download_url, file_id, optional file_name and mime_type") },
+    description: "Upload a ChatGPT attachment (maximum 25 MiB) to private R2.",
+    inputSchema: { file: fileSchema },
+    outputSchema: { key: z.string(), size: z.number(), sha256: z.string(), request_id: z.string() },
+    _meta: { "openai/fileParams": ["file"] },
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
   }, async ({ file }) => {
     try {
-      const reference = fileSchema.parse(JSON.parse(file));
-      const response = await fetch(sourceUrl(reference.download_url).toString(), {
-        redirect: "error", signal: AbortSignal.timeout(30_000),
-      });
-      const bytes = await readFile(response);
-      const key = `chatgpt/${crypto.randomUUID()}/${cleanName(reference.file_name)}`;
-      const digest = await sha256(bytes);
-      await env.FILES.put(key, bytes, {
-        httpMetadata: { contentType: reference.mime_type || "application/octet-stream" },
-        customMetadata: { sha256: digest },
-      });
-      return toolResult({ key, size: bytes.byteLength, sha256: digest });
-    } catch {
-      return { isError: true, content: [{ type: "text", text: "Upload failed: invalid URL, inaccessible file, or size limit." }] };
+      return toolResult(await uploadFile(file, env.FILES, requestId));
+    } catch (error) {
+      return { isError: true, content: [{ type: "text", text: JSON.stringify({
+        error: error instanceof UploadError ? error.code : "upload_failed",
+        message: error instanceof UploadError ? error.message : "Upload failed.",
+        request_id: requestId,
+      }) }] };
     }
   });
 
@@ -120,6 +59,7 @@ function makeServer(env: Env, origin: string): McpServer {
     title: "Create temporary download URL",
     description: "Make a 10-minute read-only download URL for an uploaded object.",
     inputSchema: { key: z.string().regex(KEY_PATTERN) },
+    outputSchema: { url: z.string(), sha256: z.string().nullable(), expires: z.number() },
     annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
   }, async ({ key }) => {
     const object = await env.FILES.head(key);
@@ -138,6 +78,7 @@ function makeServer(env: Env, origin: string): McpServer {
     title: "Delete uploaded file",
     description: "Permanently remove an uploaded object from R2.",
     inputSchema: { key: z.string().regex(KEY_PATTERN) },
+    outputSchema: { deleted: z.boolean(), key: z.string() },
     annotations: { readOnlyHint: false, destructiveHint: true, openWorldHint: false },
   }, async ({ key }) => {
     await env.FILES.delete(key);
@@ -148,7 +89,12 @@ function makeServer(env: Env, origin: string): McpServer {
 
 async function serveDownload(request: Request, env: Env, path: string): Promise<Response> {
   if (request.method !== "GET" || !env.DOWNLOAD_SECRET) return new Response("Not found", { status: 404 });
-  const key = decodeURIComponent(path.slice("/download/".length));
+  let key: string;
+  try {
+    key = decodeURIComponent(path.slice("/download/".length));
+  } catch {
+    return new Response("Invalid key", { status: 400 });
+  }
   if (!KEY_PATTERN.test(key)) return new Response("Invalid key", { status: 400 });
   const url = new URL(request.url);
   const expires = Number(url.searchParams.get("expires"));
@@ -183,12 +129,17 @@ export default {
       tokenEndpoint: "/oauth/token",
       apiRoute: "/mcp",
       apiHandler: {
-        fetch(req: Request, bindings: Env, ctx: ExecutionContext) {
+        async fetch(req: Request, bindings: Env, ctx: ExecutionContext) {
           const auth = (ctx as OAuthResourceContext<{ userId: string }>).auth;
           if (!auth.scope.includes("mcp:files")) {
             return insufficientScope(auth, ["mcp:files"]);
           }
-          return createMcpHandler(() => makeServer(bindings, url.origin))(req, bindings, ctx);
+          const requestId = crypto.randomUUID();
+          console.info({ event: "mcp_authenticated", request_id: requestId, method: req.method });
+          const response = await createMcpHandler(() => makeServer(bindings, url.origin, requestId))(req, bindings, ctx);
+          const result = new Response(response.body, response);
+          result.headers.set("X-Request-ID", requestId);
+          return result;
         },
       },
       defaultHandler: authHandler,

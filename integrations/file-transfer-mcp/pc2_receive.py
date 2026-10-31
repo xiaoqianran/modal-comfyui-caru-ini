@@ -8,19 +8,39 @@ import urllib.request
 import zipfile
 from pathlib import Path, PurePosixPath
 
+MAX_DOWNLOAD_BYTES = 25 * 1024 * 1024
+MAX_EXTRACT_BYTES = 250 * 1024 * 1024
+MAX_ZIP_MEMBERS = 4096
+WINDOWS_DEVICES = {"CON", "PRN", "AUX", "NUL"} | {
+    f"{prefix}{i}" for prefix in ("COM", "LPT") for i in range(1, 10)
+}
+
 
 def extract_zip_safely(archive: Path, destination: Path) -> None:
     destination.mkdir(parents=True, exist_ok=True)
+    root = destination.resolve()
     with zipfile.ZipFile(archive) as zf:
-        for info in zf.infolist():
+        members = zf.infolist()
+        if (len(members) > MAX_ZIP_MEMBERS or
+                sum(info.file_size for info in members) > MAX_EXTRACT_BYTES):
+            raise ValueError("ZIP exceeds extraction limits")
+        # Validate every member before writing any archive contents.
+        for info in members:
             path = PurePosixPath(info.filename)
             if (path.is_absolute() or not path.parts or
                     any(part in {"..", ""} for part in path.parts) or
-                    ":" in info.filename or "\\" in info.filename):
+                    ":" in info.filename or "\\" in info.filename or
+                    any(part.endswith((".", " ")) or
+                        part.split(".")[0].upper() in WINDOWS_DEVICES
+                        for part in path.parts)):
                 raise ValueError("Unsafe ZIP member path")
             if stat.S_ISLNK(info.external_attr >> 16):
                 raise ValueError("ZIP symlink not allowed")
             target = destination.joinpath(*path.parts)
+            if not target.resolve().is_relative_to(root):
+                raise ValueError("ZIP target escapes destination")
+        for info in members:
+            target = destination.joinpath(*PurePosixPath(info.filename).parts)
             if info.is_dir():
                 target.mkdir(parents=True, exist_ok=True)
             else:
@@ -45,9 +65,16 @@ def main() -> None:
     temp = Path(tmp.name)
     tmp.close()
     try:
+        request = urllib.request.Request(args.url, headers={
+            "User-Agent": "chatgpt-file-transfer-receiver/0.5",
+        })
         with temp.open("wb") as output:
-            with urllib.request.urlopen(args.url, timeout=60) as response:
+            with urllib.request.urlopen(request, timeout=60) as response:
+                total = 0
                 while block := response.read(1024 * 1024):
+                    total += len(block)
+                    if total > MAX_DOWNLOAD_BYTES:
+                        raise ValueError("Download exceeds 25 MiB limit")
                     digest.update(block)
                     output.write(block)
         actual = digest.hexdigest()

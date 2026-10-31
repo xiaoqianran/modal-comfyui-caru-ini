@@ -1,11 +1,7 @@
 import { api } from './api.js';
 
-// Region suffix of the Modal web URL. A URL parsed from a deploy log
-// (server.py LINKS) takes precedence over this composed one.
-const REGION = 'us-east';
-const MAX_LABEL = 63;
 
-let all = [], apps = {}, links = {}, workspace = '';
+let all = [], apps = {}, links = {};
 let selected = '', notify = () => {}, navigate = () => {}, generation = 0;
 const busy = new Set();
 let resumed = false;
@@ -19,12 +15,8 @@ const isDeployed = w => stateOf(w) === 'deployed';
 const shortName = w => w.id.replace(/^(comfyui|community|vendor|custom)-/, '').replaceAll('-', ' ');
 const STATE_TEXT = { deployed: '已部署', stopped: '已停止' };
 
-// https://<workspace>--<app>-comfyui-ui.<region>.modal.run
 function urlFor(w) {
-  if (links[w.id]) return { url: links[w.id], exact: true };
-  if (!workspace) return { url: '', exact: false };
-  const label = `${workspace}--${w.app}-comfyui-ui`;
-  return { url: `https://${label}.${REGION}.modal.run/`, exact: label.length <= MAX_LABEL };
+  return links[w.id] || ''; // Use a URL from a real deployment, never guess.
 }
 
 function badge(w) {
@@ -58,7 +50,7 @@ function card(w) {
   gpu.textContent = w.gpu;
   const actions = document.createElement('span');
   actions.className = 'card-actions';
-  const { url } = urlFor(w);
+  const url = urlFor(w);
   if (isDeployed(w) && url) {
     const open = document.createElement('a');
     open.className = 'link';
@@ -122,15 +114,15 @@ function updateDetail() {
   b.textContent = nb.textContent;
   $('stop').disabled = !isDeployed(w);
 
-  const { url, exact } = urlFor(w), link = $('app-link');
-  $('url-text').textContent = url || '读取 Modal 账号信息中…';
+  const url = urlFor(w), link = $('app-link');
+  $('url-text').textContent = url || '未取得真实的 ComfyUI 地址';
   link.hidden = !url;
   if (url) link.href = url;
   $('copy-url').disabled = !url;
   $('url-hint').textContent = !isDeployed(w)
     ? '尚未部署：部署完成后该地址才可访问。'
-    : exact ? '首次访问会冷启动 GPU，需等待片刻。'
-            : '应用名较长，Modal 可能截断域名；若打不开请到 Modal Dashboard 核对。';
+    : url ? '地址来自部署记录；首次访问可能冷启动 GPU。'
+          : '未找到真实地址，请在 Modal Dashboard 中打开该应用或重新部署。';
 }
 
 function select(id) {
@@ -174,7 +166,6 @@ export async function refresh() {
   if (token !== generation) return;
   apps = res.apps || {};
   links = res.links || {};
-  workspace = res.workspace || '';
   renderCards();
   updateDetail();
   if (!resumed) {
