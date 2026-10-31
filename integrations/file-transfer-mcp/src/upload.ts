@@ -1,8 +1,8 @@
 import { z } from "zod";
 
 const MAX_BYTES = 25 * 1024 * 1024;
-const HOSTS = ["chatgpt.com", "openai.com", "oaiusercontent.com"] as const;
-const ATTACHMENT_BLOB_HOST = "oaisdmntprwestus.blob.core.windows.net";
+// Accept public HTTPS hosts, not a fixed provider list. Workers fetch handles DNS.
+const BLOCKED_SUFFIXES = [".localhost", ".local", ".internal", ".home.arpa", ".test", ".invalid"];
 
 export const fileSchema = z.object({
   download_url: z.string(),
@@ -29,10 +29,17 @@ function sourceUrl(value: string): URL {
   } catch {
     throw new UploadError("invalid_source", "The attachment download URL is invalid.");
   }
+  const host = url.hostname.toLowerCase().replace(/\.$/, "");
+  // Reject all IP literals (including IPv6 and alternate IPv4 formats) and
+  // non-public/single-label hostnames. Never accept a client-selected port.
+  const ipLiteral = /^\[.*\]$/.test(host) || /^\d+\.\d+\.\d+\.\d+$/.test(host);
+  const domain = /^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(host) &&
+    host.split(".").every(part => part.length <= 63 && !part.startsWith("-") && !part.endsWith("-"));
   if (url.protocol !== "https:" || url.username || url.password || url.port ||
-    !(url.hostname === ATTACHMENT_BLOB_HOST ||
-      HOSTS.some(host => url.hostname === host || url.hostname.endsWith("." + host)))) {
-    throw new UploadError("invalid_source", "The attachment URL must use an allowed OpenAI HTTPS host.");
+      !domain || ipLiteral || host === "localhost" ||
+      BLOCKED_SUFFIXES.some(suffix => host.endsWith(suffix)) ||
+      host === "metadata.google.internal" || host === "169.254.169.254.nip.io") {
+    throw new UploadError("invalid_source", "Attachment URL must use a public HTTPS hostname.");
   }
   return url;
 }

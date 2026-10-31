@@ -56,11 +56,24 @@ test("untrusted URLs fail before any outbound call or write", async () => {
   const fetch = mock.method(globalThis, "fetch", async () => assert.fail("must not fetch"));
   const put = mock.fn(async () => assert.fail("must not write"));
   for (const url of ["invalid", "http://chatgpt.com/file", "https://chatgpt.com.evil.test/file",
-    "https://evilchatgpt.com/file", "https://user:password@chatgpt.com/file", "https://127.0.0.1/file"]) {
+    "https://localhost/file", "https://service.internal/file", "https://metadata.google.internal/file",
+    "https://user:password@chatgpt.com/file", "https://127.0.0.1/file",
+    "https://[::1]/file", "https://2130706433/file", "https://10.0.0.1/file",
+    "https://example.com:8443/file", "https://printer.local/file"]) {
     await assert.rejects(uploadFile({ ...file, download_url: url }, { put }, requestId), { code: "invalid_source" });
   }
   assert.equal(fetch.mock.callCount(), 0);
   assert.equal(put.mock.callCount(), 0);
+});
+
+test("public HTTPS attachment hosts are not provider-specific", async () => {
+  const fetch = mock.method(globalThis, "fetch", async () => new Response("ok"));
+  const put = mock.fn(async () => ({}));
+  for (const hostname of ["downloads.example.org", "oaisdmntprwestus.blob.core.windows.net", "files.oaiusercontent.com"]) {
+    await uploadFile({ ...file, download_url: `https://${hostname}/file` }, { put }, requestId);
+  }
+  assert.equal(fetch.mock.callCount(), 3);
+  assert.equal(put.mock.callCount(), 3);
 });
 
 test("expired source is distinguished from R2 failure without exposing the URL", async () => {
