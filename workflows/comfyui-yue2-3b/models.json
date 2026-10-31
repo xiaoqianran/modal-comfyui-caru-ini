@@ -1,0 +1,16 @@
+{
+  "gpu": "L40S",
+  "models": [
+    {
+      "repo_id": "Comfy-Org/YuE2",
+      "filename": "checkpoints/yue2_3b_bf16.safetensors",
+      "model_dir": "checkpoints"
+    },
+    {
+      "repo_id": "Comfy-Org/YuE2",
+      "filename": "audio_encoders/sheetsage2_bf16.safetensors",
+      "model_dir": "audio_encoders"
+    }
+  ],
+  "min_containers": 1
+}
