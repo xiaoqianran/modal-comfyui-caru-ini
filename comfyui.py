@@ -459,6 +459,8 @@ class ComfyUI:
 
     @modal.enter(snap=False)
     def start_restore(self):
+        print(f"GPU Region: {os.getenv('MODAL_REGION', 'unknown')}", flush=True)
+        print(f"Cloud Provider: {os.getenv('MODAL_CLOUD_PROVIDER', 'unknown')}", flush=True)
         for port in COMFY_PORTS:
             wait_for_port(port, timeout=30)
         self.sync_proc = subprocess.Popen(
