@@ -1,0 +1,24 @@
+{
+  "steps": [
+    {
+      "workflow": "workflows/comfyui-yue2-3b/audio_yue2_piano_strings_runner_api.json",
+      "id": "music",
+      "endpoint": "yue2",
+      "foreach": [
+        {
+          "set": {
+            "25.lyrics": "",
+            "25.seed": 202610313112,
+            "25.style": "Completely NEW original virtuosic modern piano and cinematic strings toccata, 148 BPM, E minor. Avoid repeated 4-bar ostinato. Section A: angular syncopated four-note rising motif with wide interval leaps, intricate fast runs, left hand cross-rhythms. Section B: entirely contrasting lyrical melody in G major with long sustained violin counter-melody and legato piano chords. Section C: dramatic return in altered rhythm and key, inventive harmonic modulations, cinematic crescendo. Surprising rests, strong cadence, new ideas every eight bars. No singing or voices. IMPORTANT: strict valid ABC notation. Every 4/4 bar must have exactly 32 units at L:1/32, no overfull measures, consistent V: Vocal and V: Ins, correct note lengths and bars. Compose genuinely contrasting sections, no repeated 4-bar loops.",
+            "25.abc": "X:1\r\nT:\r\nM:3/4\r\nL:1/32\r\nQ:1/4=76\r\nV: Vocal clef=treble name=\"Vocal Melody\" snm=\"Vocal\"\r\nV: Ins clef=treble name=\"Ins Melody\" snm=\"Inst.\"\r\nK:Dm\r\n% intro\r\nV: Vocal\r\n\"Dsus2\"z8\"C/D\"z8\"C7/Bb\"z8|\"Bbmaj7/D\"z16\"G#dim7\"z8|\"Dm\"z16\"C/E\"z8|\"F\"z16\"Fmaj7/A\"z8|\r\nV: Ins\r\nd4d2A2e4f4c6G2|A16d'4e'4|f'12g'8e'2c''2|a'16c''6a'2|\r\nV: Vocal\r\n\"Bbmaj7\"z8\"Am\"z16|\"Gm\"z24|\"Gm\"z16\"Dm/A\"z8|\"Dm/A\"z16\"Asus4\"z8|\r\nV: Ins\r\nd''16c''8|b16a'2g'2f'2e'2|d'4b2g2a4f4d8-|d16A,4D4|\r\nV: Vocal\r\nM:5/8\r\n\"Asus4\"z16z4|\r\nV: Ins\r\nM:5/8\r\nE16-E3F|\r\n% verse\r\nV: Vocal\r\nM:3/4\r\n\"Dm\"z16\"Am7/E\"z8|\"Dm\"z16\"Am7/E\"z8|\"Bbmaj7\"z24|\"C\"z8\"Dm\"z16|\r\nV: Ins\r\nM:3/4\r\nF24|f'6a'6e'6c'2z2A,2|D2E2F12G2A4c2|G12A4z4G4|\r\nV: Vocal\r\n\"Bbmaj7\"z16\"C\"z8|\"F\"z16\"Fmaj7/A\"z8|\"Bb\"z16\"C\"z8|\"C\"z8\"Dm\"z16|\r\nV: Ins\r\nd8d8c6d2|A16a2g2f2e2|D16E8-|E8F16-|\r\nV: Vocal\r\n\"Dm\"z8\"Am7/E\"z8\"Dm\"z8|\"Dm\"z24|\r\nV: Ins\r\nF4G4G4A,8D4-|D16-D4z2f'2|\r\n% interlude\r\nV: Vocal\r\n\"Gm\"z8\"C7/G\"z8\"C\"z8|\"Fmaj7/A\"z8\"Bbmaj7/D\"z16|\"C/E\"z24|\"F\"z16\"Fmaj7/A\"z8|\r\nV: Ins\r\nd''4b4e4e4c8|c6f2f'8b'2a'2g'2f'2|g'16c''6b'2|a'16c''4a4|\r\nV: Vocal\r\n\"Bbmaj7\"z16\"C\"z8|\"Dm\"z24|\"Gm\"z8\"C\"z16|\r\nV: Ins\r\nd''16e''8|f''16a'2g'2f'2e'2|d'2g'2b'4a'4f'4g8-|\r\nV: Vocal\r\nM:3/8\r\n\"C\"z4\"A7sus4\"z8|\r\nV: Ins\r\nM:3/8\r\ng4A,4E2E2-|\r\n% verse\r\nV: Vocal\r\nM:3/4\r\n\"A7sus4\"z16\"Dm\"z8|\"Dm\"z16\"Am/C\"z8|\"Bbmaj7\"z16\"Fmaj7/A\"z8|\"Gm7\"z16\"C\"z8|\r\nV: Ins\r\nM:3/4\r\nE16-E6z2|F24-|F24-|F16e'2d'2c'4|\r\nV: Vocal\r\n\"Dm\"z16\"Dsus2\"z8|\"Dsus2\"z8\"Dm\"z16|\"Dm\"z24|\r\nV: Ins\r\nd'2z16z6|Z2|\r\n",
+            "10.filename_prefix": "audio/011_firefly_toccata",
+            "8.seed": 202610313112
+          },
+          "name": "02-firefly-toccata"
+        }
+      ]
+    }
+  ],
+  "mode": "batch",
+  "name": "011-piano-strings-innovations"
+}

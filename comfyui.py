@@ -316,6 +316,12 @@ image = image.add_local_dir(
 
 
 
+if WORKFLOW == "comfyui-yue2-3b":
+    image = image.add_local_dir(
+        root_dir / "vendor_nodes" / "yue2_instrumental",
+        "/root/comfy/ComfyUI/custom_nodes/yue2_instrumental",
+        copy=True,
+    )
 # ============================================================================
 # Qwen-Image-2.1: fix missing os.memfd_create in ComfyUI only, without PYTHONPATH overrides.
 if WORKFLOW in {"comfyui-qwen-image-2-1", "comfyui-b300-image-video-suite"}:

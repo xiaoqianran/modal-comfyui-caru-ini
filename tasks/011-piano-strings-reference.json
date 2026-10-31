@@ -1,0 +1,21 @@
+{
+  "steps": [
+    {
+      "id": "music",
+      "foreach": [
+        {
+          "name": "01-celestial-cascade-variation",
+          "set": {
+            "25.seed": 202610312811,
+            "10.filename_prefix": "audio/011_piano_strings_variation",
+            "8.seed": 202610312811
+          }
+        }
+      ],
+      "workflow": "workflows/comfyui-yue2-3b/audio_yue2_piano_strings_runner_api.json",
+      "endpoint": "yue2"
+    }
+  ],
+  "name": "011-piano-strings-reference",
+  "mode": "batch"
+}

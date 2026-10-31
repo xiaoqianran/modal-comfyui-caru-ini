@@ -1,0 +1,128 @@
+{
+  "15": {
+    "class_type": "CheckpointLoaderSimple",
+    "inputs": {
+      "ckpt_name": "yue2_3b_bf16.safetensors"
+    }
+  },
+  "24": {
+    "class_type": "YuE2GenerateABC",
+    "inputs": {
+      "clip": [
+        "15",
+        1
+      ],
+      "style": "Solo acoustic grand piano, 68 BPM, intimate expressive contemporary classical instrumental, one piano only, no vocals, no singing, no choir, no spoken words, no other instruments.",
+      "lyrics": "[Intro]\n\n[Verse]\n\n[Chorus]\n\n[Outro]",
+      "seed": 831001,
+      "mode": "full",
+      "max_abc_tokens": 8192,
+      "temperature": 0.7,
+      "top_p": 0.9,
+      "top_k": 30,
+      "repetition_penalty": 1.005,
+      "penalty_window": 100
+    }
+  },
+  "40": {
+    "class_type": "YuE2InstrumentalizeABC",
+    "inputs": {
+      "abc": [
+        "24",
+        0
+      ]
+    }
+  },
+  "25": {
+    "class_type": "YuE2GenerateMusic",
+    "inputs": {
+      "clip": [
+        "15",
+        1
+      ],
+      "style": "Solo acoustic grand piano, 68 BPM, intimate expressive contemporary classical instrumental, one piano only, no vocals, no singing, no choir, no spoken words, no other instruments.",
+      "lyrics": "",
+      "abc": [
+        "40",
+        0
+      ],
+      "seed": 831001,
+      "mode": "full",
+      "max_duration": 60.0,
+      "temperature": 1.0,
+      "top_p": 0.95,
+      "top_k": 100,
+      "repetition_penalty": 1.2
+    }
+  },
+  "18": {
+    "class_type": "ConditioningZeroOut",
+    "inputs": {
+      "conditioning": [
+        "25",
+        0
+      ]
+    }
+  },
+  "5": {
+    "class_type": "EmptyYuE2LatentAudio",
+    "inputs": {
+      "seconds": [
+        "25",
+        1
+      ],
+      "batch_size": 1
+    }
+  },
+  "8": {
+    "class_type": "KSampler",
+    "inputs": {
+      "model": [
+        "15",
+        0
+      ],
+      "seed": 831001,
+      "steps": 32,
+      "cfg": 1.0,
+      "sampler_name": "dpm_2",
+      "scheduler": "sgm_uniform",
+      "positive": [
+        "25",
+        0
+      ],
+      "negative": [
+        "18",
+        0
+      ],
+      "latent_image": [
+        "5",
+        0
+      ],
+      "denoise": 1.0
+    }
+  },
+  "9": {
+    "class_type": "VAEDecodeAudio",
+    "inputs": {
+      "samples": [
+        "8",
+        0
+      ],
+      "vae": [
+        "15",
+        2
+      ]
+    }
+  },
+  "10": {
+    "class_type": "SaveAudioAdvanced",
+    "inputs": {
+      "audio": [
+        "9",
+        0
+      ],
+      "filename_prefix": "audio/YuE2_Instrumental",
+      "format": "flac"
+    }
+  }
+}

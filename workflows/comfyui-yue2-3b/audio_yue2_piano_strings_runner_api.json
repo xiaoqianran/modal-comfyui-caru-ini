@@ -1,0 +1,97 @@
+{
+  "15": {
+    "class_type": "CheckpointLoaderSimple",
+    "inputs": {
+      "ckpt_name": "yue2_3b_bf16.safetensors"
+    }
+  },
+  "25": {
+    "class_type": "YuE2GenerateMusic",
+    "inputs": {
+      "clip": [
+        "15",
+        1
+      ],
+      "style": "Entirely original instrumental cinematic virtuoso grand piano and symphonic strings, approximately 112 BPM with expressive rubato. Piano is clearly the lead instrument, fast rippling right hand arpeggios, cascading high-register runs, broad left-hand broken octaves, shifting minor-to-major harmonic colors, strong rhythmic pulse, rich romantic-modern harmonies, dramatic register contrasts, breathtaking climactic ascending runs. Full symphonic violin viola cello and double bass sections swell and answer the piano melody with lush counterpoint and broad sustained chords; piano stays foreground. Original memorable lyrical theme, exciting agile piano figuration, cinematic emotional development, grand orchestral crescendo and delicate final piano cadence. Inspired only by general virtuoso flowing piano texture and dramatic pacing of the user audio reference, do not transcribe or copy its melody, exact motifs or chord sequence. No voice, no singing, no humming, no choir, no speech, no vocals, no lyrics, no synth, no EDM drums, no ethnic instruments. High fidelity expressive concert performance.Original newly composed flowing piano and symphonic strings, virtuosic cascading piano melody, cinematic dramatic harmonic development, 120 second complete instrumental form.",
+      "lyrics": "",
+      "abc": "X:1\nT:\nM:4/4\nL:1/32\nQ:1/4=120\nV: Vocal clef=treble name=\"Vocal Melody\" snm=\"Vocal\"\nV: Ins clef=treble name=\"Ins Melody\" snm=\"Inst.\"\nK:Dm\n% intro\nV: Vocal\n\"Dm\"z32|\"Dm\"z32|\"Dm\"z32|\"Dm\"z32|\nV: Ins\nd4f4a4e4f4a4e4f4|d4f4a4e4f4a4e4f4|d4f4a4e4f4a4e4f4|d4f4a4e4f4a4e4f4|\nV: Vocal\n\"Dm\"z32|\"Dm\"z32|\"Dm\"z32|\"Dm\"z32|\nV: Ins\nd4f4a4e4f4a4e4f4|d4f4a4e4f4a4e4f4|d32|e16f16|\nV: Vocal\n\"Dm\"z32|\"Dm\"z32|\"Bb\"z32|\"Bb\"z32|\nV: Ins\na32|d'16e'16|d'32|e'16f'16|\nV: Vocal\n\"Bb\"z32|\"Bb\"z32|\"C\"z32|\"C\"z32|\nV: Ins\nb'16a'16|g'16f'16|e'32-|e'16z8c'8|\nV: Vocal\n\"Dm\"z32|\"Dm\"z32|\"Dm\"z32|\"Dm\"z32|\nV: Ins\nd'4d4f4e4f4a4e4f4|d4f4a4e4f4a4e4f4|d4f4a4e4f4a4e4f4|d4f4a4e4f4a4e4f4|\nV: Vocal\n\"Dm\"z32|\"Dm\"z32|\"Dm\"z32|\"Dm\"z32|\nV: Ins\nd6d6d6d6d6d2-|d4d6d6d6d6d4|z24z4c2A2|c2d4z24z2|\nV: Vocal\n\"Dm\"z32|\"Dm\"z32|\"Dm\"z32|\"Dm\"z32|\nV: Ins\nd4f4a4e4f4a4e4f4|d4f4a4e4f4a4e4f4|d4f4a4e4f4a4e4f4|d4f4a4e4f4a4e4f4|\nV: Vocal\n\"Dm\"z32|\"Dm\"z32|\"Dm\"z32|\"Dm\"z32|\nV: Ins\nd4f4a4e4f4a4e4f4|d4f4a4e4f4a4e4f4|d4f4a4e4f4a4e4f4|d4f4a4e4f4a4e4f4|\n% verse\nV: Vocal\n\"Dm\"z32|\"Dm\"z32|\"Dm\"z32|\"Dm\"z32|\nV: Ins\nd16f4a4e4f4|d4f4a4e4f4a4e4f4|d16f4a4e4f4|d4f4a4e4f4a4e4f4|\nV: Vocal\n\"Bbmaj7\"z32|\"Bbmaj7\"z32|\"Bbmaj7\"z32|\"Bbmaj7\"z32|\nV: Ins\nd16f4a4e4f4|d4f4a4e4f4a4e4f4|d16f4a4e4f4|d4f4a4e4f4a4e4f4|\nV: Vocal\n\"C\"z32|\"C\"z32|\"Dm\"z32|\"Dm\"z32|\nV: Ins\ne32-|e16z8c8|d32|d4f4a4e4f4a4e4f4|\nV: Vocal\n\"Dm\"z32|\"Dm\"z32|\"Dm\"z32|\"Dm\"z32|\nV: Ins\nd16f4a4e4f4|d4f4a4e4f4a4e4f4|d16f4a4e4f4|d4f4a4e4f4a4e4f4|\nV: Vocal\n\"Bbmaj7\"z32|\"Bbmaj7\"z32|\"Bbmaj7\"z32|\"Bbmaj7\"z32|\nV: Ins\nd16f4a4e4f4|d4f4a4e4f4a4e4f4|d16f4a4e4f4|d4f4a4e4f4a4e4f4|\nV: Vocal\n\"C\"z32|\"C\"z32|\"Dm\"z32|\"Dm\"z32|\nV: Ins\ne32-|e16z8c8|d32-|d16f4a4e4f4|\nV: Vocal\n\"Dm\"z32|\"Dm\"z32|\"Dm\"z32|\"Dm\"z32|\nV: Ins\nd16f4a4e4f4|d4f4a4e4f4a4e4f4|d16f4a4e4f4|d4f4a4e4f4a4e4f4|\nV: Vocal\n\"Bbmaj7\"z32|\"Bbmaj7\"z32|\"Bbmaj7\"z32|\"Bbmaj7\"z32|\nV: Ins\nd16f4a4e4f4|d4f4a4e4f4a4e4f4|d16f4a4e4f4|d4f4a4e4f4a4e4f4|\nV: Vocal\n\"C\"z32|\"C\"z32|\"Dm\"z32|\"Dm\"z32|\nV: Ins\ne32-|e16z8c8|d32-|d16f4a4e4f4|\n% interlude\nV: Vocal\n\"Dm\"z32|\"Dm\"z32|\"Dm\"z32|\"Dm\"z32|\nV: Ins\nd4d'4d'4d'4d'4d'4d'4d'4|d'4d'4d'4d'4d'4d'4d'4d'4|d4d'4d'4d'4d'4d'4d'4d'4|d'4d'4d'4d'4d'4d'4d'4d'4|\nV: Vocal\n\"Bbmaj7\"z32|\"Bbmaj7\"z32|\"Bbmaj7\"z32|\"Bbmaj7\"z32|\nV: Ins\nd4d'4d'4d'4d'4d'4d'4d'4|d'4d'4d'4d'4d'4d'4d'4d'4|d4d'4d'4d'4d'4d'4d'4d'4|d'4d'4d'4d'4d'4d'4d'4d'4|\nV: Vocal\n\"C\"z32|\"C\"z32|\"Dm\"z32|\"Dm\"z32|\nV: Ins\ne32-|e16z8c8|d32-|d32|\nV: Vocal\n\"Dm\"z32|\"Dm\"z32|\"Dm\"z32|\"Dm\"z32|\nV: Ins\nd4f4a4e4f4a4e4f4|d4f4a4e4f4a4e4f4|d4f4a4e4f4a4e4f4|d4f4a4e4f4a4e4f4|\nV: Vocal\n\"Dm\"z32|\"Dm\"z32|\"Dm\"z32|\"Dm\"z32|\nV: Ins\nd32|e16f16|a32|d'16e'16|\nV: Vocal\n\"Bbmaj7\"z32|\"Bbmaj7\"z32|\"Bbmaj7\"z32|\"Bbmaj7\"z32|\nV: Ins\nd'32|e'16f'16|b'16a'16|g'16f'16|\nV: Vocal\n\"C\"z32|\"C\"z32|\"Dm\"z32|\"Dm\"z32|\nV: Ins\ne'32-|e'16z8c'8|d'32-|d'32|\n% verse\nV: Vocal\n\"Dm\"z32|\"Dm\"z32|\"Dm\"z32|\"Dm\"z32|\nV: Ins\nd16f4a4e4f4|d4f4a4e4f4a4e4f4|d16f4a4e4f4|d4f4a4e4f4a4e4f4|\nV: Vocal\n\"Bbmaj7\"z32|\"Bbmaj7\"z32|\"Bbmaj7\"z32|\"Bbmaj7\"z32|\nV: Ins\nd16f4a4e4f4|d4f4a4e4f4a4e4f4|d16f4a4e4f4|d4f4a4e4f4a4e4f4|\nV: Vocal\n\"C\"z32|\"C\"z32|\"Dm\"z32|\"Dm\"z32|\nV: Ins\ne32-|e16z8c8|d32-|d16f4a4e4f4|\nV: Vocal\n\"Dm\"z32|\"Dm\"z32|\"Dm\"z32|\"Dm\"z32|\nV: Ins\nd16f4a4e4f4|d4f4a4e4f4a4e4f4|d16f4a4e4f4|d4f4a4e4f4a4e4f4|\nV: Vocal\n\"Bbmaj7\"z32|\"Bbmaj7\"z32|\"Bbmaj7\"z32|\"Bbmaj7\"z32|\nV: Ins\nd16f4a4e4f4|d4f4a4e4f4a4e4f4|d16f4a4e4f4|d4f4a4e4f4a4e4f4|\nV: Vocal\n\"C\"z32|\"C\"z32|\"Dm\"z32|\"Dm\"z32|\nV: Ins\ne32-|e16z8c8|d32-|d16f4a4e4f4|\nV: Vocal\n\"Dm\"z32|\"Dm\"z32|\"Dm\"z32|\"Dm\"z32|\nV: Ins\nd16f4a4e4f4|d4f4a4e4f4a4e4f4|d16f4a4e4f4|d4f4a4e4f4a4e4f4|\nV: Vocal\n\"Bbmaj7\"z32|\"Bbmaj7\"z32|\"Bbmaj7\"z32|\"Bbmaj7\"z32|\nV: Ins\nd16f4a4e4f4|d4f4a4e4f4a4e4f4|d16f4a4e4f4|d4f4a4e4f4a4e4f4|\nV: Vocal\n\"C\"z32|\"C\"z32|\"Dm\"z32|\"Dm\"z32|\nV: Ins\ne32-|e16z8c8|d32-|d16f4a4e4f4|\nV: Vocal\n\"Dm\"z32|\"Dm\"z32|\"Dm\"z32|\"Dm\"z32|\nV: Ins\nd16f4a4e4f4|d4f4a4e4f4a4e4f4|d16f4a4e4f4|d4f4a4e4f4a4e4f4|\nV: Vocal\n\"Bbmaj7\"z32|\"Bbmaj7\"z32|\"Bbmaj7\"z32|\"Bbmaj7\"z32|\nV: Ins\nd16f4a4e4f4|d4f4a4e4f4a4e4f4|d16f4a4e4f4|d4f4a4e4f4a4e4f4|\nV: Vocal\n\"C\"z32|\"C\"z32|\"Dm\"z32|\"Dm\"z32|\nV: Ins\ne32-|e16z8c8|d32-|d16f4a4e4f4|\nV: Vocal\n\"Dm\"z32|\"Dm\"z32|\"Dm\"z32|\"Dm\"z32|\nV: Ins\nd16f4a4e4f4|d4f4a4e4f4a4e4f4|d16f4a4e4f4|d4f4a4e4f4a4e4f4|\nV: Vocal\n\"Bbmaj7\"z32|\"Bbmaj7\"z32|\"Bbmaj7\"z32|\"Bbmaj7\"z32|\nV: Ins\nd16f4a4e4f4|d4f4a4e4f4a4e4f4|d16f4a4e4f4|d4f4a4e4f4a4e4f4|\nV: Vocal\n\"C\"z32|\"C\"z32|\"Dm\"z32|\"Dm\"z32|\nV: Ins\ne32-|e16z8c8|d32-|d16f4a4e4f4|\nV: Vocal\n\"Dm\"z32|\"Dm\"z32|\"Dm\"z32|\"Dm\"z32|\nV: Ins\nd16f4a4e4f4|d4f4a4e4f4a4e4f4|d16f4a4e4f4|d4f4a4e4f4a4e4f4|\nV: Vocal\n\"Bbmaj7\"z32|\"Bbmaj7\"z32|\"Bbmaj7\"z32|\"Bbmaj7\"z32|\nV: Ins\nd16f4a4e4f4|d4f4a4e4f4a4e4f4|d16f4a4e4f4|d4f4a4e4f4a4e4f4|\nV: Vocal\n\"C\"z32|\"C\"z32|\"Dm\"z32|\"Dm\"z32|\nV: Ins\ne32-|e16z8c8|d32-|d16f4a4e4f4|\nV: Vocal\n\"Dm\"z32|\"Dm\"z32|\"Dm\"z32|\"Dm\"z32|\nV: Ins\nd16f4a4e4f4|d4f4a4e4f4a4e4f4|d16f4a4e4f4|d4f4a4e4f4a4e4f4|\nV: Vocal\n\"Bbmaj7\"z32|\"Bbmaj7\"z32|\"Bbmaj7\"z32|\"Bbmaj7\"z32|\nV: Ins\nd16f4a4e4f4|d4f4a4e4f4a4e4f4|d16f4a4e4f4|d4f4a4e4f4a4e4f4|\nV: Vocal\n\"C\"z32|\"C\"z32|\"Dm\"z32|\"Dm\"z32|\nV: Ins\ne32-|e16z8c8|d32-|d16f4a4e4f4|\nV: Vocal\n\"Dm\"z32|\"Dm\"z32|\"Dm\"z32|\"Dm\"z32|\nV: Ins\nd16f4a4e4f4|d4f4a4e4f4a4e4f4|d16f4a4e4f4|d4f4a4e4f4a4e4f4|\nV: Vocal\n\"Bbmaj7\"z32|\"Bbmaj7\"z32|\"Bbmaj7\"z32|\"Bbmaj7\"z32|\nV: Ins\nd16f4a4e4f4|d4f4a4e4f4a4e4f4|d16f4a4e4f4|d4f4a4e4f4a4e4f4|\nV: Vocal\n\"C\"z32|\"C\"z32|\"Dm\"z32|\"Dm\"z32|\nV: Ins\ne32-|e16z8c8|d32-|d16f4a4e4f4|\nV: Vocal\n\"Dm\"z32|\"Dm\"z32|\"Dm\"z32|\"Dm\"z32|\nV: Ins\nd16f4a4e4f4|d4f4a4e4f4a4e4f4|d16f4a4e4f4|d4f4a4e4f4a4e4f4|\nV: Vocal\n\"Bbmaj7\"z32|\"Bbmaj7\"z32|\"Bbmaj7\"z32|\"Bbmaj7\"z32|\nV: Ins\nd16f4a4e4f4|d4f4a4e4f4a4e4f4|d16f4a4e4f4|d4f4a4e4f4a4e4f4|\nV: Vocal\n\"C\"z32|\"C\"z32|\"Dm\"z32|\"Dm\"z32|\nV: Ins\ne32-|e16z8c8|d32-|d16f4a4e4f4|\nV: Vocal\n\"Dm\"z32|\"Dm\"z32|\"Dm\"z32|\"Dm\"z32|\nV: Ins\nd16f4a4e4f4|d4f4a4e4f4a4e4f4|d16f4a4e4f4|d4f4a4e4f4a4e4f4|\nV: Vocal\n\"Bbmaj7\"z32|\"Bbmaj7\"z32|\"Bbmaj7\"z32|\"Bbmaj7\"z32|\nV: Ins\nd16f4a4e4f4|d4f4a4e4f4a4e4f4|d16f4a4e4f4|d4f4a4e4f4a4e4f4|\nV: Vocal\n\"C\"z32|\"C\"z32|\"Dm\"z32|\"Dm\"z32|\nV: Ins\ne32-|e16z8c8|d32-|d16f4a4e4f4|\n% chorus\nV: Vocal\n\"Dm\"z32|\"Dm\"z32|\"Dm\"z32|\"Dm\"z32|\nV: Ins\nd16f4a4e4f4|d4f4a4e4f4a4e4f4|d16f4a4e4f4|d4f4a4e4f4a4e4f4|\nV: Vocal\n\"Bbmaj7\"z32|\"Bbmaj7\"z32|\"Bbmaj7\"z32|\"Bbmaj7\"z32|\nV: Ins\nd16f4a4e4f4|d4f4a4e4f4a4e4f4|d16f4a4e4f4|d4f4a4e4f4a4e4f4|\nV: Vocal\n\"C\"z32|\"C\"z32|\"Dm\"z32|\"Dm\"z32|\nV: Ins\ne32-|e16z8c8|d32-|d16f4a4e4f4|\nV: Vocal\n\"Dm\"z32|\"Dm\"z32|\"Dm\"z32|\"Dm\"z32|\nV: Ins\nd16f4a4e4f4|d4f4a4e4f4a4e4f4|d16f4a4e4f4|d4f4a4e4f4a4e4f4|\nV: Vocal\n\"Bbmaj7\"z32|\"Bbmaj7\"z32|\"Bbmaj7\"z32|\"Bbmaj7\"z32|\nV: Ins\nd16f4a4e4f4|d4f4a4e4f4a4e4f4|d16f4a4e4f4|d4f4a4e4f4a4e4f4|\nV: Vocal\n\"C\"z32|\"C\"z32|\"Dm\"z32|\"Dm\"z32|\nV: Ins\ne32-|e16z8c8|d32-|d16f4a4e4f4|\n% verse\nV: Vocal\n\"Dm\"z32|\"Dm\"z32|\"Dm\"z32|\"Dm\"z32|\nV: Ins\nd16f4a4e4f4|d4f4a4e4f4a4e4f4|d16f4a4e4f4|d4f4a4e4f4a4e4f4|\nV: Vocal\n\"Bbmaj7\"z32|\"Bbmaj7\"z32|\"Bbmaj7\"z32|\"Bbmaj7\"z32|\nV: Ins\nd16f4a4e4f4|d4f4a4e4f4a4e4f4|d16f4a4e4f4|d4f4a4e4f4a4e4f4|\nV: Vocal\n\"C\"z32|\"C\"z32|\"Dm\"z32|\"Dm\"z32|\nV: Ins\ne32-|e16z8c8|d32-|d16f4a4e4f4|\nV: Vocal\n\"Dm\"z32|\"Dm\"z32|\"Dm\"z32|\"Dm\"z32|\nV: Ins\nd16f4a4e4f4|d4f4a4e4f4a4e4f4|d16f4a4e4f4|d4f4a4e4f4a4e4f4|\nV: Vocal\n\"Bbmaj7\"z32|\"Bbmaj7\"z32|\"Bbmaj7\"z32|\"Bbmaj7\"z32|\nV: Ins\nd16f4a4e4f4|d4f4a4e4f4a4e4f4|d16f4a4e4f4|d4f4a4e4f4a4e4f4|\nV: Vocal\n\"C\"z32|\"C\"z32|\"Dm\"z32|\"Dm\"z32|\nV: Ins\ne32-|e16z8c8|d32-|d16f4a4e4f4|\nV: Vocal\n\"Dm\"z32|\"Dm\"z32|\"Dm\"z32|\"Dm\"z32|\nV: Ins\nd16f4a4e4f4|d4f4a4e4f4a4e4f4|d16f4a4e4f4|d4f4a4e4f4a4e4f4|\nV: Vocal\n\"Bbmaj7\"z32|\"Bbmaj7\"z32|\"Bbmaj7\"z32|\"Bbmaj7\"z32|\nV: Ins\nd16f4a4e4f4|d4f4a4e4f4a4e4f4|d16f4a4e4f4|d4f4a4e4f4a4e4f4|\nV: Vocal\n\"C\"z32|\"C\"z32|\"Dm\"z32|\"Dm\"z32|\nV: Ins\ne32-|e16z8c8|d32-|d16f4a4e4f4|\nV: Vocal\n\"Dm\"z32|\"Dm\"z32|\"Dm\"z32|\"Dm\"z32|\nV: Ins\nd16f4a4e4f4|d4f4a4e4f4a4e4f4|d16f4a4e4f4|d4f4a4e4f4a4e4f4|\nV: Vocal\n\"Bbmaj7\"z32|\"Bbmaj7\"z32|\"Bbmaj7\"z32|\"Bbmaj7\"z32|\nV: Ins\nd16f4a4e4f4|d4f4a4e4f4a4e4f4|d16f4a4e4f4|d4f4a4e4f4a4e4f4|\nV: Vocal\n\"C\"z32|\"C\"z32|\"Dm\"z32|\"Dm\"z32|\nV: Ins\ne32-|e16z8c8|d32-|d16f4a4e4f4|\nV: Vocal\n\"Dm\"z32|\"Dm\"z32|\"Dm\"z32|\"Dm\"z32|\nV: Ins\nd16f4a4e4f4|d4f4a4e4f4a4e4f4|d16f4a4e4f4|d4f4a4e4f4a4e4f4|\nV: Vocal\n\"Bbmaj7\"z32|\"Bbmaj7\"z32|\"Bbmaj7\"z32|\"Bbmaj7\"z32|\nV: Ins\nd16f4a4e4f4|d4f4a4e4f4a4e4f4|d16f4a4e4f4|d4f4a4e4f4a4e4f4|\nV: Vocal\n\"C\"z32|\"C\"z32|\"Dm\"z32|\"Dm\"z32|\nV: Ins\ne32-|e16z8c8|d32-|d16f4a4e4f4|\n% chorus\nV: Vocal\n\"Dm\"z32|\"Dm\"z32|\"Dm\"z32|\"Dm\"z32|\nV: Ins\nd16f4a4e4f4|d4f4a4e4f4a4e4f4|d16f4a4e4f4|d4f4a4e4f4a4e4f4|\nV: Vocal\n\"Bbmaj7\"z32|\"Bbmaj7\"z32|\"Bbmaj7\"z32|\"Bbmaj7\"z32|\nV: Ins\nd16f4a4e4f4|d4f4a4e4f4a4e4f4|d16f4a4e4f4|d4f4a4e4f4a4e4f4|\nV: Vocal\n\"C\"z32|\"C\"z32|\"Dm\"z32|\"Dm\"z32|\nV: Ins\ne32-|e16z8c8|d32-|d16f4a4e4f4|\nV: Vocal\n\"Dm\"z32|\"Dm\"z32|\"Dm\"z32|\"Dm\"z32|\nV: Ins\nd16f4a4e4f4|d4f4a4e4f4a4e4f4|d16f4a4e4f4|d4f4a4e4f4a4e4f4|\nV: Vocal\n\"Bbmaj7\"z32|\"Bbmaj7\"z32|\"Bbmaj7\"z32|\"Bbmaj7\"z32|\nV: Ins\nd16f4a4e4f4|d4f4a4e4f4a4e4f4|d16f4a4e4f4|d4f4a4e4f4a4e4f4|\nV: Vocal\n\"C\"z32|\"C\"z32|\"Dm\"z32|\"Dm\"z32|\nV: Ins\ne32-|e16z8c8|d32-|d16f4a4e4f4|\nV: Vocal\n\"Dm\"z32|\"Dm\"z32|\"Dm\"z32|\"Dm\"z32|\nV: Ins\nd16f4a4e4f4|d4f4a4e4f4a4e4f4|d16f4a4e4f4|d4f4a4e4f4a4e4f4|\nV: Vocal\n\"Bbmaj7\"z32|\"Bbmaj7\"z32|\"Bbmaj7\"z32|\"Bbmaj7\"z32|\nV: Ins\nd16f4a4e4f4|d4f4a4e4f4a4e4f4|d16f4a4e4f4|d4f4a4e4f4a4e4f4|\nV: Vocal\n\"C\"z32|\"C\"z32|\"Dm\"z32|\"Dm\"z32|\nV: Ins\ne32-|e16z8c8|d32-|d16z16|\nV: Vocal\n\"Dm\"z32|\"Dm\"z32|\"Dm\"z32|\"Dm\"z32|\nV: Ins\nd16z16|Z3|\n",
+      "seed": 202610312801,
+      "mode": "full",
+      "max_duration": 120,
+      "temperature": 1.0,
+      "top_p": 0.95,
+      "top_k": 100,
+      "repetition_penalty": 1.2
+    }
+  },
+  "18": {
+    "class_type": "ConditioningZeroOut",
+    "inputs": {
+      "conditioning": [
+        "25",
+        0
+      ]
+    }
+  },
+  "5": {
+    "class_type": "EmptyYuE2LatentAudio",
+    "inputs": {
+      "seconds": [
+        "25",
+        1
+      ],
+      "batch_size": 1
+    }
+  },
+  "8": {
+    "class_type": "KSampler",
+    "inputs": {
+      "model": [
+        "15",
+        0
+      ],
+      "seed": 202610312801,
+      "steps": 32,
+      "cfg": 1.0,
+      "sampler_name": "dpm_2",
+      "scheduler": "sgm_uniform",
+      "positive": [
+        "25",
+        0
+      ],
+      "negative": [
+        "18",
+        0
+      ],
+      "latent_image": [
+        "5",
+        0
+      ],
+      "denoise": 1.0
+    }
+  },
+  "9": {
+    "class_type": "VAEDecodeAudio",
+    "inputs": {
+      "samples": [
+        "8",
+        0
+      ],
+      "vae": [
+        "15",
+        2
+      ]
+    }
+  },
+  "10": {
+    "class_type": "SaveAudioAdvanced",
+    "inputs": {
+      "audio": [
+        "9",
+        0
+      ],
+      "filename_prefix": "audio/piano_strings_original_01_celestial_cascade",
+      "format": "flac"
+    }
+  }
+}

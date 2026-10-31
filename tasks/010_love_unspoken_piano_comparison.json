@@ -1,0 +1,30 @@
+{
+  "name": "love_unspoken_piano_comparison",
+  "endpoint": "yue2",
+  "workflow": "workflows/comfyui-yue2-3b/audio_yue2_love_unspoken_piano_api.json",
+  "score": "tasks/assets/love_unspoken_instrumental.abc",
+  "output": "outputs/love_unspoken_piano_comparison",
+  "variants": [
+    {
+      "id": "01_romantic_ballad",
+      "label": "细腻浪漫",
+      "reference_technique": "Sakayume / 逆夢: arpeggio piano ballad",
+      "style": "Original instrumental solo concert grand piano performance of one fixed lyrical melody. Keep the supplied ABC score as the underlying composition. One acoustic grand piano only, no singing, no voice, no humming, no choir, no strings, no electronic layers, no drums, no additional instruments. Expressive, beautifully voiced right-hand melody, distinct bass and harmonic support, natural rubato and pedal resonance. Do not quote any existing copyrighted melody. Intimate cinematic romance, wistful and tender Korean drama theme. 68 BPM feel, pianissimo opening and delicate long singing tone, warm high-register legato, gently rippling broken-chord arpeggios, restrained inner-voice countermelody, subtle piano staccato ornaments, gradually ascending harmony toward one quietly radiant emotional climax and a soft wistful ending. Transparent texture, carefully spaced low bass, expressive breaths, soft hammers, no virtuosic showmanship.",
+      "seed": 202610311000
+    },
+    {
+      "id": "02_symphonic_lyric",
+      "label": "宏大抒情",
+      "reference_technique": "My Dearest: symphonic piano layering",
+      "style": "Original instrumental solo concert grand piano performance of one fixed lyrical melody. Keep the supplied ABC score as the underlying composition. One acoustic grand piano only, no singing, no voice, no humming, no choir, no strings, no electronic layers, no drums, no additional instruments. Expressive, beautifully voiced right-hand melody, distinct bass and harmonic support, natural rubato and pedal resonance. Do not quote any existing copyrighted melody. Expansive cinematic concert piano, tender love theme with orchestral scope achieved using piano alone. 72 BPM feel, singing melody projected over lyrical sixteenth-note broken-chord accompaniment, expressive middle voice, wide-register bass octaves and resonant harmonic layers, rich secondary piano voicings, progressive intensification and grand sweeping yet romantic climactic passage; resolve to a delicate intimate solo-piano coda. Clear melodic foreground, refined classical phrasing, strongly contrasted dynamics but never overpower the love theme.",
+      "seed": 202610311001
+    },
+    {
+      "id": "03_dramatic_crescendo",
+      "label": "戏剧高潮",
+      "reference_technique": "Unravel: dramatic dynamic contrast",
+      "style": "Original instrumental solo concert grand piano performance of one fixed lyrical melody. Keep the supplied ABC score as the underlying composition. One acoustic grand piano only, no singing, no voice, no humming, no choir, no strings, no electronic layers, no drums, no additional instruments. Expressive, beautifully voiced right-hand melody, distinct bass and harmonic support, natural rubato and pedal resonance. Do not quote any existing copyrighted melody. Powerful emotional romantic drama piano with virtuosic climactic development, 84 BPM feel. Begin with vulnerable sparse melodic motif, gradually build rhythmic tension through flowing left hand arpeggios, dramatic octave-register movement, denser inner harmonies, bold dynamic contrast and energetic cascading piano runs; short brilliant forte climax before suddenly dropping back to almost-whispered pianissimo and one tender resolving phrase. Maintain the same melodic contour and underlying harmony from the supplied ABC, controlled clean acoustic grand piano tone only.",
+      "seed": 202610311002
+    }
+  ]
+}

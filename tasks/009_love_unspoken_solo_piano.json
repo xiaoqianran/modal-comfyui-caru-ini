@@ -1,0 +1,11 @@
+{
+  "name": "love_unspoken_solo_piano",
+  "steps": [
+    {
+      "id": "piano",
+      "endpoint": "yue2",
+      "workflow": "workflows/comfyui-yue2-3b/audio_yue2_love_unspoken_piano_api.json",
+      "set": {}
+    }
+  ]
+}

@@ -1,0 +1,119 @@
+{
+  "15": {
+    "class_type": "CheckpointLoaderSimple",
+    "inputs": {
+      "ckpt_name": "yue2_3b_bf16.safetensors"
+    }
+  },
+  "24": {
+    "class_type": "YuE2GenerateABC",
+    "inputs": {
+      "clip": [
+        "15",
+        1
+      ],
+      "style": "Original Mandarin Chinese vocal futuristic epic electronic pop, powerful bright clear female lead singing in Mandarin, cinematic melodic EDM and Future Bass, 128 BPM 4/4, D minor with uplifting F major chorus, stadium-scale hook, bold original rising five-note melodic motif, strong rhythmic phrasing, huge modern synth bass, sparkling digital arpeggiators, modern punchy electronic drums, epic orchestral brass accents and wide supersaw synthesizer lead, high impact cinematic drop after first chorus, expansive anthemic final chorus, cutting-edge modern sci-fi production. Female vocal upfront and intelligible, energetic confident emotional singing, not operatic, not traditional Chinese, not folk, not nostalgic, not sad, no spoken-word. Sing the provided Chinese lyrics clearly, avoid extra invented English lyrics. Full two-minute structure: concise verse, rising prechorus, catchy chorus, short instrumental drop, second verse, bridge and explosive final chorus. Clear original melodic hook, female vocal audible above electronic orchestration.",
+      "lyrics": "[Intro]\n光划破长夜\n宇宙在呼唤\n\n[Verse 1]\n倒数声穿过寂静的夜\n银色航迹划过天边\n城市的灯火渐渐遥远\n我们驶向未知的边缘\n\n[Pre-Chorus]\n让沉默都被点燃\n让光穿透黑暗\n这一刻不再等待\n向着星海全速展开\n\n[Chorus]\n穿越星海 奔向未来\n让亿万星辰为我们盛开\n冲破黑暗 冲破阻碍\n在宇宙尽头看见光彩\n飞向未来 永不停摆\n新的世界由我们打开\n\n[Instrumental]\n\n[Verse 2]\n穿过星云闪烁的边界\n新的坐标浮现在眼前\n每次脉冲都在宣告\n我们的旅程没有终点\n\n[Bridge]\n当群星在远方闪耀\n当时间失去了坐标\n我们仍向前奔跑\n直到宇宙听见心跳\n\n[Final Chorus]\n穿越星海 奔向未来\n让亿万星辰为我们盛开\n冲破黑暗 冲破阻碍\n在宇宙尽头看见光彩\n飞向未来 永不停摆\n新的世界由我们打开\n\n[Outro]\n奔向未来",
+      "seed": 202610312221,
+      "mode": "full",
+      "max_abc_tokens": 8192,
+      "temperature": 0.7,
+      "top_p": 0.9,
+      "top_k": 30,
+      "repetition_penalty": 1.005,
+      "penalty_window": 100
+    }
+  },
+  "25": {
+    "class_type": "YuE2GenerateMusic",
+    "inputs": {
+      "clip": [
+        "15",
+        1
+      ],
+      "style": "Original Mandarin Chinese vocal futuristic epic electronic pop, powerful bright clear female lead singing in Mandarin, cinematic melodic EDM and Future Bass, 128 BPM 4/4, D minor with uplifting F major chorus, stadium-scale hook, bold original rising five-note melodic motif, strong rhythmic phrasing, huge modern synth bass, sparkling digital arpeggiators, modern punchy electronic drums, epic orchestral brass accents and wide supersaw synthesizer lead, high impact cinematic drop after first chorus, expansive anthemic final chorus, cutting-edge modern sci-fi production. Female vocal upfront and intelligible, energetic confident emotional singing, not operatic, not traditional Chinese, not folk, not nostalgic, not sad, no spoken-word. Sing the provided Chinese lyrics clearly, avoid extra invented English lyrics. Full two-minute structure: concise verse, rising prechorus, catchy chorus, short instrumental drop, second verse, bridge and explosive final chorus. Clear original melodic hook, female vocal audible above electronic orchestration.",
+      "lyrics": "[Intro]\n光划破长夜\n宇宙在呼唤\n\n[Verse 1]\n倒数声穿过寂静的夜\n银色航迹划过天边\n城市的灯火渐渐遥远\n我们驶向未知的边缘\n\n[Pre-Chorus]\n让沉默都被点燃\n让光穿透黑暗\n这一刻不再等待\n向着星海全速展开\n\n[Chorus]\n穿越星海 奔向未来\n让亿万星辰为我们盛开\n冲破黑暗 冲破阻碍\n在宇宙尽头看见光彩\n飞向未来 永不停摆\n新的世界由我们打开\n\n[Instrumental]\n\n[Verse 2]\n穿过星云闪烁的边界\n新的坐标浮现在眼前\n每次脉冲都在宣告\n我们的旅程没有终点\n\n[Bridge]\n当群星在远方闪耀\n当时间失去了坐标\n我们仍向前奔跑\n直到宇宙听见心跳\n\n[Final Chorus]\n穿越星海 奔向未来\n让亿万星辰为我们盛开\n冲破黑暗 冲破阻碍\n在宇宙尽头看见光彩\n飞向未来 永不停摆\n新的世界由我们打开\n\n[Outro]\n奔向未来",
+      "abc": [
+        "24",
+        0
+      ],
+      "seed": 202610312221,
+      "mode": "full",
+      "max_duration": 120,
+      "temperature": 1.0,
+      "top_p": 0.95,
+      "top_k": 100,
+      "repetition_penalty": 1.2
+    }
+  },
+  "18": {
+    "class_type": "ConditioningZeroOut",
+    "inputs": {
+      "conditioning": [
+        "25",
+        0
+      ]
+    }
+  },
+  "5": {
+    "class_type": "EmptyYuE2LatentAudio",
+    "inputs": {
+      "seconds": [
+        "25",
+        1
+      ],
+      "batch_size": 1
+    }
+  },
+  "8": {
+    "class_type": "KSampler",
+    "inputs": {
+      "model": [
+        "15",
+        0
+      ],
+      "seed": 202610312221,
+      "steps": 32,
+      "cfg": 1.0,
+      "sampler_name": "dpm_2",
+      "scheduler": "sgm_uniform",
+      "positive": [
+        "25",
+        0
+      ],
+      "negative": [
+        "18",
+        0
+      ],
+      "latent_image": [
+        "5",
+        0
+      ],
+      "denoise": 1.0
+    }
+  },
+  "9": {
+    "class_type": "VAEDecodeAudio",
+    "inputs": {
+      "samples": [
+        "8",
+        0
+      ],
+      "vae": [
+        "15",
+        2
+      ]
+    }
+  },
+  "10": {
+    "class_type": "SaveAudioAdvanced",
+    "inputs": {
+      "audio": [
+        "9",
+        0
+      ],
+      "filename_prefix": "audio/star_expedition_mandarin_vocal_120s",
+      "format": "flac"
+    }
+  }
+}
