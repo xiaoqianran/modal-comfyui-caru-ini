@@ -221,9 +221,13 @@ def download_shard(payload: dict) -> dict:
             if _size_valid(candidate, item):
                 try:
                     _verify_content(candidate, item)
-                    # Hard links are not assumed across Volume directories.
                     if candidate != target:
-                        _publish(candidate, stage, item, replace_blob=True)
+                        # Reuse the public blob without moving or duplicating it.
+                        target.parent.mkdir(parents=True, exist_ok=True)
+                        temp = target.with_name(target.name + ".publish")
+                        temp.unlink(missing_ok=True)
+                        temp.symlink_to(os.path.relpath(candidate, target.parent))
+                        os.replace(temp, target)
                     return
                 except ValueError:
                     pass  # Corrupt complete cache: force a fresh native download.
@@ -270,21 +274,26 @@ def download_shard(payload: dict) -> dict:
                 seconds=time.time() - started, files=len(items))
 
 
-def _publish(source: Path, root: Path, item: dict, replace_blob: bool = False) -> None:
-    """Publish already hash-verified staging. Keep source until both commits succeed."""
-    import shutil
-    if not _size_valid(source, item):
-        raise ValueError(f"Invalid staged file: {source}")
+def _publish(source: Path, root: Path, item: dict) -> None:
+    """Publish verified staging with same-volume rename and restart recovery."""
     target = _cached_path(root, item)
     blob = (root / ("models--" + item["repo_id"].replace("/", "--")) / "blobs" / item["digest"]
             if item["kind"] == "hf" else target)
-    if replace_blob or not _size_valid(blob, item):
+    if not _size_valid(blob, item):
+        if not _size_valid(source, item):
+            raise ValueError(f"Missing staged and published file: {source}")
         blob.parent.mkdir(parents=True, exist_ok=True)
-        temp = blob.with_name(blob.name + ".publish")
-        shutil.copyfile(source, temp)
-        if not _size_valid(temp, item):
-            raise ValueError(f"Copy size mismatch: {temp}")
-        os.replace(temp, blob)
+        # Never move a shared cache blob: reused public blobs are already valid.
+        actual = source.resolve() if item["kind"] == "hf" else source
+        public_root = (Path(CACHE_DIR) / ("models--" + item["repo_id"].replace("/", "--")) / "blobs"
+                       if item["kind"] == "hf" else None)
+        if public_root is not None and actual.parent == public_root:
+            if actual != blob:
+                raise ValueError(f"Unexpected public blob source: {actual}")
+        else:
+            os.replace(actual, blob)
+    if not _size_valid(blob, item):
+        raise ValueError(f"Invalid published file: {blob}")
     if item["kind"] == "hf":
         target.parent.mkdir(parents=True, exist_ok=True)
         temp = target.with_name(target.name + ".publish")
@@ -296,25 +305,48 @@ def _publish(source: Path, root: Path, item: dict, replace_blob: bool = False) -
 @app.function(image=image, volumes={CACHE_DIR: volume}, timeout=86400, secrets=[hf_secret], cpu=2.0, memory=8192)
 def merge_shards(payload: dict) -> dict:
     import shutil
+    import time
+    started = time.monotonic()
+    print("MERGE reload: refreshing Volume", flush=True)
     volume.reload()
+    def log(stage: str, since: float) -> None:
+        print(f"MERGE {stage}: {time.monotonic() - since:.2f}s "
+              f"(total {time.monotonic() - started:.2f}s)", flush=True)
+    log("reload", started)
     root = Path(CACHE_DIR)
     run_root = Path(SHARD_ROOT) / payload["run_id"]
     # Only requested missing files are published. Every source was hash-verified
     # by its shard; merge does cheap size checks, not another full hash pass.
     pending = payload.get("downloaded_items", [])
+    phase = time.monotonic()
+    print(f"MERGE publish: {len(pending)} files (same-volume rename)", flush=True)
     for item in pending:
         source = _cached_path(_stage_dir(run_root, item), item)
-        _publish(source, root, item, replace_blob=True)
+        _publish(source, root, item)
+    log("publish", phase)
     missing = [i["filename"] for i in payload["items"] if not _size_valid(_cached_path(root, i), i)]
     if missing:
         return dict(ok=False, missing=missing, moved_entries=len(pending))
-    volume.commit()  # Model data durable first. Never delete sources before this.
     revisions = {f"{i['repo_id']}/{i['filename']}": i["revision"] for i in payload["items"] if i["kind"] == "hf"}
+    phase = time.monotonic()
+    print("MERGE commit: publishing model files", flush=True)
+    volume.commit()
+    log("commit", phase)
+    # The second commit publishes the success record and optional cleanup.
+    # If it fails, the first commit still preserves all model data for retry.
     _atomic_json(root / ".workflow-revisions" / f"{payload['workflow']}.json", revisions)
-    volume.commit()  # Reader's record durable second.
     if run_root.is_dir():
-        shutil.rmtree(run_root)
-        volume.commit()  # Cleanup failure cannot invalidate the published cache.
+        phase = time.monotonic()
+        print("MERGE cleanup: removing staged files", flush=True)
+        try:
+            shutil.rmtree(run_root)
+            log("cleanup", phase)
+        except Exception as exc:
+            print(f"WARN MERGE cleanup deferred: {exc}", flush=True)
+    phase = time.monotonic()
+    print("MERGE final commit: success record and cleanup", flush=True)
+    volume.commit()
+    log("final commit", phase)
     return dict(ok=True, missing=[], moved_entries=len(pending))
 
 
