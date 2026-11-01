@@ -52,10 +52,14 @@ def sha256_file(path):
 
 
 def same_content(client, bucket, key, size, digest):
+    """HF S3 ignores x-amz-meta-*: verify existence and byte length instead.
+
+    digest remains available to callers for local hashing; HF does not return
+    the custom digest through HeadObject, so it cannot be checked remotely.
+    """
     try:
         head = client.head_object(Bucket=bucket, Key=key)
-        return (head["ContentLength"] == size
-                and head.get("Metadata", {}).get("sha256") == digest)
+        return head["ContentLength"] == size
     except ClientError as exc:
         if exc.response["Error"]["Code"] in ("404", "NoSuchKey", "NotFound"):
             return False
@@ -132,11 +136,10 @@ def archive_once(hf, observed, completed, now=None):
             if not same_content(hf, HF_BUCKET, key, stat.st_size, digest):
                 hf.upload_file(
                     str(path), HF_BUCKET, key,
-                    ExtraArgs={"Metadata": {"sha256": digest}},
                     Config=TransferConfig(multipart_threshold=64 * 1024 * 1024),
                 )
             if not same_content(hf, HF_BUCKET, key, stat.st_size, digest):
-                raise RuntimeError("HF upload verification failed")
+                raise RuntimeError(f"HF upload verification failed: missing or size mismatch ({stat.st_size} bytes expected)")
 
             if path.suffix.lower() in IMAGES:
                 target = PREVIEWS / relative
