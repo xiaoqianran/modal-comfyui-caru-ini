@@ -169,8 +169,32 @@ image = (
 # ============================================================================
 # 5. 插件由 plugins.json 声明；工作流在全部构建步骤完成后挂载
 # ============================================================================
-if comfy_plugins:
-    image = image.run_commands("comfy node install " + " ".join(comfy_plugins))
+def find_cnr_ids(data) -> set[str]:
+    """Find Comfy Registry IDs, including nodes inside nested subgraphs."""
+    if isinstance(data, dict):
+        ids = {data["cnr_id"]} if isinstance(data.get("cnr_id"), str) else set()
+        children = data.values()
+    elif isinstance(data, list):
+        ids, children = set(), data
+    else:
+        return set()
+    for child in children:
+        ids.update(find_cnr_ids(child))
+    return ids
+
+
+# Only the selected workflow's JSON files determine automatically installed nodes.
+node_ids = set(comfy_plugins)
+if WORKFLOW_DIR.is_dir():
+    for workflow_json in sorted(WORKFLOW_DIR.rglob("*.json")):
+        if workflow_json.name.lower() in {"models.json", "plugins.json"}:
+            continue
+        node_ids.update(find_cnr_ids(json.loads(workflow_json.read_text(encoding="utf-8"))))
+node_ids.discard("comfy-core")
+if node_ids:
+    image = image.run_commands(
+        "comfy node install " + " ".join(shlex.quote(node_id) for node_id in sorted(node_ids))
+    )
 
 
 def install_wheel(image: modal.Image, wheel: dict) -> modal.Image:
