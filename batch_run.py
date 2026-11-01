@@ -262,15 +262,12 @@ def _submit_job(key, job, completed, task_path, root, upload_caches):
         raise RuntimeError(f"{sid}/{jid}: submission uncertain; inspect remote queue") from exc
     job["prompt_id"] = pid
     job["state"] = "submitted"
-    job["submitted_at"] = time.monotonic()
     _save_json(job["status_file"], {"status": "submitted", "endpoint": job["endpoint"],
                                     "prompt_id": pid, "intent_hash": job["intent_hash"]})
     print(f"{sid}/{jid}: submitted {pid}", flush=True)
 
-def _check_job(key, job, completed, timeout):
+def _check_job(key, job, completed):
     sid, jid = key
-    if time.monotonic() - job["submitted_at"] > timeout:
-        raise TimeoutError(f"{sid}/{jid}: timed out waiting for {job['prompt_id']}")
     history = get_json(job["base"], f"/history/{job['prompt_id']}")
     if job["prompt_id"] not in history:
         return False
@@ -305,7 +302,7 @@ def _check_job(key, job, completed, timeout):
     return True
 
 def _run_task_unlocked(task_path, endpoints_path="endpoints.json", output=None,
-                       timeout=3600, trust_legacy_status=False):
+                       timeout=0, trust_legacy_status=False):
     """Run ComfyUI jobs as dependencies become ready, across independent endpoints."""
     task_path = Path(task_path).resolve()
     task = json.loads(task_path.read_text(encoding="utf-8-sig"))
@@ -319,6 +316,9 @@ def _run_task_unlocked(task_path, endpoints_path="endpoints.json", output=None,
     mode = task.get("mode", "stream")
     if mode not in ("batch", "stream"):
         raise ValueError(f"Invalid mode: {mode!r}; expected 'batch' or 'stream'")
+    if timeout < 0:
+        raise ValueError("Batch timeout must be >= 0 (0 disables timeout)")
+    batch_started_at = time.monotonic()
 
     jobs = {}
     step_ids = set()
@@ -406,11 +406,15 @@ def _run_task_unlocked(task_path, endpoints_path="endpoints.json", output=None,
         elif status.get("prompt_id"):
             job["state"] = "submitted"
             job["prompt_id"] = status["prompt_id"]
-            job["submitted_at"] = time.monotonic()
             print(f"{key[0]}/{key[1]}: recovering {status['prompt_id']}", flush=True)
         elif status.get("status") in ("submitting", "uncertain"):
             raise RuntimeError(f"{key[0]}/{key[1]}: uncertain prior submission, inspect remote queue")
     while any(job["state"] != "completed" for job in jobs.values()):
+        if timeout and time.monotonic() - batch_started_at > timeout:
+            raise TimeoutError(
+                f"Batch exceeded {timeout}s; saved prompt IDs remain resumable. "
+                "Use --timeout 0 to disable the batch deadline."
+            )
         progress = False
         for key, job in jobs.items():
             if job["state"] != "pending" or not all(dep[1] in completed[dep[0]] for dep in job["deps"]):
@@ -428,7 +432,7 @@ def _run_task_unlocked(task_path, endpoints_path="endpoints.json", output=None,
         for key, job in jobs.items():
             if job["state"] != "submitted":
                 continue
-            if _check_job(key, job, completed, timeout):
+            if _check_job(key, job, completed):
                 progress = True
         if not progress:
             time.sleep(3)
@@ -436,7 +440,7 @@ def _run_task_unlocked(task_path, endpoints_path="endpoints.json", output=None,
 
 
 def run_task(task_path, endpoints_path="endpoints.json", output=None,
-             timeout=3600, trust_legacy_status=False):
+             timeout=0, trust_legacy_status=False):
     """Single runner per output directory; recover safely after process exit."""
     if output:
         out = Path(output).resolve()
@@ -453,7 +457,8 @@ def main():
     ap.add_argument("--task", required=True, help="Task JSON")
     ap.add_argument("--endpoints", default="endpoints.json")
     ap.add_argument("--out", help="Output directory (default: outputs/<task name>)")
-    ap.add_argument("--timeout", type=int, default=3600, help="Seconds per job")
+    ap.add_argument("--timeout", type=int, default=0,
+                    help="Total batch deadline in seconds (default: 0, disabled; queue time included)")
     ap.add_argument("--trust-legacy-status", action="store_true",
                     help="Explicitly adopt old status files that have no task fingerprint")
     args = ap.parse_args()
