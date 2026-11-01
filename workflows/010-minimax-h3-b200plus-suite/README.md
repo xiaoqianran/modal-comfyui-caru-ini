@@ -2,7 +2,7 @@
 
 独立套件 `010-minimax-h3-b200plus-suite`，与 `010-minimax-h3-bf16-b200plus-suite` 分开部署，不修改原 BF16 工作流。
 
-- GPU 默认 `L40S`（工作流目录名保留 b200plus 以兼容既有引用），单 GPU 容器、单 ComfyUI 进程；`highvram=false`。
+- GPU 默认 `RTX-PRO-6000`（工作流目录名保留 b200plus 以兼容既有引用），单 GPU 容器、单 ComfyUI 进程；`highvram=true`。
 - 基础视频 DiT：`minimax_h3_fl2va_int8_convrot.safetensors` 与 `minimax_h3_ref2va_int8_convrot.safetensors`（INT8 ConvRot）。
 - 视频 VAE：`minimax_h3_video_vae_int8_convrot.safetensors`；音频 VAE：FP32。
 - Qwen3VL 文本编码器：NVFP4 AWQ。**Pika H3 Flex LoRA 仍为 BF16**，并非 INT8；使用官方对应的 FL2VA、Ref2VA 适配器。
@@ -14,7 +14,7 @@
 ```bash
 git pull
 export WORKFLOW=010-minimax-h3-b200plus-suite
-export MODAL_GPU="L40S"
+export MODAL_GPU="RTX-PRO-6000"
 export MODAL_REGION=ap
 uv run modal run download-models.py
 uv run modal deploy comfyui.py
