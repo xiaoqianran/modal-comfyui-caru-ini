@@ -70,7 +70,8 @@ GPU_TYPE = os.getenv("MODAL_GPU") or model_config.get("gpu", "L40S")
 MODAL_REGIONS = [region.strip() for region in os.getenv("MODAL_REGION", "").split(",") if region.strip()] or None
 # 根据最终 GPU 配置（包含 MODAL_GPU 覆盖）自动决定高显存模式。
 IS_BLACKWELL = GPU_TYPE.strip().upper() in {"B200", "B200+", "B300"}
-HIGH_VRAM = model_config.get("highvram", IS_BLACKWELL or GPU_TYPE.strip().upper() == "H200")
+HIGH_VRAM_GPUS = {"H200", "B200", "B200+", "B300", "RTX-PRO-6000", "RTX PRO 6000", "RTX PRO 6000 BLACKWELL"}
+HIGH_VRAM = (GPU_TYPE.strip().upper() in HIGH_VRAM_GPUS or model_config.get("highvram", False)) and not model_config.get("disable_highvram", False)
 DUAL_COMFYUI = GPU_TYPE.strip().upper() == "B300"
 COMFY_PORTS = (8000, 8001) if DUAL_COMFYUI else (8000,)
 COMFY_VER = os.getenv("COMFY_VER")
@@ -322,6 +323,21 @@ if WORKFLOW == "comfyui-yue2-3b":
         "/root/comfy/ComfyUI/custom_nodes/yue2_instrumental",
         copy=True,
     )
+
+# Only the 010 INT8 H3 suite snapshots a warmed model. Other workflows retain
+# their existing fast, server-only snapshot startup.
+if WORKFLOW == "010-minimax-h3-b200plus-suite":
+    image = image.add_local_file(
+        root_dir / "snapshot_warmup.py", "/root/snapshot_warmup.py", copy=True,
+    ).add_local_file(
+        root_dir / "testing" / "snapshot_h3_int8_warmup_api.json",
+        "/root/snapshot_h3_int8_warmup_api.json",
+        copy=True,
+    ).add_local_file(
+        root_dir / "inputs" / "001.png",
+        "/root/comfy/ComfyUI/input/001.png",
+        copy=True,
+    )
 # ============================================================================
 # Qwen-Image-2.1: fix missing os.memfd_create in ComfyUI only, without PYTHONPATH overrides.
 if WORKFLOW in {"comfyui-qwen-image-2-1", "comfyui-b300-image-video-suite"}:
@@ -402,6 +418,7 @@ def download_models():
 
 @app.cls(
     max_containers=1,  # Hard cap: never start a second B300 container for this app.
+    startup_timeout=1800 if WORKFLOW == "010-minimax-h3-b200plus-suite" else 300,
     gpu=GPU_TYPE,
     region=MODAL_REGIONS,
     volumes={
@@ -419,7 +436,7 @@ def download_models():
 # ============================================================================
 # 8. ComfyUI 生命周期：启动 Web 服务、恢复快照、执行退出清理
 # ============================================================================
-@modal.concurrent(max_inputs=100)
+@modal.concurrent(max_inputs=32)
 class ComfyUI:
     @modal.enter(snap=True)
     def start_checkpoint(self):
@@ -455,6 +472,16 @@ class ComfyUI:
             self.procs.append(subprocess.Popen(args))
         for port in COMFY_PORTS:
             wait_for_port(port, timeout=300)
+        if WORKFLOW == "010-minimax-h3-b200plus-suite" and os.getenv("SNAPSHOT_H3_WARMUP", "1") != "0":
+            # Official Modal pattern: localhost warmup inside snap=True, before
+            # the container is exposed to real requests. A full H3 inference
+            # (five frames, one step) initializes weights and CUDA kernels.
+            import runpy
+            warmup_h3 = runpy.run_path("/root/snapshot_warmup.py")["warmup_h3"]
+            warmup_h3(
+                COMFY_PORTS[0], "/root/snapshot_h3_int8_warmup_api.json",
+                f"/outputs/{WORKFLOW}",
+            )
 
     @staticmethod
     def _output_snapshot():
@@ -511,7 +538,7 @@ class ComfyUI:
         self.commit_thread.start()
         print("App Restored!")
     
-    @modal.web_server(8000, startup_timeout=300, label="comfyui-1")
+    @modal.web_server(8000, startup_timeout=1800 if WORKFLOW == "010-minimax-h3-b200plus-suite" else 300, label="comfyui-1")
     def ui(self):
         print("App Ready!")
 
