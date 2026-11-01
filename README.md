@@ -9,8 +9,12 @@ This project builds on [caru-ini/modal-comfyui](https://github.com/caru-ini/moda
 - **多工作流配置**：每个 `workflows/<name>/` 使用 API Workflow JSON、`models.json`、`plugins.json`；工作流独立 Modal App。
 - **工作流部署管理**：通用部署 BAT；本地 `frontend/` 管理界面可查看状态、触发部署或取消部署。
 - **统一资产浏览**：`storage/s3.py` 访问 Cloudflare R2 与 Hugging Face Storage Buckets；预览 GLB 和 Gaussian Splat 文件。
-- **生成资产同步**：R2 挂载 `output/3d`，`storage/hf_sync.py` 后台将生成文件复制到 HF S3。
+- **生成资产同步**：输出先保存在 Modal Volume，`storage/hf_sync.py` 定时归档到 HF S3，图片预览复制到 R2；支持视频、图片、音频和 3D 文件。
 - **GPU 与自定义 CUDA 节点**：各工作流独立配置 GPU，支持额外编译命令。
+
+输出格式统一维护在 `storage/output_formats.py`，供归档、资产列表/下载和 Volume 快照共用。新增 GIF、WebP 及 WAV、MP3、FLAC、OGG、M4A、AAC、Opus；音频可下载，暂不提供在线播放。
+
+同步仍使用定时扫描、稳定等待和失败重试。进程运行期间发现文件变化会强制更新 HF 与图片预览；上传前后若大小或修改时间变化，本轮不标记完成，后续重试。首次扫描（包括重启后）仍以远端大小判断是否跳过，因此不能识别停机期间发生的同大小覆盖；建议生成结果使用不同文件名。
 
 > 本项目是社区 Fork，并非原作者的官方发布。部分工作流依赖第三方自定义节点和云端凭据；部署前请自行核对依赖与权限。
 
