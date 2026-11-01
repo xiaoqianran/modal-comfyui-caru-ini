@@ -362,6 +362,21 @@ if WORKFLOW == "010-minimax-h3-b200plus-suite":
         "/root/comfy/ComfyUI/input/001.png",
         copy=True,
     )
+
+# Official Pika FL2VA demo workflows reference these two images by filename.
+# Bake them into each relevant image so a fresh ComfyUI container can run the
+# workflow without a manual browser upload.
+if WORKFLOW in {
+    "010-minimax-h3-b200plus-suite",
+    "010-minimax-h3-bf16-b200plus-suite",
+    "001-minimax-h3-fl2va-bf16",
+}:
+    for name in ("ref_popart_woman.png", "lastP_spin_jump_hole.png"):
+        image = image.add_local_file(
+            root_dir / "inputs" / name,
+            "/root/comfy/ComfyUI/input/" + name,
+            copy=True,
+        )
 # ============================================================================
 # Qwen-Image-2.1: fix missing os.memfd_create in ComfyUI only, without PYTHONPATH overrides.
 if WORKFLOW in {"comfyui-qwen-image-2-1", "comfyui-b300-image-video-suite"}:
