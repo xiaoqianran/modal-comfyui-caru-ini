@@ -1,5 +1,5 @@
 {
-  "gpu": "B200+",
+  "gpu": "RTX-PRO-6000",
   "models": [
     {
       "repo_id": "Comfy-Org/MiniMax-H3",
@@ -38,5 +38,6 @@
     }
   ],
   "models_ext": [],
-  "highvram": false
+  "highvram": false,
+  "disable_highvram": true
 }

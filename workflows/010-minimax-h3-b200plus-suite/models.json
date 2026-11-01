@@ -1,5 +1,5 @@
 {
-  "gpu": "B200+",
+  "gpu": "L40S",
   "models": [
     {
       "repo_id": "Comfy-Org/MiniMax-H3",

@@ -3,7 +3,7 @@
 使用新部署标识 `010-minimax-h3-bf16-b200plus-suite`，部署后会创建不同名称的 Modal 应用。
 仅提供 Pika H3 Flex 文生视频（T2V）、FL2VA 和 Ref2VA 三个 UI 工作流；不再包含原生 MiniMax H3 工作流。
 
-- GPU：默认 B200+，单个 GPU 容器、单个 ComfyUI 进程。
+- GPU：默认 RTX PRO 6000（工作流目录名保留 b200plus 以兼容既有引用），单个 GPU 容器、单个 ComfyUI 进程。
 - `highvram=false`：此套件不传 `--highvram`，由 ComfyUI 管理 FL2VA / Ref2VA 模型切换，降低连续推理时显存溢出风险；其他工作流保持原设置。
 - 7 个模型：两套 H3 BF16 基础权重、两套 Pika LoRA、视频/音频 VAE 和 Qwen3VL 编码器。
 - 模型继续复用公共 Volume；从模型清单移除某文件**不会删除**公共缓存文件，也不会影响其他工作流。
