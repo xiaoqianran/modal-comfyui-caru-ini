@@ -12,17 +12,13 @@ from botocore.config import Config
 from boto3.s3.transfer import TransferConfig
 from botocore.exceptions import ClientError
 
+from storage.output_formats import AUDIO, CATEGORIES, EXTENSIONS, IMAGES, MODELS, VIDEOS
+
 ROOT = Path(os.getenv("COMFY_OUTPUT_ROOT", "/outputs"))
 WORKFLOW = os.getenv("WORKFLOW", "default")
 PREVIEWS = Path(os.getenv("COMFY_R2_PREVIEWS", "/r2-previews"))
 HF_BUCKET = os.getenv("HF_S3_BUCKET", "comfyui-assets")
 INTERVAL = int(os.getenv("HF_SYNC_INTERVAL", "15"))
-EXTENSIONS = {".glb", ".gltf", ".ply", ".splat", ".ksplat", ".spz",
-              ".mp4", ".webm", ".mov", ".mkv", ".png", ".jpg", ".jpeg",
-              ".json", ".bin", ".obj", ".mtl", ".stl"}
-VIDEOS = {".mp4", ".webm", ".mov", ".mkv"}
-IMAGES = {".png", ".jpg", ".jpeg"}
-CATEGORIES = {"3d", "3dgs", "video", "image"}
 LOG = logging.getLogger("hf-archive")
 
 
@@ -103,8 +99,9 @@ def iter_outputs():
             category = "image"
         elif path.suffix.lower() in VIDEOS:
             category = "video"
-        elif path.suffix.lower() in {".glb", ".gltf", ".ply", ".splat", ".ksplat", ".spz",
-                                      ".obj", ".mtl", ".stl"}:
+        elif path.suffix.lower() in AUDIO:
+            category = "audio"
+        elif path.suffix.lower() in MODELS:
             category = "3d"
         else:
             continue  # Keep uncategorized metadata out of the archive.
@@ -120,20 +117,28 @@ def archive_once(hf, observed, completed, now=None):
     present = set()
     for relative, path in iter_outputs():
         present.add(relative)
-        stat = path.stat()
+        try:
+            stat = path.stat()
+        except FileNotFoundError:
+            continue
         version = (stat.st_size, stat.st_mtime_ns)
         if not stat.st_size or completed.get(relative) == version:
             continue
         previous = observed.get(relative)
         if previous is None or previous[0] != version:
-            observed[relative] = (version, now)
+            # Keep a dirty flag until success, including interrupted uploads.
+            observed[relative] = (version, now, previous is not None or relative in completed)
             continue
         if now - previous[1] < INTERVAL:
             continue
         key = f"comfyui/{WORKFLOW}/{relative}"
         try:
             digest = sha256_file(path)
-            if not same_content(hf, HF_BUCKET, key, stat.st_size, digest):
+            current = path.stat()
+            if (current.st_size, current.st_mtime_ns) != version:
+                raise RuntimeError("Output changed before upload")
+            if previous[2] or not same_content(hf, HF_BUCKET, key, stat.st_size, digest):
+                observed[relative] = (version, previous[1], True)
                 hf.upload_file(
                     str(path), HF_BUCKET, key,
                     Config=TransferConfig(multipart_threshold=64 * 1024 * 1024),
@@ -141,13 +146,21 @@ def archive_once(hf, observed, completed, now=None):
             if not same_content(hf, HF_BUCKET, key, stat.st_size, digest):
                 raise RuntimeError(f"HF upload verification failed: missing or size mismatch ({stat.st_size} bytes expected)")
 
+            current = path.stat()
+            if (current.st_size, current.st_mtime_ns) != version:
+                raise RuntimeError("Output changed during upload")
+
             if path.suffix.lower() in IMAGES:
                 target = PREVIEWS / relative
                 target.parent.mkdir(parents=True, exist_ok=True)
-                if not target.exists() or target.stat().st_size != stat.st_size:
+                if previous[2] or not target.exists() or target.stat().st_size != stat.st_size:
                     shutil.copyfile(path, target)
                 if target.stat().st_size != stat.st_size:
                     raise RuntimeError("R2 preview verification failed")
+
+            current = path.stat()
+            if (current.st_size, current.st_mtime_ns) != version:
+                raise RuntimeError("Output changed during archive")
 
             completed[relative] = version
             LOG.info("Archived %s", key)

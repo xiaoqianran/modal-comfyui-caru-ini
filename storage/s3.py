@@ -9,12 +9,9 @@ from botocore.config import Config
 from botocore.exceptions import ClientError
 from dotenv import load_dotenv
 
-load_dotenv(Path(__file__).resolve().parents[1] / ".env")
+from storage.output_formats import CATEGORIES, EXTENSIONS
 
-EXTENSIONS = {".glb", ".gltf", ".ply", ".splat", ".ksplat", ".spz",
-              ".mp4", ".webm", ".mov", ".mkv", ".png", ".jpg", ".jpeg",
-              ".json", ".bin", ".obj", ".mtl", ".stl"}
-CATEGORIES = ("3d", "3dgs", "video", "image")
+load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
 
 def client(source):

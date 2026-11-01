@@ -19,6 +19,9 @@ def test_single_and_dual_archive():
             "video/instance-2/clip.mp4": root / "instance-2" / "video" / "clip.mp4",
             "image/instance-2/pic.png": root / "instance-2" / "pic.png",
             "3d/instance-2/mesh.glb": root / "instance-2" / "3d" / "mesh.glb",
+            "audio/instance-1/voice.wav": root / "instance-1" / "voice.wav",
+            "image/animation.gif": root / "animation.gif",
+            "image/picture.webp": root / "picture.webp",
         }
         for relative, path in paths.items():
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -29,16 +32,17 @@ def test_single_and_dual_archive():
                 self.objects = {}
                 self.uploads = []
             def upload_file(self, path, bucket, key, Config=None, ExtraArgs=None):
-                self.objects[key] = (Path(path).stat().st_size, ExtraArgs["Metadata"]["sha256"])
+                self.objects[key] = Path(path).read_bytes()
                 self.uploads.append(key)
+            def head_object(self, Bucket, Key):
+                if Key not in self.objects:
+                    raise hf_sync.ClientError({"Error": {"Code": "404"}}, "HeadObject")
+                return {"ContentLength": len(self.objects[Key]), "Metadata": {}}
         hf = FakeHF()
-        def same_content(client, bucket, key, size, digest):
-            return client.objects.get(key) == (size, digest)
         with patch.object(hf_sync, "ROOT", root), \
              patch.object(hf_sync, "PREVIEWS", preview), \
              patch.object(hf_sync, "WORKFLOW", "test-suite"), \
              patch.object(hf_sync, "INTERVAL", 2), \
-             patch.object(hf_sync, "same_content", same_content), \
              patch.object(hf_sync, "make_video_preview", lambda _: None):
             assert dict(hf_sync.iter_outputs()) == paths
             observed, completed = {}, {}
@@ -50,7 +54,7 @@ def test_single_and_dual_archive():
                 key = f"comfyui/test-suite/{relative}"
                 assert key in hf.objects
                 assert s3.check_key(key, "hf") == key
-                if relative.endswith(".png"):
+                if paths[relative].suffix in hf_sync.IMAGES:
                     assert (preview / relative).read_bytes() == paths[relative].read_bytes()
                     assert s3.check_key(f"previews/test-suite/{relative}", "r2")
             hf_sync.archive_once(hf, observed, completed, now=10)
@@ -63,6 +67,8 @@ def test_single_and_dual_archive():
             hf_sync.archive_once(hf, observed, completed, now=16)
             hf_sync.archive_once(hf, observed, completed, now=20)
             assert len(hf.uploads) == len(paths) + 2, "Same-size changed output must rearchive"
+            assert hf.objects["comfyui/test-suite/image/instance-2/pic.png"] == b"new larger imagE"
+            assert (preview / "image/instance-2/pic.png").read_bytes() == b"new larger imagE"
 
 
 def test_modal_volume_snapshot_scans_all_instances():
@@ -79,6 +85,9 @@ def test_modal_volume_snapshot_scans_all_instances():
             root / "test-suite" / "Qwen_001.png",
             root / "test-suite" / "instance-1" / "video" / "clip.mp4",
             root / "test-suite" / "instance-2" / "3d" / "mesh.glb",
+            root / "test-suite" / "voice.flac",
+            root / "test-suite" / "animation.gif",
+            root / "test-suite" / "picture.webp",
         ]
         for path in files:
             path.parent.mkdir(parents=True, exist_ok=True)

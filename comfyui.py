@@ -417,6 +417,8 @@ preview_mount = modal.CloudBucketMount(
 )
 image = image.pip_install("boto3", "imageio-ffmpeg").add_local_file(
     root_dir / "storage" / "hf_sync.py", "/root/hf_sync.py", copy=True
+).add_local_file(
+    root_dir / "storage" / "output_formats.py", "/root/storage/output_formats.py", copy=True
 ).env({"WORKFLOW": WORKFLOW})
 
 # Runtime configuration is mounted after builds; editing models.json cannot
@@ -525,15 +527,13 @@ class ComfyUI:
     @staticmethod
     def _output_snapshot():
         """Track completed-looking output files without touching temp files."""
-        extensions = {".glb", ".gltf", ".ply", ".splat", ".ksplat", ".spz",
-                      ".mp4", ".webm", ".mov", ".mkv", ".png", ".jpg", ".jpeg",
-                      ".json", ".bin", ".obj", ".mtl", ".stl"}
+        from storage.output_formats import EXTENSIONS
         root = Path("/outputs") / WORKFLOW
         snapshot = {}
         if not root.is_dir():
             return snapshot
         for path in root.rglob("*"):
-            if not path.is_file() or path.suffix.lower() not in extensions:
+            if not path.is_file() or path.suffix.lower() not in EXTENSIONS:
                 continue
             try:
                 stat = path.stat()
@@ -577,7 +577,7 @@ class ComfyUI:
         self.commit_thread.start()
         print("App Restored!")
     
-    @modal.web_server(8000, startup_timeout=1800 if WORKFLOW == "010-minimax-h3-b200plus-suite" else 300, label="comfyui-1")
+    @modal.web_server(8000, startup_timeout=1800 if WORKFLOW == "010-minimax-h3-b200plus-suite" else 300, label="comfyui-h3-int8" if WORKFLOW == "010-minimax-h3-b200plus-suite" else "comfyui-1")
     def ui(self):
         print("App Ready!")
 
