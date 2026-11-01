@@ -301,25 +301,8 @@ def _check_job(key, job, completed):
     print(f"{sid}/{jid}: completed {len(local)} output(s)", flush=True)
     return True
 
-def _run_task_unlocked(task_path, endpoints_path="endpoints.json", output=None,
-                       timeout=0, trust_legacy_status=False):
-    """Run ComfyUI jobs as dependencies become ready, across independent endpoints."""
-    task_path = Path(task_path).resolve()
-    task = json.loads(task_path.read_text(encoding="utf-8-sig"))
-    endpoints_file = Path(endpoints_path).resolve()
-    endpoints = json.loads(endpoints_file.read_text(encoding="utf-8-sig"))
-    root = endpoints_file.parent
-    out = Path(output).resolve() if output else root / "outputs" / _safe_name(task["name"])
-    steps = task["steps"]
-    if not isinstance(steps, list) or not steps:
-        raise ValueError("Task must contain nonempty steps")
-    mode = task.get("mode", "stream")
-    if mode not in ("batch", "stream"):
-        raise ValueError(f"Invalid mode: {mode!r}; expected 'batch' or 'stream'")
-    if timeout < 0:
-        raise ValueError("Batch timeout must be >= 0 (0 disables timeout)")
-    batch_started_at = time.monotonic()
-
+def _build_jobs(steps, endpoints, root, out, task_dir):
+    """Expand task steps and validate all graphs/dependencies before execution."""
     jobs = {}
     step_ids = set()
     for step in steps:
@@ -371,7 +354,31 @@ def _run_task_unlocked(task_path, endpoints_path="endpoints.json", output=None,
         step_ids.add(sid)
 
     for job in jobs.values():
-        job["intent_hash"] = _job_intent_hash(job, jobs, task_path.parent, root)
+        job["intent_hash"] = _job_intent_hash(job, jobs, task_dir, root)
+
+    return jobs, step_ids
+
+
+def _run_task_unlocked(task_path, endpoints_path="endpoints.json", output=None,
+                       timeout=0, trust_legacy_status=False):
+    """Run ComfyUI jobs as dependencies become ready, across independent endpoints."""
+    task_path = Path(task_path).resolve()
+    task = json.loads(task_path.read_text(encoding="utf-8-sig"))
+    endpoints_file = Path(endpoints_path).resolve()
+    endpoints = json.loads(endpoints_file.read_text(encoding="utf-8-sig"))
+    root = endpoints_file.parent
+    out = Path(output).resolve() if output else root / "outputs" / _safe_name(task["name"])
+    steps = task["steps"]
+    if not isinstance(steps, list) or not steps:
+        raise ValueError("Task must contain nonempty steps")
+    mode = task.get("mode", "stream")
+    if mode not in ("batch", "stream"):
+        raise ValueError(f"Invalid mode: {mode!r}; expected 'batch' or 'stream'")
+    if timeout < 0:
+        raise ValueError("Batch timeout must be >= 0 (0 disables timeout)")
+    batch_started_at = time.monotonic()
+
+    jobs, step_ids = _build_jobs(steps, endpoints, root, out, task_path.parent)
 
     # Validate *every* persisted job before submitting anything or adopting legacy state.
     statuses = {}
@@ -409,6 +416,9 @@ def _run_task_unlocked(task_path, endpoints_path="endpoints.json", output=None,
             print(f"{key[0]}/{key[1]}: recovering {status['prompt_id']}", flush=True)
         elif status.get("status") in ("submitting", "uncertain"):
             raise RuntimeError(f"{key[0]}/{key[1]}: uncertain prior submission, inspect remote queue")
+    jobs_by_step = {}
+    for key, job in jobs.items():
+        jobs_by_step.setdefault(key[0], []).append(job)
     while any(job["state"] != "completed" for job in jobs.values()):
         if timeout and time.monotonic() - batch_started_at > timeout:
             raise TimeoutError(
@@ -422,7 +432,7 @@ def _run_task_unlocked(task_path, endpoints_path="endpoints.json", output=None,
             if mode == "batch" and any(
                 other["state"] != "completed"
                 for dep_step in {dep[0] for dep in job["deps"]}
-                for other_key, other in jobs.items() if other_key[0] == dep_step
+                for other in jobs_by_step[dep_step]
             ):
                 continue
             _submit_job(key, job, completed, task_path, root, upload_caches)
