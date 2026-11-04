@@ -468,9 +468,9 @@ def download_models():
         "/r2-previews": preview_mount,
     },
     secrets=[modal.Secret.from_name("huggingface-s3")],
-    # 所有已部署的工作流保持一个 GPU 容器常驻，不因空闲缩容至零。
-    min_containers=1,
-    scaledown_window=3600 if WORKFLOW == "comfyui-b300-image-video-suite" else 1800,
+    # 临时节省 GPU 费用：不保留常驻容器，空闲 30 分钟后缩容至零。
+    min_containers=0,
+    scaledown_window=1800,
     enable_memory_snapshot=True,
     experimental_options={"enable_gpu_snapshot": True},
 )
