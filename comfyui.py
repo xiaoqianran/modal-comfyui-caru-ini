@@ -468,9 +468,9 @@ def download_models():
         "/r2-previews": preview_mount,
     },
     secrets=[modal.Secret.from_name("huggingface-s3")],
-    # 不保留常驻容器；Idol 空闲 2 分钟缩容，其余工作流保持 30 分钟。
+    # 不保留常驻容器；Idol 空闲 5 分钟缩容，其余工作流保持 30 分钟。
     min_containers=0,
-    scaledown_window=120 if WORKFLOW == "comfyui-idol" else 1800,
+    scaledown_window=300 if WORKFLOW == "comfyui-idol" else 1800,
     enable_memory_snapshot=True,
     experimental_options={"enable_gpu_snapshot": True},
 )

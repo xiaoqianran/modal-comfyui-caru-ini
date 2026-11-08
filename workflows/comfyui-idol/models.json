@@ -27,5 +27,5 @@
     }
   ],
   "models_ext": [],
-  "gpu": "L40S"
+  "gpu": "T4"
 }
