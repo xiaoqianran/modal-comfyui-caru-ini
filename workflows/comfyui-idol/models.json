@@ -1,0 +1,31 @@
+{
+  "models": [
+    {
+      "repo_id": "Comfy-Org/Idol",
+      "filename": "diffusion_models/idol_fp16.safetensors",
+      "model_dir": "diffusion_models"
+    },
+    {
+      "repo_id": "Comfy-Org/Idol",
+      "filename": "clip_vision/dino_v3_vit_h_bf16.safetensors",
+      "model_dir": "clip_vision"
+    },
+    {
+      "repo_id": "VAST-AI/TripoSplat",
+      "filename": "vae/flux2-vae.safetensors",
+      "model_dir": "vae"
+    },
+    {
+      "repo_id": "Comfy-Org/Idol",
+      "filename": "vae/idol_decoder_fp16.safetensors",
+      "model_dir": "vae"
+    },
+    {
+      "repo_id": "VAST-AI/TripoSplat",
+      "filename": "background_removal/birefnet.safetensors",
+      "model_dir": "background_removal"
+    }
+  ],
+  "models_ext": [],
+  "gpu": "L40S"
+}
