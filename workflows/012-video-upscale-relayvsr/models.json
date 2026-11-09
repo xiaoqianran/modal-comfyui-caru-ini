@@ -1,0 +1,17 @@
+{
+  "gpu": "RTX-PRO-6000",
+  "min_containers": 1,
+  "highvram": true,
+  "models": [
+    {
+      "repo_id": "Comfy-Org/RelayVSR",
+      "filename": "diffusion_models/relayvsr_x2_lightx2v_int8_convrot.safetensors",
+      "model_dir": "diffusion_models"
+    },
+    {
+      "repo_id": "Comfy-Org/RelayVSR",
+      "filename": "vae/relayvsr_flash_vae_x2_fp32.safetensors",
+      "model_dir": "vae"
+    }
+  ]
+}
