@@ -15,9 +15,11 @@ CONFIG = ROOT / "workflows" / WORKFLOW / "models.json"
 volume = modal.Volume.from_name("modal-comfyui-models-v2", create_if_missing=True, version=2)
 app = modal.App("modal-model-cache-download")
 try:
+    hf_secret_name = "huggingface-secret"
     hf_secret = modal.Secret.from_name("huggingface-secret")
     hf_secret.hydrate()
 except modal.exception.NotFoundError:
+    hf_secret_name = "huggingface-s3"
     hf_secret = modal.Secret.from_name("huggingface-s3")
 image = (
     modal.Image.debian_slim(python_version="3.11")
@@ -29,6 +31,39 @@ image = (
 CACHE_DIR = "/cache"
 SHARD_ROOT = "/cache/.download-shards"
 MAX_SHARDS = 16
+
+# Register benchmark functions only on the local coordinator, not on workers
+# importing this module inside the lightweight cache image.
+if modal.is_local():
+    from modal_benchmark.hf import create_downloader
+    benchmark = create_downloader(
+        volume_name="modal-comfyui-models-v2", app=app, volume_version=2,
+        mount_path=CACHE_DIR, secret_name=hf_secret_name,
+        verification_mode="fast",
+    )
+
+
+def benchmark_manifest(items: list[dict]) -> dict:
+    grouped = {}
+    for item in items:
+        if item["kind"] != "hf":
+            continue
+        key = (item["repo_id"], item["revision"])
+        files = grouped.setdefault(key, {})
+        entry = {"size": item["size"],
+                 "sha256": item["digest"] if item["algorithm"] == "sha256" else None}
+        if item["filename"] in files and files[item["filename"]] != entry:
+            raise ValueError(f"Conflicting benchmark file: {key}/{item['filename']}")
+        files[item["filename"]] = entry
+    return {"version": 1, "models": [
+        {"repo_id": repo, "revision": revision, "files": files}
+        for (repo, revision), files in grouped.items()
+    ]}
+
+
+def benchmark_path(base: Path, item: dict) -> Path:
+    root = _safe_path(base, item["repo_id"])
+    return _safe_path(root / item["revision"] / "model", item["filename"])
 
 
 def _env_int(name: str, default: int, lo: int, hi: int) -> int:
@@ -348,7 +383,14 @@ def merge_shards(payload: dict) -> dict:
     phase = time.monotonic()
     print(f"MERGE publish: {len(pending)} files (same-volume rename)", flush=True)
     for item in pending:
-        source = _cached_path(_stage_dir(run_root, item), item)
+        if item["kind"] == "hf" and payload.get("benchmark_base"):
+            source = benchmark_path(Path(payload["benchmark_base"]), item)
+            # The benchmark accepts non-LFS entries without SHA-256; verify
+            # our manifest's Git blob SHA-1 as well before publication.
+            if source.exists():
+                _verify_content(source, item)
+        else:
+            source = _cached_path(_stage_dir(run_root, item), item)
         _publish(source, root, item)
     log("publish", phase)
     missing = [i["filename"] for i in payload["items"] if not _size_valid(_cached_path(root, i), i)]
@@ -410,13 +452,20 @@ def main(update: bool = False, check_only: bool = False, ensure: bool = False):
     workers = _env_int("MODEL_DOWNLOAD_WORKERS", 2, 1, 8)
     total = sum(int(it.get("size") or 0) for it in missing_items)
     print(f"Cache: {len(items) - len(missing_items)} hit(s), {len(missing_items)} missing")
+    hf_items = [item for item in missing_items if item["kind"] == "hf"]
+    external_items = [item for item in missing_items if item["kind"] == "external"]
+    benchmark_base = f"{CACHE_DIR}/.benchmark-downloads/{run_id}"
+    if hf_items:
+        manifest = benchmark_manifest(hf_items)
+        print(f"Downloading {len(hf_items)} HF files with modal-benchmark", flush=True)
+        benchmark.run_manifest(manifest, benchmark_base, workers="auto")
     target_gb = _env_int("MODEL_DOWNLOAD_SHARD_TARGET_GB", 16, 1, 1024)
     forced = _env_int("MODEL_DOWNLOAD_SHARDS", 0, 0, MAX_SHARDS)
     if forced:
         target = -(-total // forced) if total else 0
-        shards = pack_shards(missing_items, target, forced)
+        shards = pack_shards(external_items, target, forced)
     else:
-        shards = pack_shards(missing_items, target_gb * 1_000_000_000, MAX_SHARDS)
+        shards = pack_shards(external_items, target_gb * 1_000_000_000, MAX_SHARDS)
     print(f"Models: {len(items)} requested, {len(missing_items)} to download, {total / 1e9:.1f} GB, {len(shards)} shard(s)")
     payloads = []
     for i, shard in enumerate(shards):
@@ -424,7 +473,7 @@ def main(update: bool = False, check_only: bool = False, ensure: bool = False):
         print(f"  shard {i}: {len(shard)} files, {shard_bytes / 1e9:.1f} GB")
         payloads.append({"shard_id": i, "items": shard, "run_id": run_id, "workers": workers})
 
-    results = list(download_shard.map(payloads))
+    results = list(download_shard.map(payloads)) if payloads else []
     failed = [r for r in results if not r["ok"]]
     if failed:
         for r in failed:
@@ -436,7 +485,8 @@ def main(update: bool = False, check_only: bool = False, ensure: bool = False):
             "cause and re-run — finished files resume instead of restarting.")
 
     merged = merge_shards.remote({"items": items, "run_id": run_id, "workflow": WORKFLOW,
-                                  "downloaded_items": missing_items})
+                                  "downloaded_items": missing_items,
+                                  "benchmark_base": benchmark_base})
     if not merged["ok"]:
         for m in merged["missing"]:
             print("MISSING after merge:", m)

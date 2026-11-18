@@ -58,38 +58,66 @@ class DownloaderTests(unittest.TestCase):
         item = dict(self.item, algorithm='sha1', digest=hashlib.sha1(f'blob {len(self.content)}\0'.encode() + self.content).hexdigest())
         self.ns['_verify_content'](self.source, item)
 
+    def test_benchmark_manifest_and_publish(self):
+        item = dict(kind='hf', repo_id='org/model', filename='nested/model.bin',
+                    revision='a' * 40, size=len(self.content), algorithm='sha256',
+                    digest=hashlib.sha256(self.content).hexdigest())
+        manifest = self.ns['benchmark_manifest']([item, self.item])
+        self.assertEqual(manifest['models'][0]['files'][item['filename']]['sha256'], item['digest'])
+        base = self.cache / '.benchmark-downloads' / 'run'
+        source = self.ns['benchmark_path'](base, item)
+        source.parent.mkdir(parents=True)
+        source.write_bytes(self.content)
+        payload = dict(items=[item], downloaded_items=[item], workflow='test', run_id='run',
+                       benchmark_base=str(base))
+        self.assertTrue(self.ns['merge_shards'](payload)['ok'])
+        self.assertEqual(self.ns['_cached_path'](self.cache, item).read_bytes(), self.content)
+
+    def test_benchmark_corruption_is_not_published(self):
+        item = dict(kind='hf', repo_id='org/model', filename='model.bin',
+                    revision='a' * 40, size=len(self.content), algorithm='sha256',
+                    digest=hashlib.sha256(self.content).hexdigest())
+        base = self.cache / '.benchmark-downloads' / 'run'
+        source = self.ns['benchmark_path'](base, item)
+        source.parent.mkdir(parents=True)
+        source.write_bytes(b'x' * len(self.content))
+        payload = dict(items=[item], downloaded_items=[item], workflow='test', run_id='run',
+                       benchmark_base=str(base))
+        with self.assertRaises(ValueError):
+            self.ns['merge_shards'](payload)
+        self.assertFalse(self.ns['_cached_path'](self.cache, item).exists())
+
     def test_publish_failure_preserves_source_and_destination(self):
         target = self.cache / 'model.bin'
         target.write_bytes(b'old')
         with patch.object(os, 'replace', side_effect=OSError('disk error')):
             with self.assertRaises(OSError):
-                self.ns['_publish'](self.source, self.cache, self.item, True)
+                self.ns['_publish'](self.source, self.cache, self.item)
         self.assertEqual(target.read_bytes(), b'old')
         self.assertEqual(self.source.read_bytes(), self.content)
 
-    def test_first_commit_failure_keeps_source_and_old_record(self):
+    def test_first_commit_failure_keeps_published_data_and_old_record(self):
         record = self.cache / '.workflow-revisions/test.json'
         record.parent.mkdir()
         record.write_text('{"old":"commit"}')
         self.volume.commit.side_effect = OSError('commit failed')
         with self.assertRaises(OSError):
             self.ns['merge_shards'](self.payload)
-        self.assertTrue(self.source.exists())
+        self.assertEqual((self.cache / 'model.bin').read_bytes(), self.content)
         self.assertEqual(json.loads(record.read_text()), {'old': 'commit'})
 
-    def test_second_commit_failure_keeps_source(self):
+    def test_second_commit_failure_keeps_published_data(self):
         self.volume.commit.side_effect = [None, OSError('record commit failed')]
         with self.assertRaises(OSError):
             self.ns['merge_shards'](self.payload)
-        self.assertTrue(self.source.exists())
+        self.assertEqual((self.cache / 'model.bin').read_bytes(), self.content)
 
     def test_success_commits_before_cleanup(self):
         def commit():
-            if self.volume.commit.call_count <= 2:
-                self.assertTrue(self.source.exists())
+            self.assertEqual((self.cache / 'model.bin').read_bytes(), self.content)
         self.volume.commit.side_effect = commit
         self.assertTrue(self.ns['merge_shards'](self.payload)['ok'])
-        self.assertEqual(self.volume.commit.call_count, 3)
+        self.assertEqual(self.volume.commit.call_count, 2)
         self.assertFalse(self.run_root.exists())
         self.assertEqual((self.cache / 'model.bin').read_bytes(), self.content)
 

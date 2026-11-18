@@ -3,12 +3,16 @@ name = "modal-comfyui"
 version = "0.1.0"
 description = "Run ComfyUI on Modal with auto-scaling, GPU snapshots, and easy model management."
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.12,<3.13"
 dependencies = [
     "boto3>=1.43.114",
-    "modal[api-proxy-support]",
+    "modal[api-proxy-support]>=1.6.4,<2",
+    "modal-benchmark",
     "python-dotenv>=1.2.4",
 ]
+
+[tool.uv.sources]
+modal-benchmark = { git = "https://github.com/xiaoqianran/modal-benchmark.git" }
 
 [[tool.uv.index]]
 url = "https://pypi.org/simple"
