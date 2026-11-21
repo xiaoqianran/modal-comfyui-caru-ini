@@ -4,8 +4,7 @@ app = modal.App("torch214-cu130-blackwell-test")
 image = (
     modal.Image.from_registry("nvidia/cuda:13.0.3-devel-ubuntu22.04", add_python="3.11")
     .entrypoint([])
-    .run_commands("python -m pip install --upgrade pip")
-    .run_commands("python -m pip install torch==2.14.1 --index-url https://download.pytorch.org/whl/cu130")
+    .uv_pip_install("torch==2.14.1", index_url="https://download.pytorch.org/whl/cu130")
 )
 
 @app.function(image=image, gpu="RTX-PRO-6000", timeout=300)

@@ -5,7 +5,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 import modal
 app = modal.App('hunyuan3d-fresh-download-benchmark')
-image = modal.Image.debian_slim(python_version='3.11').pip_install('huggingface_hub>=0.30,<2', 'hf_xet')
+image = modal.Image.debian_slim(python_version='3.11').uv_pip_install('huggingface_hub>=0.30,<2', 'hf_xet')
 REPO = 'tencent/Hunyuan3D-2.1'
 @app.function(image=image, cpu=8, memory=16384, timeout=3600)
 def bench(workers: int):

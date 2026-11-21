@@ -154,7 +154,7 @@ image = (
     modal.Image.from_registry(f"nvidia/cuda:{CUDA_VERSION}-devel-ubuntu22.04", add_python="3.11")
     .entrypoint([])
     .apt_install("git", "git-lfs", "libgl1-mesa-dev", "libglib2.0-0", "axel", "build-essential", "ninja-build")
-    .pip_install_from_requirements(str(root_dir / "requirements_comfy.txt"))
+    .uv_pip_install(requirements=[str(root_dir / "requirements_comfy.txt")])
     .run_commands(
         "uv pip install --system "
         f"torch=={TORCH_VERSION} torchvision=={TORCHVISION_VERSION} "
@@ -415,7 +415,7 @@ preview_mount = modal.CloudBucketMount(
         "cloudflare-r2", required_keys=["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"]
     ),
 )
-image = image.pip_install("boto3", "imageio-ffmpeg").add_local_file(
+image = image.uv_pip_install("boto3", "imageio-ffmpeg").add_local_file(
     root_dir / "storage" / "hf_sync.py", "/root/hf_sync.py", copy=True
 ).add_local_file(
     root_dir / "storage" / "output_formats.py", "/root/storage/output_formats.py", copy=True

@@ -21,9 +21,9 @@ app = modal.App("comfyui-wheel-builder")
 image = (
     modal.Image.from_registry(CUDA_IMAGE, add_python="3.11")
     .apt_install("git", "build-essential", "ninja-build", "git-lfs")
-    .pip_install("comfy-cli")
+    .uv_pip_install("comfy-cli")
     .run_commands("comfy --skip-prompt install --nvidia")
-    .pip_install("wheel", "setuptools")
+    .uv_pip_install("wheel", "setuptools")
     .add_local_dir(ROOT / "workflows", "/workspace/workflows", copy=True)
 )
 

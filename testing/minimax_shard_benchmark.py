@@ -18,7 +18,7 @@ MAX_SHARDS = 16
 # All new benchmark storage uses Volume v2. Do not reuse the old v1 name.
 VOLUME = modal.Volume.from_name("minimax-m31-shard-benchmark-v2", create_if_missing=True, version=2)
 IMAGE = (modal.Image.debian_slim(python_version="3.11")
-         .pip_install("huggingface_hub>=0.30,<2", "hf_xet")
+         .uv_pip_install("huggingface_hub>=0.30,<2", "hf_xet")
          .env({"HF_XET_HIGH_PERFORMANCE": "0"}))
 APP = modal.App("minimax-m31-shard-benchmark")
 # Reuse the existing cloud-side HF Token secret; never store it in source.

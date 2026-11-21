@@ -23,7 +23,7 @@ app = modal.App("hunyuan3d-resource-benchmark")
 
 image = modal.Image.debian_slim(
     python_version="3.11"
-).pip_install(
+).uv_pip_install(
     "huggingface_hub>=0.30,<2",
     "hf_xet",
     "psutil",

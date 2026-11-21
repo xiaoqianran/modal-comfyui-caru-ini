@@ -23,7 +23,7 @@ except modal.exception.NotFoundError:
     hf_secret = modal.Secret.from_name("huggingface-s3")
 image = (
     modal.Image.debian_slim(python_version="3.11")
-    .pip_install("huggingface_hub>=0.30,<2", "hf_xet", "httpx")
+    .uv_pip_install("huggingface_hub>=0.30,<2", "hf_xet", "httpx")
     # 关闭 Xet 高性能模式（基准测试确定的默认值）。
     .env({"HF_XET_HIGH_PERFORMANCE": "0"})
 )
