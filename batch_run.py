@@ -11,21 +11,55 @@ import urllib.parse
 import urllib.request
 import uuid
 from contextlib import contextmanager
+from contextvars import ContextVar
 from pathlib import Path
 
 IMAGE_EXT = {".png", ".jpg", ".jpeg", ".webp", ".bmp"}
 VIDEO_EXT = {".mp4", ".webm", ".mov", ".mkv"}
 MODEL_EXT = {".glb", ".gltf", ".obj", ".stl", ".ply", ".splat", ".ksplat", ".spz"}
 
+_DEADLINE = ContextVar("runner_deadline", default=None)
 
-def request(url, data=None, headers=None, timeout=300, retries=6):
+
+class RequestFailed(RuntimeError):
+    """Transient transport failure; polling may retry on the next scan."""
+
+
+def _remaining(limit):
+    deadline = _DEADLINE.get()
+    if deadline is None:
+        return limit
+    remaining = deadline - time.monotonic()
+    if remaining <= 0:
+        raise TimeoutError("Batch deadline exceeded; saved prompt IDs remain resumable")
+    return min(limit, remaining)
+
+
+def request(url, data=None, headers=None, timeout=300, retries=6, destination=None):
     """HTTP with retries: Modal cold starts can answer slowly or with 5xx/303."""
     last = None
     for attempt in range(retries):
         try:
             req = urllib.request.Request(url, data=data, headers=headers or {})
-            with urllib.request.urlopen(req, timeout=timeout) as r:
-                return r.read()
+            with urllib.request.urlopen(req, timeout=_remaining(timeout)) as r:
+                if destination is None:
+                    result = r.read()
+                else:
+                    size = 0
+                    with destination.open("wb") as handle:
+                        while True:
+                            _remaining(timeout)
+                            chunk = r.read(1024 * 1024)
+                            if not chunk:
+                                break
+                            handle.write(chunk)
+                            size += len(chunk)
+                    expected = r.headers.get("Content-Length")
+                    if not size or (expected is not None and size != int(expected)):
+                        raise http.client.IncompleteRead(b"", int(expected or 1))
+                    result = size
+                _remaining(timeout)
+                return result
         except urllib.error.HTTPError as e:
             body = e.read()[:500].decode("utf-8", "replace")
             if e.code in (400, 401, 403, 404):  # not retryable
@@ -33,12 +67,14 @@ def request(url, data=None, headers=None, timeout=300, retries=6):
             last = RuntimeError(f"HTTP {e.code}: {body}")
         except (urllib.error.URLError, TimeoutError, ConnectionError, http.client.IncompleteRead) as e:
             last = e
-        time.sleep(min(5 * (attempt + 1), 30))
-    raise RuntimeError(f"Request failed after {retries} tries: {url}: {last}")
+        _remaining(timeout)
+        if attempt + 1 < retries:
+            time.sleep(_remaining(min(5 * (attempt + 1), 30)))
+    raise RequestFailed(f"Request failed after {retries} tries: {url}: {last}")
 
 
 def get_json(base, path):
-    return json.loads(request(base + path))
+    return json.loads(request(base + path, timeout=10, retries=1))
 
 
 def upload(base, file):
@@ -95,12 +131,12 @@ def download(base, item, dest):
         "filename": item["filename"], "subfolder": item.get("subfolder", ""),
         "type": item.get("type", "output"),
     })
-    data = request(f"{base}/view?{q}", timeout=600)
-    if not data:
-        raise RuntimeError("Empty download response")
     temp = dest.with_name(dest.name + ".part")
-    temp.write_bytes(data)
-    temp.replace(dest)
+    try:
+        request(f"{base}/view?{q}", timeout=60, destination=temp)
+        temp.replace(dest)
+    finally:
+        temp.unlink(missing_ok=True)
 
 
 @contextmanager
@@ -197,6 +233,8 @@ def _validate_graph(graph, settings, output_nodes=None):
         node_id, sep, field = key.partition(".")
         if not sep or node_id not in graph or field not in graph[node_id]["inputs"]:
             raise ValueError(f"Invalid task target {key}: node/input not found in workflow")
+    if output_nodes is not None and (not isinstance(output_nodes, list) or not output_nodes):
+        raise ValueError("output_nodes must be a nonempty list when specified")
     for node_id in output_nodes or ():
         if str(node_id) not in graph:
             raise ValueError(f"Invalid output node {node_id}: node not found in workflow")
@@ -227,6 +265,8 @@ def _job_intent_hash(job, jobs, task_dir, root):
         "local_inputs": local_inputs,
         "upstream": [(list(dep), jobs[dep]["intent_hash"]) for dep in sorted(job["deps"])],
     }
+    if job.get("output_nodes") is not None:
+        payload["output_nodes"] = job["output_nodes"]
     raw = json.dumps(payload, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
@@ -268,7 +308,11 @@ def _submit_job(key, job, completed, task_path, root, upload_caches):
 
 def _check_job(key, job, completed):
     sid, jid = key
-    history = get_json(job["base"], f"/history/{job['prompt_id']}")
+    try:
+        history = get_json(job["base"], f"/history/{job['prompt_id']}")
+    except RequestFailed as exc:
+        print(f"{sid}/{jid}: polling deferred: {exc}", flush=True)
+        return False
     if job["prompt_id"] not in history:
         return False
     record = history[job["prompt_id"]]
@@ -277,7 +321,10 @@ def _check_job(key, job, completed):
         raise RuntimeError(f"{sid}/{jid} remote error: {json.dumps(status)[:700]}")
     if not record.get("outputs"):
         return False
-    output_files = collect_files(record["outputs"])
+    outputs = record["outputs"]
+    if job.get("output_nodes") is not None:
+        outputs = {node: outputs[node] for node in job["output_nodes"] if node in outputs}
+    output_files = collect_files(outputs)
     if not output_files:
         raise RuntimeError(f"{sid}/{jid}: no downloadable output")
     local = []
@@ -349,6 +396,7 @@ def _build_jobs(steps, endpoints, root, out, task_dir):
                 deps.add(dep)
             folder = out / sid / jid
             jobs[key] = dict(entry=entry, settings=settings, deps=deps, base=base,
+                             output_nodes=sorted({str(n) for n in step["output_nodes"]}) if step.get("output_nodes") is not None else None,
                              endpoint=endpoint_name, graph=graph, folder=folder,
                              status_file=folder / "status.json", state="pending")
         step_ids.add(sid)
@@ -427,6 +475,7 @@ def _run_task_unlocked(task_path, endpoints_path="endpoints.json", output=None,
             )
         progress = False
         for key, job in jobs.items():
+            _remaining(1)
             if job["state"] != "pending" or not all(dep[1] in completed[dep[0]] for dep in job["deps"]):
                 continue
             if mode == "batch" and any(
@@ -440,12 +489,13 @@ def _run_task_unlocked(task_path, endpoints_path="endpoints.json", output=None,
 
         # Poll every submitted job once. Never block later jobs behind the first job.
         for key, job in jobs.items():
+            _remaining(1)
             if job["state"] != "submitted":
                 continue
             if _check_job(key, job, completed):
                 progress = True
         if not progress:
-            time.sleep(3)
+            time.sleep(_remaining(3))
     return out
 
 
@@ -458,8 +508,12 @@ def run_task(task_path, endpoints_path="endpoints.json", output=None,
         name = _safe_name(json.loads(Path(task_path).read_text(encoding="utf-8-sig"))["name"])
         out = Path(endpoints_path).resolve().parent / "outputs" / name
     with _task_lock(out):
-        return _run_task_unlocked(task_path, endpoints_path, output, timeout,
-                                  trust_legacy_status=trust_legacy_status)
+        token = _DEADLINE.set(time.monotonic() + timeout if timeout > 0 else None)
+        try:
+            return _run_task_unlocked(task_path, endpoints_path, output, timeout,
+                                      trust_legacy_status=trust_legacy_status)
+        finally:
+            _DEADLINE.reset(token)
 
 
 def main():

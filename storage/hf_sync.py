@@ -1,6 +1,5 @@
 """Archive ComfyUI outputs in HF; keep only small previews in CF R2."""
 import logging
-import hashlib
 import os
 import shutil
 import subprocess
@@ -39,20 +38,8 @@ def hf_client():
     )
 
 
-def sha256_file(path):
-    sha = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            sha.update(chunk)
-    return sha.hexdigest()
-
-
-def same_content(client, bucket, key, size, digest):
-    """HF S3 ignores x-amz-meta-*: verify existence and byte length instead.
-
-    digest remains available to callers for local hashing; HF does not return
-    the custom digest through HeadObject, so it cannot be checked remotely.
-    """
+def same_size(client, bucket, key, size):
+    """Check existence and byte length, not content identity."""
     try:
         head = client.head_object(Bucket=bucket, Key=key)
         return head["ContentLength"] == size
@@ -64,7 +51,8 @@ def same_content(client, bucket, key, size, digest):
 
 def make_video_preview(video):
     preview = video.with_name(video.stem + "_preview.png")
-    if preview.exists():
+    stamp = video.stat().st_mtime_ns
+    if preview.exists() and preview.stat().st_mtime_ns == stamp:
         return
     temporary = video.with_name(video.stem + "_preview.part.png")
     try:
@@ -75,9 +63,11 @@ def make_video_preview(video):
             capture_output=True, check=True, timeout=90,
         )
         temporary.replace(preview)
+        os.utime(preview, ns=(stamp, stamp))
     except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
         temporary.unlink(missing_ok=True)
         LOG.warning("Video preview failed %s: %s", video.name, exc)
+        raise
 
 
 def iter_outputs():
@@ -133,17 +123,16 @@ def archive_once(hf, observed, completed, now=None):
             continue
         key = f"comfyui/{WORKFLOW}/{relative}"
         try:
-            digest = sha256_file(path)
             current = path.stat()
             if (current.st_size, current.st_mtime_ns) != version:
                 raise RuntimeError("Output changed before upload")
-            if previous[2] or not same_content(hf, HF_BUCKET, key, stat.st_size, digest):
+            if previous[2] or not same_size(hf, HF_BUCKET, key, stat.st_size):
                 observed[relative] = (version, previous[1], True)
                 hf.upload_file(
                     str(path), HF_BUCKET, key,
                     Config=TransferConfig(multipart_threshold=64 * 1024 * 1024),
                 )
-            if not same_content(hf, HF_BUCKET, key, stat.st_size, digest):
+            if not same_size(hf, HF_BUCKET, key, stat.st_size):
                 raise RuntimeError(f"HF upload verification failed: missing or size mismatch ({stat.st_size} bytes expected)")
 
             current = path.stat()
@@ -162,10 +151,17 @@ def archive_once(hf, observed, completed, now=None):
             if (current.st_size, current.st_mtime_ns) != version:
                 raise RuntimeError("Output changed during archive")
 
-            completed[relative] = version
-            LOG.info("Archived %s", key)
+            # Archive is verified. A preview failure must retry without uploading
+            # the unchanged video again.
+            observed[relative] = (version, previous[1], False)
             if path.suffix.lower() in VIDEOS:
                 make_video_preview(path)
+            current = path.stat()
+            if (current.st_size, current.st_mtime_ns) != version:
+                observed[relative] = (version, previous[1], True)
+                raise RuntimeError("Output changed during preview")
+            completed[relative] = version
+            LOG.info("Archived %s", key)
         except Exception as exc:
             LOG.warning("Will retry %s: %s", relative, exc)
     for key in list(observed):
