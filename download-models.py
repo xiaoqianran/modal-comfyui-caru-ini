@@ -164,10 +164,12 @@ def _size_valid(path: Path, item: dict) -> bool:
     return stat.S_ISREG(info.st_mode) and info.st_size > 0 and (expected is None or info.st_size == expected)
 
 
-def _verify_content(path: Path, item: dict) -> str:
+def _verify_content(path: Path, item: dict) -> None:
     import hashlib
     if not _size_valid(path, item):
         raise ValueError(f"Missing file or size mismatch: {path}")
+    if not item.get("digest"):
+        return
     algorithm = item.get("algorithm", "sha256")
     digest = hashlib.new(algorithm)
     if algorithm == "sha1":
@@ -175,10 +177,8 @@ def _verify_content(path: Path, item: dict) -> str:
     with path.open("rb") as stream:
         for chunk in iter(lambda: stream.read(8 * 1024 * 1024), b""):
             digest.update(chunk)
-    value = digest.hexdigest()
-    if item.get("digest") and value != item["digest"]:
+    if digest.hexdigest() != item["digest"]:
         raise ValueError(f"Content hash mismatch: {path}")
-    return value
 
 
 def _stage_dir(run_root: Path, item: dict) -> Path:
@@ -289,6 +289,100 @@ def quick_check(config_json: str, workflow: str) -> list[str]:
     return missing
 
 
+def _hf_model_file(url):
+    """Recognize public Hub model resolve URLs, including nested filenames."""
+    import re
+    from urllib.parse import parse_qsl, unquote, urlsplit
+
+    parts = urlsplit(url)
+    if parts.scheme != "https" or parts.netloc.lower() != "huggingface.co":
+        return None
+    if any(key != "download" for key, _ in parse_qsl(parts.query, keep_blank_values=True)):
+        return None
+    match = re.fullmatch(r"/([\w.-]+(?:/[\w.-]+)?)/resolve/([^/]+)/(.+)", parts.path)
+    if not match:
+        return None
+    repo, revision, filename = map(unquote, match.groups())
+    if repo.split("/")[0] in {"datasets", "spaces"}:
+        return None
+    if any(segment in {"", ".", ".."} for segment in filename.split("/")) or "\\" in filename:
+        return None
+    return dict(repo_id=repo, revision=revision, filename=filename)
+
+
+def _download_external(item, target):
+    import httpx
+    import re
+    import time
+
+    target.parent.mkdir(parents=True, exist_ok=True)
+    part = target.with_name(target.name + ".part")
+    marker = part.with_suffix(".part.resume")
+    try:
+        identity = json.loads(marker.read_text())
+    except (FileNotFoundError, ValueError):
+        identity = {}
+    offset = part.stat().st_size if part.exists() else 0
+    headers = {"Accept-Encoding": "identity"}
+    if offset and isinstance(identity, dict) and identity.get("etag"):
+        headers.update({"Range": f"bytes={offset}-", "If-Range": identity["etag"]})
+
+    for attempt in range(2):
+        with httpx.stream("GET", item["url"], headers=headers, follow_redirects=True,
+                          timeout=120) as response:
+            mode = None
+            if response.status_code == 416 and "Range" in headers:
+                if response.headers.get("Content-Range") == f"bytes */{offset}" and (
+                        item.get("digest") or (str(response.url) == identity.get("url") and
+                        response.headers.get("ETag") == identity["etag"])):
+                    break
+            elif response.status_code == 206:
+                total = identity.get("size")
+                if ("Range" in headers and total and
+                        response.headers.get("Content-Range") == f"bytes {offset}-{total-1}/{total}" and
+                        str(response.url) == identity["url"] and
+                        response.headers.get("ETag", identity["etag"]) == identity["etag"]):
+                    mode = "ab"
+            elif response.status_code == 200:
+                mode = "wb"
+                length = response.headers.get("Content-Length")
+                total = int(length) if length else item.get("size")
+            else:
+                response.raise_for_status()
+                raise ValueError("Unexpected download response")
+
+            if mode is None:
+                if attempt:
+                    raise ValueError("Invalid download range")
+                headers = {"Accept-Encoding": "identity"}
+                continue
+            if response.headers.get("Content-Encoding", "identity").lower() != "identity":
+                raise ValueError("Unexpected encoded model response")
+            with part.open(mode) as stream:
+                if mode == "wb":
+                    marker.unlink(missing_ok=True)
+                    etag = response.headers.get("ETag", "")
+                    if total and re.fullmatch(r'"[^"]*"', etag):
+                        marker.write_text(json.dumps(dict(url=str(response.url), etag=etag, size=total)))
+                checkpoint = time.monotonic()
+                for chunk in response.iter_bytes(chunk_size=1024 * 1024):
+                    stream.write(chunk)
+                    if time.monotonic() - checkpoint >= 60:
+                        stream.flush()
+                        volume.commit()
+                        checkpoint = time.monotonic()
+            if total is not None and part.stat().st_size != total:
+                raise ValueError("Incomplete external download")
+            break
+    try:
+        _verify_content(part, item)
+    except ValueError:
+        marker.unlink(missing_ok=True)
+        raise
+    os.replace(part, target)
+    marker.unlink(missing_ok=True)
+
+
 @app.function(image=image, volumes={CACHE_DIR: volume}, timeout=86400, secrets=[hf_secret], cpu=4.0, memory=4096)
 def download_shard(payload: dict) -> dict:
     """Parallel containers only write disjoint per-file staging, never final cache."""
@@ -340,17 +434,14 @@ def download_shard(payload: dict) -> dict:
                     return
                 except ValueError:
                     pass
-            import httpx
-            target.parent.mkdir(parents=True, exist_ok=True)
-            part = target.with_name(target.name + ".part")
-            with httpx.stream("GET", item["url"], follow_redirects=True, timeout=120,
-                              headers={"Accept-Encoding": "identity"}) as response:
-                response.raise_for_status()
-                with part.open("wb") as stream:
-                    for chunk in response.iter_bytes(chunk_size=1024 * 1024):
-                        stream.write(chunk)
-            _verify_content(part, item)
-            os.replace(part, target)
+            hub_file = _hf_model_file(item["url"])
+            if hub_file:
+                cached = hf_hub_download(**hub_file, local_dir=stage / ".hub",
+                                         token=os.getenv("HF_TOKEN") or None)
+                _verify_content(Path(cached), item)
+                os.replace(cached, target)
+            else:
+                _download_external(item, target)
 
     def guarded(item):
         try:
