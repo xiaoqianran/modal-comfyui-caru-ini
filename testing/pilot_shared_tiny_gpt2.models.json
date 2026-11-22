@@ -1,0 +1,23 @@
+{
+  "models": [
+    {
+      "repo_id": "sshleifer/tiny-gpt2",
+      "filename": "config.json",
+      "model_dir": "checkpoints",
+      "local_filename": "pilot-tiny-config.json"
+    },
+    {
+      "repo_id": "sshleifer/tiny-gpt2",
+      "filename": "pytorch_model.bin",
+      "model_dir": "checkpoints",
+      "local_filename": "pilot-tiny-weights.bin"
+    },
+    {
+      "repo_id": "sshleifer/tiny-gpt2",
+      "filename": "tokenizer_config.json",
+      "model_dir": "checkpoints",
+      "local_filename": "pilot-tiny-tokenizer-config.json"
+    }
+  ],
+  "models_ext": []
+}

@@ -10,9 +10,10 @@ ROOT = Path(__file__).parent
 WORKFLOW = os.getenv("WORKFLOW", "comfyui-pixal3d-trellis2")
 # Only the local entrypoint reads the workspace config. Modal imports this
 # module again in the remote container, where workflows/ is not mounted.
-CONFIG = ROOT / "workflows" / WORKFLOW / "models.json"
-# 与 comfyui.py 共用同一个模型缓存卷：Volumes v2，新卷名（v1 卷不能原地升级）。
-volume = modal.Volume.from_name("modal-comfyui-models-v2", create_if_missing=True, version=2)
+CONFIG = Path(os.getenv("MODEL_CONFIG_PATH") or ROOT / "workflows" / WORKFLOW / "models.json")
+# 同名 Volume 供下载与推理共用；默认保持现有缓存，试点时可显式切换。
+MODEL_VOLUME_NAME = os.getenv("MODEL_VOLUME_NAME", "modal-comfyui-models-v2")
+volume = modal.Volume.from_name(MODEL_VOLUME_NAME, create_if_missing=True, version=2)
 app = modal.App("modal-model-cache-download")
 try:
     hf_secret_name = "huggingface-secret"
@@ -32,14 +33,14 @@ CACHE_DIR = "/cache"
 SHARD_ROOT = "/cache/.download-shards"
 MAX_SHARDS = 16
 
-# Register benchmark functions only on the local coordinator, not on workers
-# importing this module inside the lightweight cache image.
+# benchmark 0.2.x 自行管理独立的 App；不能把 download() 的 app.run()
+# 嵌套注册到当前 ComfyUI App。
 if modal.is_local():
     from modal_benchmark.hf import create_downloader
     benchmark = create_downloader(
-        volume_name="modal-comfyui-models-v2", app=app, volume_version=2,
+        volume_name=MODEL_VOLUME_NAME, volume_version=2,
         mount_path=CACHE_DIR, secret_name=hf_secret_name,
-        verification_mode="fast",
+        verification_mode="xet", max_workers=3,
     )
 
 
@@ -59,6 +60,37 @@ def benchmark_manifest(items: list[dict]) -> dict:
         {"repo_id": repo, "revision": revision, "files": files}
         for (repo, revision), files in grouped.items()
     ]}
+
+
+def benchmark_sources(items: list[dict]) -> list[dict]:
+    """将精确文件清单映射为 benchmark 0.2.x 的下载参数。"""
+    sources = []
+    seen = {}
+    for model in benchmark_manifest(items)["models"]:
+        repo, revision = model["repo_id"], model["revision"]
+        if repo in seen and seen[repo] != revision:
+            raise ValueError(f"One download cannot mix revisions of {repo}")
+        seen[repo] = revision
+        filenames = list(model["files"])
+        # benchmark 的 include 使用 fnmatch 和逗号分隔，不支持转义通配符。
+        if any(name != name.strip() or any(char in name for char in ",*?[]")
+               for name in filenames):
+            raise ValueError(f"Unsupported benchmark filename filter in {repo}")
+        sources.append({"repo_id": repo, "revision": revision,
+                        "include": ",".join(filenames)})
+    return sources
+
+
+def download_hf_items(items: list[dict], base: str, downloader) -> dict:
+    """只有真实下载结果与计划的每个文件完全匹配时才允许后续发布。"""
+    expected = benchmark_manifest(items)
+    result = downloader.download(benchmark_sources(items), base=base, workers=3)
+    if (result.get("status") != "VERIFIED"
+            or result.get("verification_mode") != "xet"
+            or result.get("base") != base
+            or result.get("manifest") != expected):
+        raise RuntimeError("benchmark result differs from pinned ComfyUI manifest")
+    return result
 
 
 def benchmark_path(base: Path, item: dict) -> Path:
@@ -157,7 +189,7 @@ def _stage_dir(run_root: Path, item: dict) -> Path:
 
 
 @app.function(image=image, volumes={CACHE_DIR: volume}, timeout=3600, secrets=[hf_secret], cpu=2.0, memory=4096)
-def fetch_manifest(config_json: str, workflow: str = WORKFLOW, update: bool = False) -> list[dict]:
+def fetch_manifest(config_json: str, workflow: str = WORKFLOW, update: bool = False) -> dict:
     """Resolve pinned metadata once. One complete download job at a time."""
     import re
     from huggingface_hub import HfApi
@@ -215,22 +247,19 @@ def fetch_manifest(config_json: str, workflow: str = WORKFLOW, update: bool = Fa
             raise ValueError(f"Conflicting models: {target}")
         unique[target] = item
     items = list(unique.values())
-    # Pending pins persist before download; readers still use last successful record.
-    _atomic_json(pins, {f"{i['repo_id']}/{i['filename']}": i["revision"] for i in items if i["kind"] == "hf"})
-    volume.commit()
-    return items
-
-
-@app.function(image=image, volumes={CACHE_DIR: volume}, timeout=3600, cpu=2.0, memory=4096)
-def check_cache(items: list[dict]) -> list[dict]:
-    volume.reload()
+    revisions = {f"{i['repo_id']}/{i['filename']}": i["revision"] for i in items if i["kind"] == "hf"}
+    # Persist changed pins before downloading. The success record is published separately.
+    if not pins.exists() or old != revisions:
+        _atomic_json(pins, revisions)
+        volume.commit()
+    published = json.loads(success.read_text(encoding="utf-8")) if success.is_file() else None
     missing = []
     for item in items:
         hit = _size_valid(_cached_path(Path(CACHE_DIR), item), item)
         print("CACHE HIT" if hit else "CACHE MISS", item["filename"], flush=True)
         if not hit:
             missing.append(item)
-    return missing
+    return dict(items=items, missing=missing, published=published == revisions)
 
 
 @app.function(image=image, volumes={CACHE_DIR: volume}, timeout=300, cpu=1.0, memory=1024)
@@ -364,6 +393,75 @@ def _publish(source: Path, root: Path, item: dict) -> None:
         os.replace(temp, target)
 
 
+def _require_benchmark_evidence(base: Path, items: list[dict]) -> None:
+    """按 benchmark 0.2.2 的已提交清单与凭证校验，不重复读取大权重。
+
+    Xet/HTTP 可信下载凭证不比较 mtime（Volume 跨容器时间戳可能漂移）；
+    普通摘要凭证仍必须核对 mtime。这里不是逐字节的二次 SHA-256 审计。
+    """
+    import hashlib
+    import re
+
+    if not items:
+        return
+    manifest = benchmark_manifest(items)
+    first = manifest["models"][0]
+    saved_manifest = base / "download-manifest.json"
+    if (not saved_manifest.is_file() or saved_manifest.is_symlink()
+            or json.loads(saved_manifest.read_text(encoding="utf-8")) != manifest):
+        raise RuntimeError("Benchmark persisted manifest mismatch")
+    marker = (base / first["repo_id"] / first["revision"] /
+              "all-components-complete.json")
+    expected = {"status": "COMPLETE", "manifest": manifest, "verification_mode": "xet"}
+    if not marker.is_file() or marker.is_symlink():
+        raise RuntimeError(f"Missing benchmark completion marker: {marker}")
+    if json.loads(marker.read_text(encoding="utf-8")) != expected:
+        raise RuntimeError("Benchmark completion marker does not match this xet manifest")
+
+    for item in items:
+        repo_root = base / item["repo_id"] / item["revision"]
+        source = benchmark_path(base, item)
+        if not _size_valid(source, item):
+            raise RuntimeError(f"Missing or wrong-size benchmark file: {source}")
+        filename = item["filename"]
+        receipt = (repo_root / "_verification" /
+                   (hashlib.sha256(filename.encode("utf-8")).hexdigest() + ".json"))
+        if not receipt.is_file() or receipt.is_symlink():
+            raise RuntimeError(f"Missing benchmark verification receipt: {receipt}")
+        saved = json.loads(receipt.read_text(encoding="utf-8"))
+        expected_sha = item["digest"] if item["algorithm"] == "sha256" else None
+        expected_fields = {
+            "version": 1, "repo_id": item["repo_id"],
+            "revision": item["revision"], "filename": filename,
+            "size": item["size"], "source_sha256": expected_sha,
+        }
+        if not isinstance(saved, dict) or any(saved.get(k) != v for k, v in expected_fields.items()):
+            raise RuntimeError(f"Benchmark receipt metadata mismatch: {filename}")
+        method = saved.get("method")
+        if not isinstance(saved.get("mtime_ns"), int):
+            raise RuntimeError(f"Invalid benchmark receipt mtime: {filename}")
+        if method == "trusted_xet_download":
+            if (set(saved) != set(expected_fields) | {"mtime_ns", "method", "xet_hash", "huggingface_hub", "hf_xet"}
+                    or not isinstance(saved.get("xet_hash"), str)
+                    or not re.fullmatch(r"[0-9a-f]{64}", saved["xet_hash"])
+                    or saved.get("huggingface_hub") != "1.33.0"
+                    or saved.get("hf_xet") != "1.8.0"):
+                raise RuntimeError(f"Invalid Xet transport receipt: {filename}")
+        elif method == "trusted_hf_http_download":
+            etag = saved.get("etag")
+            if (set(saved) != set(expected_fields) | {"mtime_ns", "method", "etag", "huggingface_hub"}
+                    or not isinstance(etag, str)
+                    or not re.fullmatch(r"[A-Za-z0-9]{40,64}", etag)
+                    or saved.get("huggingface_hub") != "1.33.0"
+                    or (expected_sha is not None and len(etag) == 64
+                        and etag.lower() != expected_sha)):
+                raise RuntimeError(f"Invalid HF HTTP receipt: {filename}")
+        elif (method != ("sha256_match" if expected_sha else "size_only")
+              or set(saved) != set(expected_fields) | {"mtime_ns", "method"}
+              or saved["mtime_ns"] != source.stat().st_mtime_ns):
+            raise RuntimeError(f"Invalid benchmark verification method: {filename}")
+
+
 @app.function(image=image, volumes={CACHE_DIR: volume}, timeout=86400, secrets=[hf_secret], cpu=2.0, memory=8192)
 def merge_shards(payload: dict) -> dict:
     import shutil
@@ -377,20 +475,21 @@ def merge_shards(payload: dict) -> dict:
     log("reload", started)
     root = Path(CACHE_DIR)
     run_root = Path(SHARD_ROOT) / payload["run_id"]
-    # Only requested missing files are published. Every source was hash-verified
-    # by its shard; merge does cheap size checks, not another full hash pass.
+    # Publish verified external files and recheck HF staging before moving it.
     pending = payload.get("downloaded_items", [])
+    hf_pending = [item for item in pending if item["kind"] == "hf"]
+    if hf_pending:
+        if not payload.get("benchmark_base"):
+            raise RuntimeError("HF publication requires benchmark evidence")
+        phase = time.monotonic()
+        _require_benchmark_evidence(Path(payload["benchmark_base"]), hf_pending)
+        log("evidence", phase)
     phase = time.monotonic()
     print(f"MERGE publish: {len(pending)} files (same-volume rename)", flush=True)
     for item in pending:
-        if item["kind"] == "hf" and payload.get("benchmark_base"):
-            source = benchmark_path(Path(payload["benchmark_base"]), item)
-            # The benchmark accepts non-LFS entries without SHA-256; verify
-            # our manifest's Git blob SHA-1 as well before publication.
-            if source.exists():
-                _verify_content(source, item)
-        else:
-            source = _cached_path(_stage_dir(run_root, item), item)
+        source = (benchmark_path(Path(payload["benchmark_base"]), item)
+                  if item["kind"] == "hf" else
+                  _cached_path(_stage_dir(run_root, item), item))
         _publish(source, root, item)
     log("publish", phase)
     missing = [i["filename"] for i in payload["items"] if not _size_valid(_cached_path(root, i), i)]
@@ -404,14 +503,23 @@ def merge_shards(payload: dict) -> dict:
     # The second commit publishes the success record and optional cleanup.
     # If it fails, the first commit still preserves all model data for retry.
     _atomic_json(root / ".workflow-revisions" / f"{payload['workflow']}.json", revisions)
-    if run_root.is_dir():
-        phase = time.monotonic()
-        print("MERGE cleanup: removing staged files", flush=True)
-        try:
-            shutil.rmtree(run_root)
-            log("cleanup", phase)
-        except Exception as exc:
-            print(f"WARN MERGE cleanup deferred: {exc}", flush=True)
+    cleanup_dirs = [run_root]
+    if hf_pending:
+        benchmark_stage = Path(payload["benchmark_base"])
+        # 任务目录里可能残留已经复用的 blob；仅删除当前清单专属暂存。
+        if (benchmark_stage.parent != root / ".benchmark-downloads"
+                or benchmark_stage.is_symlink()):
+            raise ValueError("Unsafe benchmark cleanup path")
+        cleanup_dirs.append(benchmark_stage)
+    for staged in cleanup_dirs:
+        if staged.is_dir():
+            phase = time.monotonic()
+            print(f"MERGE cleanup: {staged}", flush=True)
+            try:
+                shutil.rmtree(staged)
+                log("cleanup", phase)
+            except Exception as exc:
+                print(f"WARN MERGE cleanup deferred: {exc}", flush=True)
     phase = time.monotonic()
     print("MERGE final commit: success record and cleanup", flush=True)
     volume.commit()
@@ -442,30 +550,36 @@ def main(update: bool = False, check_only: bool = False, ensure: bool = False):
     print(f"Workflow: {WORKFLOW} (one complete download job at a time)")
 
     t0 = time.time()
-    items = fetch_manifest.remote(config_json, WORKFLOW, update)
+    plan = fetch_manifest.remote(config_json, WORKFLOW, update)
+    items = plan["items"]
+    missing_items = plan["missing"]
+    if not missing_items and plan["published"]:
+        print(f"CACHE READY: {WORKFLOW} ({len(items)} models)", flush=True)
+        return
     # Same manifest (files + pinned revisions) -> same run id, so a re-run
     # resumes into the same shard dirs; a different manifest is isolated.
     fingerprint = json.dumps(items, sort_keys=True)
     run_id = hashlib.sha256(fingerprint.encode()).hexdigest()[:12]
     print(f"Run id: {run_id}")
-    missing_items = check_cache.remote(items)
-    workers = _env_int("MODEL_DOWNLOAD_WORKERS", 2, 1, 8)
     total = sum(int(it.get("size") or 0) for it in missing_items)
     print(f"Cache: {len(items) - len(missing_items)} hit(s), {len(missing_items)} missing")
     hf_items = [item for item in missing_items if item["kind"] == "hf"]
     external_items = [item for item in missing_items if item["kind"] == "external"]
-    benchmark_base = f"{CACHE_DIR}/.benchmark-downloads/{run_id}"
+    # 同一 Workflow 的缺失文件集合可能变化，下载目录必须绑定本次 HF 清单。
+    hf_manifest = benchmark_manifest(hf_items)
+    hf_id = hashlib.sha256(json.dumps(hf_manifest, sort_keys=True).encode()).hexdigest()[:16]
+    benchmark_base = f"{CACHE_DIR}/.benchmark-downloads/{hf_id}"
     if hf_items:
-        manifest = benchmark_manifest(hf_items)
         print(f"Downloading {len(hf_items)} HF files with modal-benchmark", flush=True)
-        benchmark.run_manifest(manifest, benchmark_base, workers="auto")
-    target_gb = _env_int("MODEL_DOWNLOAD_SHARD_TARGET_GB", 16, 1, 1024)
-    forced = _env_int("MODEL_DOWNLOAD_SHARDS", 0, 0, MAX_SHARDS)
-    if forced:
-        target = -(-total // forced) if total else 0
-        shards = pack_shards(external_items, target, forced)
-    else:
-        shards = pack_shards(external_items, target_gb * 1_000_000_000, MAX_SHARDS)
+        download_hf_items(hf_items, benchmark_base, benchmark)
+    shards = []
+    if external_items:
+        workers = _env_int("MODEL_DOWNLOAD_WORKERS", 2, 1, 8)
+        target_gb = _env_int("MODEL_DOWNLOAD_SHARD_TARGET_GB", 16, 1, 1024)
+        forced = _env_int("MODEL_DOWNLOAD_SHARDS", 0, 0, MAX_SHARDS)
+        external_bytes = sum(int(item.get("size") or 0) for item in external_items)
+        target = -(-external_bytes // forced) if forced else target_gb * 1_000_000_000
+        shards = pack_shards(external_items, target, forced or MAX_SHARDS)
     print(f"Models: {len(items)} requested, {len(missing_items)} to download, {total / 1e9:.1f} GB, {len(shards)} shard(s)")
     payloads = []
     for i, shard in enumerate(shards):
@@ -494,5 +608,5 @@ def main(update: bool = False, check_only: bool = False, ensure: bool = False):
 
     wall = time.time() - t0
     print(f"Downloaded: {len(missing_items)} files, {total / 1e9:.1f} GB in {wall:.1f}s "
-          f"({total / 1e6 / max(wall, 0.1):.0f} MB/s aggregate) across {len(shards)} container(s)")
-    print("Model cache Volume: modal-comfyui-models-v2 (Volumes v2)")
+          f"({total / 1e6 / max(wall, 0.1):.0f} MB/s aggregate) with {len(shards)} external URL shard(s)")
+    print(f"Model cache Volume: {MODEL_VOLUME_NAME} (Volumes v2)")

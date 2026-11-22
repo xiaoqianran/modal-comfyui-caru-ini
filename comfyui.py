@@ -141,7 +141,8 @@ def link_cached_models():
 # version 必须与已有卷一致、同名传 version=2 会直接报错，所以 v2 用新卷名
 # "modal-comfyui-models-v2"；切换后首次部署会重新下载一次模型（旧 v1 卷
 # 数据保留不动，确认无用后可自行在 Modal 控制台删除）。
-vol = modal.Volume.from_name("modal-comfyui-models-v2", create_if_missing=True, version=2)
+MODEL_VOLUME_NAME = os.getenv("MODEL_VOLUME_NAME", "modal-comfyui-models-v2")
+vol = modal.Volume.from_name(MODEL_VOLUME_NAME, create_if_missing=True, version=2)
 
 # construct images and install deps/custom nodes
 VERSION = f"--version {COMFY_VER}" if COMFY_VER else ""

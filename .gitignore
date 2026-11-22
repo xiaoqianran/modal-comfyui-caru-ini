@@ -8,6 +8,16 @@ wheels/
 
 # Virtual environments
 .venv
+/uv.lock
+
+# Regenerable local analysis and test caches
+/.code-review-graph/
+/.codegraph/
+/.pytest_cache/
+
+# Personal environment files
+/.env.*
+!/.env.example
 
 # Legacy root configuration
 /models.py

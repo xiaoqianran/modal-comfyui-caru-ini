@@ -7,13 +7,14 @@ requires-python = ">=3.12,<3.13"
 dependencies = [
     "boto3>=1.43.114",
     "modal[api-proxy-support]>=1.6.4,<2",
-    "modal-benchmark",
+    "modal-benchmark==0.2.2",
     "python-dotenv>=1.2.4",
 ]
 
-[tool.uv.sources]
-modal-benchmark = { git = "https://github.com/xiaoqianran/modal-benchmark.git" }
-
 [[tool.uv.index]]
+name = "pypi-official"
 url = "https://pypi.org/simple"
-default = true
+explicit = true
+
+[tool.uv.sources]
+modal-benchmark = { index = "pypi-official" }

@@ -16,6 +16,10 @@ This project builds on [caru-ini/modal-comfyui](https://github.com/caru-ini/moda
 
 同步仍使用定时扫描、稳定等待和失败重试。进程运行期间发现文件变化会强制更新 HF 与图片预览；上传前后若大小或修改时间变化，本轮不标记完成，后续重试。首次扫描（包括重启后）仍以远端大小判断是否跳过，因此不能识别停机期间发生的同大小覆盖；建议生成结果使用不同文件名。
 
+视频封面失败会在后续扫描重试，已验证归档的视频不会因此重复上传；视频修改时间变化时会重新生成封面。HF 校验仅检查远端文件大小，不再额外读取整个文件计算未使用的摘要。
+
+Task Runner 的 `output_nodes` 为可选非空节点 ID 列表，用于筛选下载及下游引用的输出，也参与任务指纹。启用或更改筛选后请使用新任务名或 `--out` 目录；未配置筛选的旧任务保持指纹兼容。下载按块写入 `.part`，检查响应长度后原子替换。history 轮询单次网络超时为 10 秒，临时失败留到下一轮；`--timeout` 的剩余时间同时约束请求和重试等待（底层阻塞 I/O 并非硬实时中断）。
+
 > 本项目是社区 Fork，并非原作者的官方发布。部分工作流依赖第三方自定义节点和云端凭据；部署前请自行核对依赖与权限。
 
 ## 命名约定
@@ -156,7 +160,7 @@ uv run modal secret list
 
 ### 2. 仅下载模型（不部署 ComfyUI）
 
-两个入口 `download-models.py` 与 `comfyui.py::download_models` 使用同一个分片下载实现，默认 16 GB/片、最多 16 容器、每容器 4 CPU / 4 GiB / 2 线程，关闭 Xet 高性能模式。`comfyui.py::download_models` 是本地入口，委托运行 `download-models.py`，不构建或启动 GPU 推理服务。
+两个入口 `download-models.py` 与 `comfyui.py::download_models` 使用同一套下载流程。HF 文件由 modal-benchmark 0.2.2 启动最多三个 Writer。HTTP(S) 直链单独分片，默认 16 GB/片、最多 16 个容器、每个容器 2 个下载线程。缓存命中且版本记录一致时直接结束。详细说明见 [模型缓存下载](MODEL_CACHE.md)。
 
 独立下载入口 `download-models.py` 读取 `workflows/<名称>/models.json`，将 HF 文件和直链文件下载至共享 Modal Volume `modal-comfyui-models-v2`（Volumes v2；旧 v1 卷 `modal-comfyui-models` 不能原地升级，已弃用）。不会启动 ComfyUI UI，也不部署工作流服务。会产生 Modal CPU 和下载 / 存储费用。下载完成后，正常部署仍需构建镜像和安装节点，但相同模型文件可复用缓存。
 
@@ -173,7 +177,7 @@ uv run --env-file .env modal run download-models.py
 WORKFLOW=comfyui-pixal3d-trellis2 uv run --env-file .env modal run download-models.py
 ```
 
-该脚本的 Modal CPU 镜像已安装 `hf_xet`，支持 Hugging Face Xet 下载；如果正在执行的旧容器出现 `hf_xet package is not installed`，属于性能警告，不是下载失败，新代码只会在下一次运行时生效。该脚本优先使用云端 `huggingface-secret`，未创建时使用本地 `HF_TOKEN`。针对需要 CivitAI 认证或自定义认证头的直链模型，请先确认授权及下载方式；当前独立下载入口只支持普通 HTTP(S) 直链。模型缓存位于云端 Volume，而不是 Linux/Windows 本地磁盘。
+HF 下载使用支持 Xet 的 CPU 镜像，采用 modal-benchmark 0.2.2 的 Xet/HTTP 传输凭证验证；合并发布核对完成标记和文件凭证，不再重复计算全文件 SHA-256。脚本优先使用 Modal Secret `huggingface-secret`，缺少时使用 `huggingface-s3`。直链支持普通 HTTP(S) 下载。默认共用 `modal-comfyui-models-v2`，需要试点新 V2 Volume 时可以同时在下载器和推理入口设置 `MODEL_VOLUME_NAME`，不会自动迁移旧数据。
 
 ### 3. 部署指定工作流
 
