@@ -9,6 +9,34 @@ import batch_run as runner
 
 
 class RunnerReliabilityTests(unittest.TestCase):
+    def test_batch_can_depend_on_earlier_job_in_same_step(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            (root / "g.json").write_text(json.dumps({"1": {"inputs": {"image": ""}}}))
+            (root / "endpoints.json").write_text('{"e": "http://test"}')
+            step = {"id": "s", "endpoint": "e", "workflow": "g.json", "foreach": [
+                {"name": "a"}, {"name": "b", "set": {"1.image": "$s.a.image"}}]}
+            task = root / "task.json"
+            task.write_text(json.dumps({"name": "test", "mode": "batch", "steps": [step]}))
+            submitted = []
+
+            def submit(key, job, completed, *_):
+                submitted.append(key)
+                completed[key[0]][key[1]] = []
+                job["state"] = "completed"
+
+            with patch.object(runner, "_submit_job", side_effect=submit), patch.object(
+                    runner.time, "sleep", side_effect=AssertionError("scheduler stalled")):
+                runner.run_task(task, root / "endpoints.json")
+            self.assertEqual(submitted, [("s", "a"), ("s", "b")])
+
+    def test_completed_history_without_outputs_stops_polling(self):
+        job = {"base": "http://test", "prompt_id": "p"}
+        history = {"p": {"status": {"completed": True}, "outputs": {}}}
+        with patch.object(runner, "get_json", return_value=history):
+            with self.assertRaisesRegex(RuntimeError, "no downloadable output"):
+                runner._check_job(("s", "j"), job, {})
+
     def test_selected_outputs_and_fingerprint(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)

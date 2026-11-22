@@ -320,6 +320,8 @@ def _check_job(key, job, completed):
     if status.get("status_str") == "error":
         raise RuntimeError(f"{sid}/{jid} remote error: {json.dumps(status)[:700]}")
     if not record.get("outputs"):
+        if status.get("completed"):
+            raise RuntimeError(f"{sid}/{jid}: no downloadable output")
         return False
     outputs = record["outputs"]
     if job.get("output_nodes") is not None:
@@ -481,6 +483,7 @@ def _run_task_unlocked(task_path, endpoints_path="endpoints.json", output=None,
             if mode == "batch" and any(
                 other["state"] != "completed"
                 for dep_step in {dep[0] for dep in job["deps"]}
+                if dep_step != key[0]
                 for other in jobs_by_step[dep_step]
             ):
                 continue
