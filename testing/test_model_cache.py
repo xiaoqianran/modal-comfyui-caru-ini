@@ -59,7 +59,7 @@ class DownloaderTests(unittest.TestCase):
         self.ns['_verify_content'](self.source, item)
 
     def _benchmark_evidence(self, base, items):
-        """Fixture matching modal-benchmark v0.2.2 Coordinator receipts."""
+        """Fixture matching modal-benchmark v0.3.0 Coordinator receipts."""
         for item in items:
             repo = base / item["repo_id"] / item["revision"]
             source = self.ns["benchmark_path"](base, item)
@@ -82,7 +82,10 @@ class DownloaderTests(unittest.TestCase):
         first = manifest["models"][0]
         marker = base / first["repo_id"] / first["revision"] / "all-components-complete.json"
         marker.write_text(json.dumps({
-            "status": "COMPLETE", "manifest": manifest, "verification_mode": "xet",
+            "status": "COMPLETE",
+            "manifest_sha256": hashlib.sha256(
+                json.dumps(manifest, sort_keys=True).encode()).hexdigest(),
+            "verification_mode": "xet",
         }))
         return marker
 

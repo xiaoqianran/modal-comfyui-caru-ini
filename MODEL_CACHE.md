@@ -11,8 +11,8 @@ uv run modal run download-models.py
 ```
 
 `MODEL_DOWNLOAD_SHARDS`、`MODEL_DOWNLOAD_SHARD_TARGET_GB` 和
-`MODEL_DOWNLOAD_WORKERS` 仅控制外部 URL 下载；HF 并发在本项目的下载入口固定为 3 个 writer；modal-benchmark 支持最多 5 个。
-两个下载入口都使用同一套逻辑，依赖 PyPI 上固定的 `modal-benchmark==0.2.2`。
+`MODEL_DOWNLOAD_WORKERS` 仅控制外部 URL 下载；HF 并发在本项目的下载入口固定为 3 个 writer；modal-benchmark 支持最多 8 个。
+两个下载入口都使用同一套逻辑，依赖 PyPI 上固定的 `modal-benchmark==0.3.0`。
 默认固定三个 HF Writer（`max_workers=3` 且 `workers=3`），调用新版 `download()` API，使用 `xet` 验证模式，由 Modal 选择地区。Coordinator 在 Writer 提交后刷新 Volume、验证凭证，并通过 Volume SDK 回读完成标记；ComfyUI 再核对同一份清单和凭证，随后同卷移动发布到 HF 原生缓存，不重复计算整个权重的 SHA-256。项目不提交 `uv.lock`。
 刷新本地依赖可运行以下命令。
 
@@ -35,7 +35,7 @@ uv run modal run download-models.py --update
 清单解析与缓存检查在同一个 CPU 容器完成。全部文件命中且成功版本记录一致时直接结束。
 普通缓存命中仅检查是否为非空普通文件及大小，不重新计算全文件哈希。
 权限及 IO 异常会报错，不再当作普通缺失。
-HF 文件使用 modal-benchmark 0.2.2 的 Xet 生产验证：可信 Xet 下载记录传输结果与版本，非 Xet 文件通过官方 HF HTTP 下载并记录 ETag；Coordinator 验证已经提交的文件凭证，再通过 Volume SDK 回读完成标记。合并阶段核对精确清单、凭证和大小：对可信 Xet/HTTP 凭证容忍跨容器修改时间漂移，普通摘要凭证仍核对修改时间。此模式不保证提交后逐字节 SHA-256 审计，不能与 strict 校验等同。
+HF 文件使用 modal-benchmark 0.3.0 的 Xet 生产验证：可信 Xet 下载记录传输结果与版本，非 Xet 文件通过官方 HF HTTP 下载并记录 ETag；Coordinator 验证已经提交的文件凭证，再通过 Volume SDK 回读完成标记。合并阶段核对精确清单、凭证和大小：对可信 Xet/HTTP 凭证容忍跨容器修改时间漂移，普通摘要凭证仍核对修改时间。此模式不保证提交后逐字节 SHA-256 审计，不能与 strict 校验等同。
 benchmark 使用独立任务目录和自身的恢复机制，不再使用 HF 原生缓存的 .incomplete。任务目录根据本次缺失的 HF 文件清单确定，避免不同缺失集合错误复用同一个完成标记。
 合并阶段先验证 benchmark 完成标记与文件凭证，再以同 Volume 重命名发布；发布完成检查使用文件大小。缺少或不匹配的凭证会拒绝发布，而不是退化为盲目大小信任。
 不要将 benchmark 的任务目录直接作为长期模型库：多个 Workflow 可能使用不同的文件子集。本项目仍统一发布到 `/cache/models--<repo>/blobs` 和 `snapshots`，相同摘要文件只保存一份。

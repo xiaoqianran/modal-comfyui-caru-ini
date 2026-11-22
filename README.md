@@ -160,7 +160,7 @@ uv run modal secret list
 
 ### 2. 仅下载模型（不部署 ComfyUI）
 
-两个入口 `download-models.py` 与 `comfyui.py::download_models` 使用同一套下载流程。HF 文件由 modal-benchmark 0.2.2 启动最多三个 Writer。HTTP(S) 直链单独分片，默认 16 GB/片、最多 16 个容器、每个容器 2 个下载线程。缓存命中且版本记录一致时直接结束。详细说明见 [模型缓存下载](MODEL_CACHE.md)。
+两个入口 `download-models.py` 与 `comfyui.py::download_models` 使用同一套下载流程。HF 文件由 modal-benchmark 0.3.0 启动最多三个 Writer。HTTP(S) 直链单独分片，默认 16 GB/片、最多 16 个容器、每个容器 2 个下载线程。缓存命中且版本记录一致时直接结束。详细说明见 [模型缓存下载](MODEL_CACHE.md)。
 
 独立下载入口 `download-models.py` 读取 `workflows/<名称>/models.json`，将 HF 文件和直链文件下载至共享 Modal Volume `modal-comfyui-models-v2`（Volumes v2；旧 v1 卷 `modal-comfyui-models` 不能原地升级，已弃用）。不会启动 ComfyUI UI，也不部署工作流服务。会产生 Modal CPU 和下载 / 存储费用。下载完成后，正常部署仍需构建镜像和安装节点，但相同模型文件可复用缓存。
 
@@ -177,7 +177,7 @@ uv run --env-file .env modal run download-models.py
 WORKFLOW=comfyui-pixal3d-trellis2 uv run --env-file .env modal run download-models.py
 ```
 
-HF 下载使用支持 Xet 的 CPU 镜像，采用 modal-benchmark 0.2.2 的 Xet/HTTP 传输凭证验证；合并发布核对完成标记和文件凭证，不再重复计算全文件 SHA-256。脚本优先使用 Modal Secret `huggingface-secret`，缺少时使用 `huggingface-s3`。直链支持普通 HTTP(S) 下载。默认共用 `modal-comfyui-models-v2`，需要试点新 V2 Volume 时可以同时在下载器和推理入口设置 `MODEL_VOLUME_NAME`，不会自动迁移旧数据。
+HF 下载使用支持 Xet 的 CPU 镜像，采用 modal-benchmark 0.3.0 的 Xet/HTTP 传输凭证验证；合并发布核对完成标记和文件凭证，不再重复计算全文件 SHA-256。脚本优先使用 Modal Secret `huggingface-secret`，缺少时使用 `huggingface-s3`。直链支持普通 HTTP(S) 下载。默认共用 `modal-comfyui-models-v2`，需要试点新 V2 Volume 时可以同时在下载器和推理入口设置 `MODEL_VOLUME_NAME`，不会自动迁移旧数据。
 
 ### 3. 部署指定工作流
 

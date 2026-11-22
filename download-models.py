@@ -33,7 +33,7 @@ CACHE_DIR = "/cache"
 SHARD_ROOT = "/cache/.download-shards"
 MAX_SHARDS = 16
 
-# benchmark 0.2.x 自行管理独立的 App；不能把 download() 的 app.run()
+# benchmark 0.3.x 自行管理独立的 App；不能把 download() 的 app.run()
 # 嵌套注册到当前 ComfyUI App。
 if modal.is_local():
     from modal_benchmark.hf import create_downloader
@@ -412,7 +412,10 @@ def _require_benchmark_evidence(base: Path, items: list[dict]) -> None:
         raise RuntimeError("Benchmark persisted manifest mismatch")
     marker = (base / first["repo_id"] / first["revision"] /
               "all-components-complete.json")
-    expected = {"status": "COMPLETE", "manifest": manifest, "verification_mode": "xet"}
+    expected = {"status": "COMPLETE",
+                "manifest_sha256": hashlib.sha256(
+                    json.dumps(manifest, sort_keys=True).encode()).hexdigest(),
+                "verification_mode": "xet"}
     if not marker.is_file() or marker.is_symlink():
         raise RuntimeError(f"Missing benchmark completion marker: {marker}")
     if json.loads(marker.read_text(encoding="utf-8")) != expected:
