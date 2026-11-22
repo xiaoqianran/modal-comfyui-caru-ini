@@ -92,7 +92,7 @@ def link_cached_models():
     from huggingface_hub.errors import LocalEntryNotFoundError
 
     # Use exact revisions written by the verified downloader.
-    revision_file = Path("/cache/.workflow-revisions") / f"{WORKFLOW}.json"
+    revision_file = Path(MODEL_CACHE_DIR) / ".workflow-revisions" / f"{WORKFLOW}.json"
     revisions = json.loads(revision_file.read_text()) if revision_file.is_file() else {}
 
     for model in models:
@@ -101,10 +101,10 @@ def link_cached_models():
         try:
             cached = hf_hub_download(
                 repo_id=model["repo_id"], filename=model["filename"],
-                cache_dir="/cache", revision=revision, local_files_only=True)
+                cache_dir=MODEL_CACHE_DIR, revision=revision, local_files_only=True)
         except LocalEntryNotFoundError as exc:
             # Compatibility for older caches without an exact revision manifest.
-            repo_cache = Path("/cache") / ("models--" + model["repo_id"].replace("/", "--"))
+            repo_cache = Path(MODEL_CACHE_DIR) / ("models--" + model["repo_id"].replace("/", "--"))
             candidates = list((repo_cache / "snapshots").glob("*/" + model["filename"]))
             candidates = [path for path in candidates if path.is_file()]
             if revision is None and len(candidates) == 1:
@@ -121,7 +121,7 @@ def link_cached_models():
         target.symlink_to(cached)
         print(f"CACHE HIT {key} revision={revision or 'legacy'}")
     for model in models_ext:
-        cached = Path("/cache") / model["filename"]
+        cached = Path(MODEL_CACHE_DIR) / model["filename"]
         if not cached.is_file() or cached.stat().st_size == 0:
             raise RuntimeError(f"Model missing: {cached}. Run: uv run modal run comfyui.py::download_models")
         target = resolve_model_dir(model["model_dir"]) / model["filename"]
@@ -136,12 +136,9 @@ def link_cached_models():
 # 3. 构建 Modal 基础镜像：选择 CUDA / Python，安装系统依赖与 ComfyUI
 #    模型与插件暂不在此层加入，便于复用基础镜像缓存。
 # ============================================================================
-# 模型缓存卷用 Volumes v2（官方推荐：吞吐更高、并发写更好）。
-# 注意：已有的 v1 卷 "modal-comfyui-models" 不能原地升级，且 from_name 的
-# version 必须与已有卷一致、同名传 version=2 会直接报错，所以 v2 用新卷名
-# "modal-comfyui-models-v2"；切换后首次部署会重新下载一次模型（旧 v1 卷
-# 数据保留不动，确认无用后可自行在 Modal 控制台删除）。
-MODEL_VOLUME_NAME = os.getenv("MODEL_VOLUME_NAME", "modal-comfyui-models-v2")
+# Shared Modal Volume V2; ComfyUI HF snapshots occupy /comfyui/hf in the Volume, mounted at /data/hf.
+MODEL_VOLUME_NAME = os.getenv("MODEL_VOLUME_NAME", "model-store")
+MODEL_CACHE_DIR = "/data/hf"
 vol = modal.Volume.from_name(MODEL_VOLUME_NAME, create_if_missing=True, version=2)
 
 # construct images and install deps/custom nodes
@@ -464,7 +461,7 @@ def download_models():
     gpu=GPU_TYPE,
     region=MODAL_REGIONS,
     volumes={
-        "/cache": vol,
+        "/data": vol.with_mount_options(sub_path="/comfyui"),
         "/outputs": output_volume,
         "/r2-previews": preview_mount,
     },

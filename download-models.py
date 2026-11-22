@@ -12,7 +12,7 @@ WORKFLOW = os.getenv("WORKFLOW", "comfyui-pixal3d-trellis2")
 # module again in the remote container, where workflows/ is not mounted.
 CONFIG = Path(os.getenv("MODEL_CONFIG_PATH") or ROOT / "workflows" / WORKFLOW / "models.json")
 # 同名 Volume 供下载与推理共用；默认保持现有缓存，试点时可显式切换。
-MODEL_VOLUME_NAME = os.getenv("MODEL_VOLUME_NAME", "modal-comfyui-models-v2")
+MODEL_VOLUME_NAME = os.getenv("MODEL_VOLUME_NAME", "model-store")
 volume = modal.Volume.from_name(MODEL_VOLUME_NAME, create_if_missing=True, version=2)
 app = modal.App("modal-model-cache-download")
 try:
@@ -29,8 +29,8 @@ image = (
     .env({"HF_XET_HIGH_PERFORMANCE": "0"})
 )
 
-CACHE_DIR = "/cache"
-SHARD_ROOT = "/cache/.download-shards"
+CACHE_DIR = "/data/hf"
+SHARD_ROOT = CACHE_DIR + "/.download-shards"
 MAX_SHARDS = 16
 
 # benchmark 0.3.x 自行管理独立的 App；不能把 download() 的 app.run()
@@ -39,9 +39,10 @@ if modal.is_local():
     from modal_benchmark.hf import create_downloader
     benchmark = create_downloader(
         volume_name=MODEL_VOLUME_NAME, volume_version=2,
-        mount_path=CACHE_DIR, secret_name=hf_secret_name,
+        mount_path="/data", sub_path="/comfyui", secret_name=hf_secret_name,
         verification_mode="xet", max_workers=3,
     )
+
 
 
 def benchmark_manifest(items: list[dict]) -> dict:
@@ -188,7 +189,7 @@ def _stage_dir(run_root: Path, item: dict) -> Path:
     return run_root / "files" / hashlib.sha256(key.encode()).hexdigest()
 
 
-@app.function(image=image, volumes={CACHE_DIR: volume}, timeout=3600, secrets=[hf_secret], cpu=2.0, memory=4096)
+@app.function(image=image, volumes={"/data": volume.with_mount_options(sub_path="/comfyui")}, timeout=3600, secrets=[hf_secret], cpu=2.0, memory=4096)
 def fetch_manifest(config_json: str, workflow: str = WORKFLOW, update: bool = False) -> dict:
     """Resolve pinned metadata once. One complete download job at a time."""
     import re
@@ -262,7 +263,7 @@ def fetch_manifest(config_json: str, workflow: str = WORKFLOW, update: bool = Fa
     return dict(items=items, missing=missing, published=published == revisions)
 
 
-@app.function(image=image, volumes={CACHE_DIR: volume}, timeout=300, cpu=1.0, memory=1024)
+@app.function(image=image, volumes={"/data": volume.with_mount_options(sub_path="/comfyui")}, timeout=300, cpu=1.0, memory=1024)
 def quick_check(config_json: str, workflow: str) -> list[str]:
     """Fast cache check using the last successful revision record, without hashing weights."""
     volume.reload()
@@ -383,7 +384,7 @@ def _download_external(item, target):
     marker.unlink(missing_ok=True)
 
 
-@app.function(image=image, volumes={CACHE_DIR: volume}, timeout=86400, secrets=[hf_secret], cpu=4.0, memory=4096)
+@app.function(image=image, volumes={"/data": volume.with_mount_options(sub_path="/comfyui")}, timeout=86400, secrets=[hf_secret], cpu=4.0, memory=4096)
 def download_shard(payload: dict) -> dict:
     """Parallel containers only write disjoint per-file staging, never final cache."""
     import concurrent.futures
@@ -556,7 +557,7 @@ def _require_benchmark_evidence(base: Path, items: list[dict]) -> None:
             raise RuntimeError(f"Invalid benchmark verification method: {filename}")
 
 
-@app.function(image=image, volumes={CACHE_DIR: volume}, timeout=86400, secrets=[hf_secret], cpu=2.0, memory=8192)
+@app.function(image=image, volumes={"/data": volume.with_mount_options(sub_path="/comfyui")}, timeout=86400, secrets=[hf_secret], cpu=2.0, memory=8192)
 def merge_shards(payload: dict) -> dict:
     import shutil
     import time
@@ -662,6 +663,7 @@ def main(update: bool = False, check_only: bool = False, ensure: bool = False):
     # 同一 Workflow 的缺失文件集合可能变化，下载目录必须绑定本次 HF 清单。
     hf_manifest = benchmark_manifest(hf_items)
     hf_id = hashlib.sha256(json.dumps(hf_manifest, sort_keys=True).encode()).hexdigest()[:16]
+    # Benchmark 0.3.1 scopes its Writer/Coordinator mount to /comfyui.
     benchmark_base = f"{CACHE_DIR}/.benchmark-downloads/{hf_id}"
     if hf_items:
         print(f"Downloading {len(hf_items)} HF files with modal-benchmark", flush=True)

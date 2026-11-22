@@ -43,6 +43,13 @@ class DownloaderTests(unittest.TestCase):
         self.source.write_bytes(self.content)
         self.payload = dict(items=[self.item], downloaded_items=[self.item], workflow='test', run_id='run')
 
+    def test_downloader_uses_scoped_volume_without_path_translation(self):
+        source = SOURCE.read_text(encoding="utf-8")
+        self.assertIn('sub_path="/comfyui"', source)
+        self.assertIn('benchmark_base = f"{CACHE_DIR}/.benchmark-downloads/{hf_id}"', source)
+        self.assertIn('"benchmark_base": benchmark_base', source)
+        self.assertNotIn('publisher_benchmark_base(', source)
+
     def test_cheap_hit_does_not_hash_but_full_check_detects_corruption(self):
         self.source.write_bytes(b'x' * len(self.content))
         self.assertTrue(self.ns['_size_valid'](self.source, self.item))
@@ -208,15 +215,15 @@ class DownloaderTests(unittest.TestCase):
         downloader = Mock()
         downloader.download.return_value = dict(
             status='VERIFIED', verification_mode='xet',
-            base='/cache/.benchmark-downloads/one', manifest=expected)
+            base='/data/hf/.benchmark-downloads/one', manifest=expected)
         self.ns['download_hf_items'](
-            items, '/cache/.benchmark-downloads/one', downloader)
+            items, '/data/hf/.benchmark-downloads/one', downloader)
         downloader.download.assert_called_once_with(
-            sources, base='/cache/.benchmark-downloads/one', workers=3)
+            sources, base='/data/hf/.benchmark-downloads/one', workers=3)
         downloader.download.return_value['manifest'] = self.ns['benchmark_manifest']([item])
         with self.assertRaisesRegex(RuntimeError, 'manifest'):
             self.ns['download_hf_items'](
-                items, '/cache/.benchmark-downloads/one', downloader)
+                items, '/data/hf/.benchmark-downloads/one', downloader)
 
     def test_benchmark_sources_reject_unsafe_filters_and_revision_conflicts(self):
         item = dict(kind='hf', repo_id='org/model', filename='weight[1].bin',
