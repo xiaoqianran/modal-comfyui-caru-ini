@@ -66,7 +66,7 @@ class DownloaderTests(unittest.TestCase):
         self.ns['_verify_content'](self.source, item)
 
     def _benchmark_evidence(self, base, items):
-        """Fixture matching modal-benchmark v0.3.0 Coordinator receipts."""
+        """Fixture matching modal-benchmark v0.4.0 Coordinator receipts."""
         for item in items:
             repo = base / item["repo_id"] / item["revision"]
             source = self.ns["benchmark_path"](base, item)
@@ -217,13 +217,13 @@ class DownloaderTests(unittest.TestCase):
             status='VERIFIED', verification_mode='xet',
             base='/data/hf/.benchmark-downloads/one', manifest=expected)
         self.ns['download_hf_items'](
-            items, '/data/hf/.benchmark-downloads/one', downloader)
+            items, '/data/hf/.benchmark-downloads/one', downloader, workers=3)
         downloader.download.assert_called_once_with(
             sources, base='/data/hf/.benchmark-downloads/one', workers=3)
         downloader.download.return_value['manifest'] = self.ns['benchmark_manifest']([item])
         with self.assertRaisesRegex(RuntimeError, 'manifest'):
             self.ns['download_hf_items'](
-                items, '/data/hf/.benchmark-downloads/one', downloader)
+                items, '/data/hf/.benchmark-downloads/one', downloader, workers=3)
 
     def test_benchmark_sources_reject_unsafe_filters_and_revision_conflicts(self):
         item = dict(kind='hf', repo_id='org/model', filename='weight[1].bin',
@@ -323,41 +323,62 @@ class DownloaderTests(unittest.TestCase):
             self.ns['fetch_manifest'](config, 'test', True)
             self.assertEqual(api.model_info.call_args.kwargs['revision'], 'main')
 
-    def test_hf_native_resume_and_corrupt_cache_recovery(self):
-        hf = types.ModuleType('huggingface_hub')
+    def test_external_shard_rejects_hf_without_network_or_volume_writes(self):
         item = dict(self.item, kind='hf', repo_id='org/repo', filename='weight', revision='a'*40)
-        target = self.ns['_cached_path'](self.ns['_stage_dir'](self.run_root, item), item)
-        def download(**kwargs):
-            target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_bytes(self.content)
-            return str(target)
-        hf.hf_hub_download = Mock(side_effect=download)
-        payload = dict(items=[item], run_id='run', shard_id=0)
-        with patch.dict(sys.modules, huggingface_hub=hf):
-            result = self.ns['download_shard'](payload)
-            self.assertTrue(result['ok'], result)
-            self.assertFalse(hf.hf_hub_download.call_args.kwargs['force_download'])
-            target.write_bytes(b'x' * len(self.content))
-            result = self.ns['download_shard'](payload)
-            self.assertTrue(result['ok'], result)
-            self.assertTrue(hf.hf_hub_download.call_args.kwargs['force_download'])
-        self.assertFalse(self.ns['_cached_path'](self.cache, item).exists())
+        with self.assertRaisesRegex(ValueError, 'modal-benchmark'):
+            self.ns['download_shard'](dict(items=[self.item, item], run_id='run', shard_id=0))
+        self.volume.reload.assert_not_called()
+        self.volume.commit.assert_not_called()
 
-    def test_bad_download_never_publishes(self):
+    def test_external_hf_url_keeps_local_filename(self):
         hf = types.ModuleType('huggingface_hub')
-        item = dict(self.item, kind='hf', repo_id='org/repo', filename='weight', revision='a'*40)
-        target = self.ns['_cached_path'](self.ns['_stage_dir'](self.run_root, item), item)
+        item = dict(self.item, url='https://huggingface.co/org/model/resolve/main/nested/weight.bin')
         def download(**kwargs):
-            target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_bytes(b'x' * len(self.content))
-            return str(target)
+            downloaded = Path(kwargs['local_dir']) / kwargs['filename']
+            downloaded.parent.mkdir(parents=True, exist_ok=True)
+            downloaded.write_bytes(self.content)
+            return str(downloaded)
         hf.hf_hub_download = Mock(side_effect=download)
         with patch.dict(sys.modules, huggingface_hub=hf):
             result = self.ns['download_shard'](dict(items=[item], run_id='run', shard_id=0))
-        self.assertFalse(result['ok'])
-        self.assertEqual(hf.hf_hub_download.call_count, 2)
-        self.assertTrue(target.exists())
-        self.assertFalse(self.ns['_cached_path'](self.cache, item).exists())
+        self.assertTrue(result['ok'], result)
+        self.assertEqual(hf.hf_hub_download.call_args.kwargs['filename'], 'nested/weight.bin')
+        target = self.ns['_cached_path'](self.ns['_stage_dir'](self.run_root, item), item)
+        self.assertEqual(target.read_bytes(), self.content)
+
+    def test_hf_worker_config(self):
+        for value, expected in ((None, 3), ('', 3), ('1', 1), ('2', 2), ('8', 8)):
+            with self.subTest(value=value), patch.dict(os.environ, {}, clear=True):
+                if value is not None:
+                    os.environ['MODEL_HF_DOWNLOAD_WORKERS'] = value
+                os.environ['MODEL_DOWNLOAD_WORKERS'] = '6'
+                self.assertEqual(self.ns['hf_download_workers'](), expected)
+        for value in ('0', '9', '1.5', 'abc'):
+            with self.subTest(value=value), patch.dict(os.environ, MODEL_HF_DOWNLOAD_WORKERS=value):
+                with self.assertRaisesRegex(ValueError, 'MODEL_HF_DOWNLOAD_WORKERS'):
+                    self.ns['hf_download_workers']()
+
+    def test_worker_config_reaches_benchmark_factory_and_download(self):
+        item = dict(self.item, kind='hf', repo_id='org/model', filename='weight',
+                    revision='a'*40)
+        base = '/data/hf/.benchmark-downloads/one'
+        downloader = Mock()
+        downloader.download.return_value = dict(status='VERIFIED', verification_mode='xet',
+            base=base, manifest=self.ns['benchmark_manifest']([item]))
+        factory = Mock(return_value=downloader)
+        module = types.ModuleType('modal_benchmark.hf')
+        module.create_downloader = factory
+        self.ns.update(MODEL_VOLUME_NAME='model-store', hf_secret_name='hf-secret')
+        with patch.dict(sys.modules, {'modal_benchmark.hf': module}), patch.dict(
+                os.environ, MODEL_HF_DOWNLOAD_WORKERS='8'):
+            workers = self.ns['hf_download_workers']()
+            self.ns['download_hf_items']([item], base, self.ns['create_hf_downloader'](workers),
+                                         workers=workers)
+        factory.assert_called_once_with(volume_name='model-store', volume_version=2,
+            mount_path='/data', sub_path='/comfyui', secret_name='hf-secret',
+            verification_mode='xet', max_workers=8)
+        downloader.download.assert_called_once_with(
+            self.ns['benchmark_sources']([item]), base=base, workers=8)
 
     def test_path_escape_rejected(self):
         for name in ('../bad', '/absolute', 'a/../../bad', 'a\\bad'):

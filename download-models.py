@@ -33,18 +33,6 @@ CACHE_DIR = "/data/hf"
 SHARD_ROOT = CACHE_DIR + "/.download-shards"
 MAX_SHARDS = 16
 
-# benchmark 0.3.x 自行管理独立的 App；不能把 download() 的 app.run()
-# 嵌套注册到当前 ComfyUI App。
-if modal.is_local():
-    from modal_benchmark.hf import create_downloader
-    benchmark = create_downloader(
-        volume_name=MODEL_VOLUME_NAME, volume_version=2,
-        mount_path="/data", sub_path="/comfyui", secret_name=hf_secret_name,
-        verification_mode="xet", max_workers=3,
-    )
-
-
-
 def benchmark_manifest(items: list[dict]) -> dict:
     grouped = {}
     for item in items:
@@ -64,7 +52,7 @@ def benchmark_manifest(items: list[dict]) -> dict:
 
 
 def benchmark_sources(items: list[dict]) -> list[dict]:
-    """将精确文件清单映射为 benchmark 0.2.x 的下载参数。"""
+    """将精确文件清单映射为 benchmark 0.4.x 的下载参数。"""
     sources = []
     seen = {}
     for model in benchmark_manifest(items)["models"]:
@@ -82,10 +70,10 @@ def benchmark_sources(items: list[dict]) -> list[dict]:
     return sources
 
 
-def download_hf_items(items: list[dict], base: str, downloader) -> dict:
+def download_hf_items(items: list[dict], base: str, downloader, *, workers: int) -> dict:
     """只有真实下载结果与计划的每个文件完全匹配时才允许后续发布。"""
     expected = benchmark_manifest(items)
-    result = downloader.download(benchmark_sources(items), base=base, workers=3)
+    result = downloader.download(benchmark_sources(items), base=base, workers=workers)
     if (result.get("status") != "VERIFIED"
             or result.get("verification_mode") != "xet"
             or result.get("base") != base
@@ -110,6 +98,22 @@ def _env_int(name: str, default: int, lo: int, hi: int) -> int:
     if not lo <= value <= hi:
         raise ValueError(f"{name} must be within {lo}..{hi}, got {value}")
     return value
+
+
+def hf_download_workers() -> int:
+    """Number of HF Writer containers; independent of external URL threads."""
+    return _env_int("MODEL_HF_DOWNLOAD_WORKERS", 3, 1, 8)
+
+
+def create_hf_downloader(workers: int):
+    """Create the independent benchmark App only when HF files are missing."""
+    from modal_benchmark.hf import create_downloader
+
+    return create_downloader(
+        volume_name=MODEL_VOLUME_NAME, volume_version=2,
+        mount_path="/data", sub_path="/comfyui", secret_name=hf_secret_name,
+        verification_mode="xet", max_workers=workers,
+    )
 
 
 def pack_shards(items: list[dict], target_bytes: int, max_shards: int) -> list[list[dict]]:
@@ -386,13 +390,15 @@ def _download_external(item, target):
 
 @app.function(image=image, volumes={"/data": volume.with_mount_options(sub_path="/comfyui")}, timeout=86400, secrets=[hf_secret], cpu=4.0, memory=4096)
 def download_shard(payload: dict) -> dict:
-    """Parallel containers only write disjoint per-file staging, never final cache."""
+    """Stage external URLs only; declared HF models must use modal-benchmark."""
     import concurrent.futures
     import time
-    from huggingface_hub import hf_hub_download
+
+    items = payload["items"]
+    if any(item["kind"] != "external" for item in items):
+        raise ValueError("download_shard accepts external URLs only; use modal-benchmark for HF models")
     volume.reload()
     started = time.time()
-    items = payload["items"]
     run_root = Path(SHARD_ROOT) / payload["run_id"]
     workers = max(1, min(8, int(payload.get("workers") or 2)))
     errors = []
@@ -400,49 +406,23 @@ def download_shard(payload: dict) -> dict:
     def fetch(item):
         stage = _stage_dir(run_root, item)
         target = _cached_path(stage, item)
-        if item["kind"] == "hf":
-            # Public content-addressed blobs may already exist under another revision.
-            public_blob = Path(CACHE_DIR) / ("models--" + item["repo_id"].replace("/", "--")) / "blobs" / item["digest"]
-            candidate = target if _size_valid(target, item) else public_blob
-            if _size_valid(candidate, item):
-                try:
-                    _verify_content(candidate, item)
-                    if candidate != target:
-                        # Reuse the public blob without moving or duplicating it.
-                        target.parent.mkdir(parents=True, exist_ok=True)
-                        temp = target.with_name(target.name + ".publish")
-                        temp.unlink(missing_ok=True)
-                        temp.symlink_to(os.path.relpath(candidate, target.parent))
-                        os.replace(temp, target)
-                    return
-                except ValueError:
-                    pass  # Corrupt complete cache: force a fresh native download.
-            force = target.exists()
-            for attempt in range(2):
-                cached = hf_hub_download(repo_id=item["repo_id"], filename=item["filename"],
-                    revision=item["revision"], cache_dir=str(stage), token=os.getenv("HF_TOKEN") or None,
-                    force_download=force or attempt > 0)
-                try:
-                    _verify_content(Path(cached), item)
-                    return
-                except ValueError:
-                    if attempt:
-                        raise
+        if _size_valid(target, item):
+            try:
+                _verify_content(target, item)
+                return
+            except ValueError:
+                pass
+        # Preserve explicit models_ext Hub URLs (including their local filenames).
+        hub_file = _hf_model_file(item["url"])
+        if hub_file:
+            from huggingface_hub import hf_hub_download
+
+            cached = hf_hub_download(**hub_file, local_dir=stage / ".hub",
+                                     token=os.getenv("HF_TOKEN") or None)
+            _verify_content(Path(cached), item)
+            os.replace(cached, target)
         else:
-            if _size_valid(target, item):
-                try:
-                    _verify_content(target, item)
-                    return
-                except ValueError:
-                    pass
-            hub_file = _hf_model_file(item["url"])
-            if hub_file:
-                cached = hf_hub_download(**hub_file, local_dir=stage / ".hub",
-                                         token=os.getenv("HF_TOKEN") or None)
-                _verify_content(Path(cached), item)
-                os.replace(cached, target)
-            else:
-                _download_external(item, target)
+            _download_external(item, target)
 
     def guarded(item):
         try:
@@ -452,7 +432,7 @@ def download_shard(payload: dict) -> dict:
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=min(workers, len(items) or 1)) as pool:
         list(pool.map(guarded, items))
-    volume.commit()  # Completed files and HF .incomplete files remain resumable.
+    volume.commit()  # Completed files and external partial files remain resumable.
     return dict(shard_id=payload["shard_id"], ok=not errors, errors=errors,
                 seconds=time.time() - started, files=len(items))
 
@@ -486,7 +466,7 @@ def _publish(source: Path, root: Path, item: dict) -> None:
 
 
 def _require_benchmark_evidence(base: Path, items: list[dict]) -> None:
-    """按 benchmark 0.2.2 的已提交清单与凭证校验，不重复读取大权重。
+    """按 benchmark 0.4.0 的已提交清单与凭证校验，不重复读取大权重。
 
     Xet/HTTP 可信下载凭证不比较 mtime（Volume 跨容器时间戳可能漂移）；
     普通摘要凭证仍必须核对 mtime。这里不是逐字节的二次 SHA-256 审计。
@@ -663,11 +643,13 @@ def main(update: bool = False, check_only: bool = False, ensure: bool = False):
     # 同一 Workflow 的缺失文件集合可能变化，下载目录必须绑定本次 HF 清单。
     hf_manifest = benchmark_manifest(hf_items)
     hf_id = hashlib.sha256(json.dumps(hf_manifest, sort_keys=True).encode()).hexdigest()[:16]
-    # Benchmark 0.3.1 scopes its Writer/Coordinator mount to /comfyui.
+    # Benchmark 0.4.0 scopes its Writer/Coordinator mount to /comfyui.
     benchmark_base = f"{CACHE_DIR}/.benchmark-downloads/{hf_id}"
     if hf_items:
-        print(f"Downloading {len(hf_items)} HF files with modal-benchmark", flush=True)
-        download_hf_items(hf_items, benchmark_base, benchmark)
+        hf_workers = hf_download_workers()
+        print(f"Downloading {len(hf_items)} HF files with modal-benchmark (max {hf_workers} workers)", flush=True)
+        download_hf_items(hf_items, benchmark_base, create_hf_downloader(hf_workers),
+                          workers=hf_workers)
     shards = []
     if external_items:
         workers = _env_int("MODEL_DOWNLOAD_WORKERS", 2, 1, 8)
