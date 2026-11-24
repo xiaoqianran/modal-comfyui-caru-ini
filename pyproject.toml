@@ -3,7 +3,7 @@ name = "modal-comfyui"
 version = "0.1.0"
 description = "Run ComfyUI on Modal with auto-scaling, GPU snapshots, and easy model management."
 readme = "README.md"
-requires-python = ">=3.12,<3.13"
+requires-python = ">=3.11"
 dependencies = [
     "boto3>=1.43.114",
     "modal[api-proxy-support]>=1.6.4,<2",

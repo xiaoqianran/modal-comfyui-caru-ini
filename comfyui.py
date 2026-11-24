@@ -417,7 +417,8 @@ image = image.uv_pip_install("boto3", "imageio-ffmpeg").add_local_file(
     root_dir / "storage" / "hf_sync.py", "/root/hf_sync.py", copy=True
 ).add_local_file(
     root_dir / "storage" / "output_formats.py", "/root/storage/output_formats.py", copy=True
-).env({"WORKFLOW": WORKFLOW})
+).env({"WORKFLOW": WORKFLOW, "MODEL_VOLUME_NAME": MODEL_VOLUME_NAME,
+       "MODAL_GPU": GPU_TYPE, "MODAL_REGION": ",".join(MODAL_REGIONS or [])})
 
 # Runtime configuration is mounted after builds; editing models.json cannot
 # invalidate the plugin installation image layers.
@@ -448,7 +449,7 @@ def download_models():
     # The standalone downloader owns shard packing, retry, verification and
     # Volume V2 merge. This keeps both CLI entrypoints on exactly one path.
     subprocess.run(
-        ["uv", "run", "modal", "run", "download-models.py"],
+        [sys.executable, "-m", "modal", "run", "download-models.py"],
         cwd=root_dir,
         env=os.environ.copy(),
         check=True,
@@ -456,6 +457,7 @@ def download_models():
 
 
 @app.cls(
+    serialized=False,
     max_containers=1,  # Hard cap: never start a second B300 container for this app.
     startup_timeout=1800 if WORKFLOW == "010-minimax-h3-b200plus-suite" else 300,
     gpu=GPU_TYPE,

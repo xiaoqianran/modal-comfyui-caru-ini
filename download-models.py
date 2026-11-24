@@ -26,7 +26,8 @@ image = (
     modal.Image.debian_slim(python_version="3.11")
     .uv_pip_install("huggingface_hub>=0.30,<2", "hf_xet", "httpx")
     # 关闭 Xet 高性能模式（基准测试确定的默认值）。
-    .env({"HF_XET_HIGH_PERFORMANCE": "0"})
+    .env({"HF_XET_HIGH_PERFORMANCE": "0",
+          "MODEL_VOLUME_NAME": MODEL_VOLUME_NAME, "WORKFLOW": WORKFLOW})
 )
 
 CACHE_DIR = "/data/hf"
@@ -193,7 +194,7 @@ def _stage_dir(run_root: Path, item: dict) -> Path:
     return run_root / "files" / hashlib.sha256(key.encode()).hexdigest()
 
 
-@app.function(image=image, volumes={"/data": volume.with_mount_options(sub_path="/comfyui")}, timeout=3600, secrets=[hf_secret], cpu=2.0, memory=4096)
+@app.function(image=image, serialized=False, volumes={"/data": volume.with_mount_options(sub_path="/comfyui")}, timeout=3600, secrets=[hf_secret], cpu=2.0, memory=4096)
 def fetch_manifest(config_json: str, workflow: str = WORKFLOW, update: bool = False) -> dict:
     """Resolve pinned metadata once. One complete download job at a time."""
     import re
@@ -267,7 +268,7 @@ def fetch_manifest(config_json: str, workflow: str = WORKFLOW, update: bool = Fa
     return dict(items=items, missing=missing, published=published == revisions)
 
 
-@app.function(image=image, volumes={"/data": volume.with_mount_options(sub_path="/comfyui")}, timeout=300, cpu=1.0, memory=1024)
+@app.function(image=image, serialized=False, volumes={"/data": volume.with_mount_options(sub_path="/comfyui")}, timeout=300, cpu=1.0, memory=1024)
 def quick_check(config_json: str, workflow: str) -> list[str]:
     """Fast cache check using the last successful revision record, without hashing weights."""
     volume.reload()
@@ -388,7 +389,7 @@ def _download_external(item, target):
     marker.unlink(missing_ok=True)
 
 
-@app.function(image=image, volumes={"/data": volume.with_mount_options(sub_path="/comfyui")}, timeout=86400, secrets=[hf_secret], cpu=4.0, memory=4096)
+@app.function(image=image, serialized=False, volumes={"/data": volume.with_mount_options(sub_path="/comfyui")}, timeout=86400, secrets=[hf_secret], cpu=4.0, memory=4096)
 def download_shard(payload: dict) -> dict:
     """Stage external URLs only; declared HF models must use modal-benchmark."""
     import concurrent.futures
@@ -537,7 +538,7 @@ def _require_benchmark_evidence(base: Path, items: list[dict]) -> None:
             raise RuntimeError(f"Invalid benchmark verification method: {filename}")
 
 
-@app.function(image=image, volumes={"/data": volume.with_mount_options(sub_path="/comfyui")}, timeout=86400, secrets=[hf_secret], cpu=2.0, memory=8192)
+@app.function(image=image, serialized=False, volumes={"/data": volume.with_mount_options(sub_path="/comfyui")}, timeout=86400, secrets=[hf_secret], cpu=2.0, memory=8192)
 def merge_shards(payload: dict) -> dict:
     import shutil
     import time

@@ -272,3 +272,7 @@ uv run python batch_run.py --task tasks/005_last_train.json --endpoints endpoint
 - 状态保存在 `outputs/<task>/<step>/<job>/status.json`，包含 `prompt_id` 和 `intent_hash`。恢复前校验提示词、Workflow、Endpoint、上游 job 和本地输入文件内容，发生变更时**拒绝复用旧结果**，不会自动重复付费提交；应使用新 Task 名或 `--out` 目录重新运行。
 - 旧版 `status.json` 没有 `intent_hash` 时，默认拒绝恢复。确认旧结果与当前任务匹配后，可显式加 `--trust-legacy-status` 采纳旧状态（仅为旧状态补充指纹，不重新生成）。提交响应不确定的任务仍必须先人工核查远程队列。
 - 两种模式均由一个轻量调度器运行，并使用本地状态文件和任务锁；不依赖 Celery、Redis 或跨账号共享 Volume。
+
+### Python 版本独立
+
+本地 CLI 支持 Python 3.11 及以上（实际可用版本仍取决于 Modal SDK 和依赖）；.python-version 仅为默认开发环境。ComfyUI GPU 与独立 CPU 缓存维护镜像固定 Python 3.11，HF 下载由 modal-benchmark 的固定 Python 3.15 Worker 执行。远程类/函数在模块顶层声明，显式 serialized=False，通过源码和普通数据参数执行。不要通过匹配本地 Python 版本解决远程序列化问题。工作流、Volume 名称与 GPU/区域覆盖通过镜像环境传入远端，确保源码重新导入时得到相同运行配置。
