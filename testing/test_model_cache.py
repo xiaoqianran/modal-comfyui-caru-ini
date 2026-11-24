@@ -66,7 +66,7 @@ class DownloaderTests(unittest.TestCase):
         self.ns['_verify_content'](self.source, item)
 
     def _benchmark_evidence(self, base, items):
-        """Fixture matching modal-benchmark v0.4.1 Coordinator receipts."""
+        """Fixture matching modal-benchmark v0.4.2 Coordinator receipts."""
         for item in items:
             repo = base / item["repo_id"] / item["revision"]
             source = self.ns["benchmark_path"](base, item)
@@ -380,15 +380,21 @@ class DownloaderTests(unittest.TestCase):
         downloader.download.assert_called_once_with(
             self.ns['benchmark_sources']([item]), base=base, workers=8)
 
-    def test_installed_benchmark_v041_persistent_config(self):
+    def test_installed_benchmark_v042_persistent_config(self):
         from importlib.metadata import version
-        self.assertEqual(version("modal-benchmark"), "0.4.1")
+        self.assertEqual(version("modal-benchmark"), "0.4.2")
         self.ns.update(MODEL_VOLUME_NAME="model-store", hf_secret_name="hf-secret")
         for workers in (1, 3, 8):
             with self.subTest(workers=workers):
                 config = self.ns["create_hf_downloader"](workers).config
                 self.assertEqual(config.scheduling, "persistent")
                 self.assertEqual(config.task_batch_bytes, 10 * 1024**3)
+                self.assertEqual(config.commit_batch_files, 16)
+                self.assertEqual(config.commit_batch_bytes, 16 * 1024**3)
+                self.assertEqual(config.small_file_workers, 4)
+                self.assertTrue(config.coalesce_commits)
+                self.assertEqual(config.xet_concurrency, 8)
+                self.assertEqual(config.replacement_budget, 0)
                 self.assertEqual(config.volume_version, 2)
                 self.assertEqual(config.mount_path, "/data")
                 self.assertEqual(config.sub_path, "/comfyui")

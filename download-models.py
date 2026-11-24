@@ -466,7 +466,7 @@ def _publish(source: Path, root: Path, item: dict) -> None:
 
 
 def _require_benchmark_evidence(base: Path, items: list[dict]) -> None:
-    """按 benchmark 0.4.1 的已提交清单与凭证校验，不重复读取大权重。
+    """按 benchmark 0.4.2 的已提交清单与凭证校验，不重复读取大权重。
 
     Xet/HTTP 可信下载凭证不比较 mtime（Volume 跨容器时间戳可能漂移）；
     普通摘要凭证仍必须核对 mtime。这里不是逐字节的二次 SHA-256 审计。
@@ -643,7 +643,7 @@ def main(update: bool = False, check_only: bool = False, ensure: bool = False):
     # 同一 Workflow 的缺失文件集合可能变化，下载目录必须绑定本次 HF 清单。
     hf_manifest = benchmark_manifest(hf_items)
     hf_id = hashlib.sha256(json.dumps(hf_manifest, sort_keys=True).encode()).hexdigest()[:16]
-    # Benchmark 0.4.1 uses persistent Writers by default on Volume V2; all mounts use /comfyui.
+    # Benchmark 0.4.2 uses persistent Writers by default on Volume V2; all mounts use /comfyui.
     benchmark_base = f"{CACHE_DIR}/.benchmark-downloads/{hf_id}"
     if hf_items:
         hf_workers = hf_download_workers()
