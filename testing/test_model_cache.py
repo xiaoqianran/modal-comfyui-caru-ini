@@ -66,7 +66,7 @@ class DownloaderTests(unittest.TestCase):
         self.ns['_verify_content'](self.source, item)
 
     def _benchmark_evidence(self, base, items):
-        """Fixture matching modal-benchmark v0.4.0 Coordinator receipts."""
+        """Fixture matching modal-benchmark v0.4.1 Coordinator receipts."""
         for item in items:
             repo = base / item["repo_id"] / item["revision"]
             source = self.ns["benchmark_path"](base, item)
@@ -379,6 +379,67 @@ class DownloaderTests(unittest.TestCase):
             verification_mode='xet', max_workers=8)
         downloader.download.assert_called_once_with(
             self.ns['benchmark_sources']([item]), base=base, workers=8)
+
+    def test_installed_benchmark_v041_persistent_config(self):
+        from importlib.metadata import version
+        self.assertEqual(version("modal-benchmark"), "0.4.1")
+        self.ns.update(MODEL_VOLUME_NAME="model-store", hf_secret_name="hf-secret")
+        for workers in (1, 3, 8):
+            with self.subTest(workers=workers):
+                config = self.ns["create_hf_downloader"](workers).config
+                self.assertEqual(config.scheduling, "persistent")
+                self.assertEqual(config.task_batch_bytes, 10 * 1024**3)
+                self.assertEqual(config.volume_version, 2)
+                self.assertEqual(config.mount_path, "/data")
+                self.assertEqual(config.sub_path, "/comfyui")
+                self.assertEqual(config.verification_mode, "xet")
+                self.assertEqual(config.max_workers, workers)
+
+    def test_installed_benchmark_receipts_match_publication(self):
+        from modal_benchmark.hf.download import completion_identity
+        from modal_benchmark.hf.evidence import publish_receipt
+        from modal_benchmark.hf.transport import HUB_VERSION, XET_VERSION
+        item = dict(self.item, kind="hf", repo_id="org/model", filename="nested/weight",
+                    revision="a" * 40)
+        base = self.cache / ".benchmark-downloads" / "real-contract"
+        manifest = self.ns["benchmark_manifest"]([item])
+        model = manifest["models"][0]
+        marker = self._benchmark_evidence(base, [item])
+        marker.write_text(json.dumps({**completion_identity(manifest), "verification_mode": "xet"}))
+        source = self.ns["benchmark_path"](base, item)
+        folder = base / item["repo_id"] / item["revision"]
+        for transport in (
+            {"method": "trusted_xet_download", "xet_hash": "a" * 64,
+             "huggingface_hub": HUB_VERSION, "hf_xet": XET_VERSION},
+            {"method": "trusted_hf_http_download", "etag": item["digest"],
+             "huggingface_hub": HUB_VERSION},
+            None,
+        ):
+            with self.subTest(transport=transport):
+                publish_receipt(folder, model, item["filename"], source.stat(), transport=transport)
+                self.ns["_require_benchmark_evidence"](base, [item])
+
+    def test_invalid_http_etag_and_size_only_receipts_are_rejected(self):
+        from modal_benchmark.hf.evidence import receipt_path, publish_receipt
+        item = dict(self.item, kind="hf", repo_id="org/model", filename="weight",
+                    revision="a" * 40, algorithm="sha1", digest="b" * 40)
+        base = self.cache / ".benchmark-downloads" / "invalid-contract"
+        self._benchmark_evidence(base, [item])
+        model = self.ns["benchmark_manifest"]([item])["models"][0]
+        source = self.ns["benchmark_path"](base, item)
+        folder = base / item["repo_id"] / item["revision"]
+        publish_receipt(folder, model, item["filename"], source.stat())
+        with self.assertRaises(RuntimeError):
+            self.ns["_require_benchmark_evidence"](base, [item])
+        receipt = receipt_path(folder, item["filename"])
+        record = json.loads(receipt.read_text())
+        for invalid in ("z" * 40, "a" * 41):
+            with self.subTest(etag=invalid):
+                record.update(method="trusted_hf_http_download",
+                              etag=invalid, huggingface_hub="1.33.0")
+                receipt.write_text(json.dumps(record))
+                with self.assertRaises(RuntimeError):
+                    self.ns["_require_benchmark_evidence"](base, [item])
 
     def test_path_escape_rejected(self):
         for name in ('../bad', '/absolute', 'a/../../bad', 'a\\bad'):
