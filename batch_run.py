@@ -14,6 +14,7 @@ from contextlib import contextmanager
 from contextvars import ContextVar, copy_context
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from pathlib import Path
+from dataclasses import dataclass
 
 from storage.delivery import HEX, normalized_config
 from storage.output_formats import AUDIO as AUDIO_EXT
@@ -196,6 +197,26 @@ def _safe_name(value):
     return value
 
 
+@dataclass(frozen=True)
+class CloudOutputs:
+    config: dict
+    job_id: str
+    files: list
+
+
+@dataclass(frozen=True)
+class CloudInput:
+    source: dict
+
+
+def _matches_kind(path, kind):
+    return (kind == "image" and path.suffix.lower() in IMAGE_EXT
+            or kind == "video" and path.suffix.lower() in VIDEO_EXT
+            or kind == "audio" and path.suffix.lower() in AUDIO_EXT
+            or kind == "model" and path.suffix.lower() in MODEL_EXT
+            or kind == "file")
+
+
 def _input_value(value, item, completed):
     """Resolve $item.key and $step.image or $step.job.image; preserve ordinary text."""
     if not isinstance(value, str) or not value.startswith("$"):
@@ -218,15 +239,14 @@ def _input_value(value, item, completed):
         raise ValueError(f"Ambiguous output reference: {value}; use $step.job.image")
     if job not in jobs:
         raise ValueError(f"Unknown output job: {value}")
-    paths = jobs[job]
-    matches = [path for path in paths if
-               (kind == "image" and path.suffix.lower() in IMAGE_EXT)
-               or (kind == "video" and path.suffix.lower() in VIDEO_EXT)
-               or (kind == "audio" and path.suffix.lower() in AUDIO_EXT)
-               or (kind == "model" and path.suffix.lower() in MODEL_EXT)
-               or (kind == "file")]
+    outputs = jobs[job]
+    cloud = isinstance(outputs, CloudOutputs)
+    matches = ([ref for ref in outputs.files if _matches_kind(Path(ref["filename"]), kind)]
+               if cloud else [path for path in outputs if _matches_kind(path, kind)])
     if len(matches) != 1:
         raise ValueError(f"Reference {value}: expected one {kind}, found {len(matches)}")
+    if cloud:
+        return CloudInput({"config": outputs.config, "job_id": outputs.job_id, "item": matches[0]})
     return "@" + str(matches[0].resolve())
 
 
@@ -284,6 +304,8 @@ def _job_intent_hash(job, jobs, task_dir, root):
         payload["delivery"] = job["delivery"]
     if job.get("execution") == "durable":
         payload["durable_scope"] = job["durable_scope"]
+    if job.get("collect") == "cloud":
+        payload["collect"] = "cloud"
     raw = json.dumps(payload, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
@@ -321,15 +343,22 @@ def _submit_job(key, job, completed, task_path, root, upload_caches):
     if job.get("execution") == "durable":
         from storage.execution_client import DurableClient
         expected_inputs = dict(job.get("local_input_hashes") or {})
+        output_inputs = {}
         for field, raw in job["settings"].items():
-            if isinstance(raw, str) and raw.startswith("$") and not raw.startswith("$item."):
+            if isinstance(resolved[field], CloudInput):
+                output_inputs[field] = resolved[field].source
+                resolved[field] = None
+            elif isinstance(raw, str) and raw.startswith("$") and not raw.startswith("$item."):
                 expected_inputs[field] = _upstream_input_hash(Path(resolved[field][1:]))
         client = DurableClient(job["delivery"], job["base"])
+        options = {"output_inputs": output_inputs} if output_inputs else {}
         manifest = client.stage(job["durable_job_id"], job["intent_hash"], job["graph"],
-                               resolved, job.get("output_nodes"), expected_inputs)
+                               resolved, job.get("output_nodes"), expected_inputs, **options)
         _save_json(job["folder"] / "workflow.json", manifest["graph"])
         _dispatch_durable(key, job, client)
         return
+    if any(isinstance(v, CloudInput) for v in resolved.values()):
+        raise ValueError("Cloud output handoff requires durable execution")
     prompt = build_prompt(job["graph"], resolved, job["base"],
                           upload_caches.setdefault(job["base"], {}))
     job["folder"].mkdir(parents=True, exist_ok=True)
@@ -515,6 +544,17 @@ def _collect_job(key, job, files):
             receipt = delivery_client.receipt(job["prompt_id"])
         state["delivery_receipt"] = receipt
         _save_json(path, state)
+    if job.get("collect") == "cloud":
+        from storage.delivery import receipt_file
+        if receipt is None or job.get("execution") != "durable" or not files:
+            raise RuntimeError("Cloud collection requires completed durable outputs")
+        for item in files:
+            receipt_file(receipt, item)
+        state.update(status="completed", collection="cloud", files=[], artifacts={},
+                     collect_seconds=time.monotonic() - started)
+        _save_json(path, state)
+        print(f"{sid}/{jid}: completed {len(files)} cloud output(s); no local download", flush=True)
+        return CloudOutputs(job["delivery"], job["durable_job_id"], files)
     for target, item in _artifact_targets(job, files):
         evidence = previous.get(target.name)
         if receipt is not None:
@@ -576,6 +616,9 @@ def _build_jobs(steps, endpoints, root, out, task_dir, run_name=None):
         execution = step.get("execution", "native")
         if execution not in ("native", "durable") or (execution == "durable" and delivery is None):
             raise ValueError("execution must be native or durable; durable requires delivery")
+        collect = step.get("collect", "local")
+        if collect not in ("local", "cloud") or (collect == "cloud" and execution != "durable"):
+            raise ValueError("collect must be local or cloud; cloud requires durable execution")
         entries = step.get("foreach", [{"name": "main"}])
         if not isinstance(entries, list) or not entries:
             raise ValueError(f"Empty foreach: {sid}")
@@ -603,12 +646,16 @@ def _build_jobs(steps, endpoints, root, out, task_dir, run_name=None):
                     raise ValueError(f"Bad reference: {value}")
                 if dep not in jobs:
                     raise ValueError(f"Dependency must refer to an earlier job: {value}")
+                upstream = jobs[dep]
+                if upstream.get("collect") == "cloud" and (
+                        execution != "durable" or delivery["volume"] != upstream["delivery"]["volume"]):
+                    raise ValueError(f"Cloud output dependency {value} requires durable execution in the same Volume")
                 deps.add(dep)
             folder = out / sid / jid
             jobs[key] = dict(entry=entry, settings=settings, deps=deps, base=base,
                              output_nodes=sorted({str(n) for n in step["output_nodes"]}) if step.get("output_nodes") is not None else None,
                              endpoint=endpoint_name, graph=graph, folder=folder,
-                             delivery=delivery, execution=execution,
+                             delivery=delivery, execution=execution, collect=collect,
                              durable_scope=[run_name or out.name, sid, jid],
                              status_file=folder / "status.json", state="pending")
         step_ids.add(sid)
@@ -675,7 +722,7 @@ def _run_task_unlocked(task_path, endpoints_path="endpoints.json", output=None,
         valid = bool(files) and all(p.is_file() and not p.is_symlink() and p.stat().st_size for p in files)
         if valid and artifacts is not None:
             valid = all(_valid_artifact(p, artifacts.get(p.name)) for p in files)
-        if status.get("status") == "completed" and valid:
+        if status.get("status") == "completed" and valid and job.get("collect") != "cloud":
             completed[key[0]][key[1]] = files
             job["state"] = "completed"
             quality = "SHA-256 verified" if artifacts is not None else "legacy size-only"

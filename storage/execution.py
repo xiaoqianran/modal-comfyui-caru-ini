@@ -17,7 +17,7 @@ from uuid import UUID, uuid4, uuid5, NAMESPACE_URL
 
 from storage.delivery import (
     HEX, MAX_RECEIPT_BYTES, build_receipt, file_digest, normalized_config,
-    output_ref, receipt_key, relative_path, token, validate_receipt, verified_copy, volume_receipt,
+    output_ref, receipt_file, receipt_key, relative_path, token, validate_receipt, verified_copy, volume_receipt,
 )
 from storage.output_formats import AUDIO, CATEGORIES, VIDEOS
 
@@ -78,18 +78,74 @@ def event_key(config, identifier, phase):
     return _base(config, identifier) + "/" + phase + ".json"
 
 
+def _source_descriptor(source):
+    if not isinstance(source, dict) or set(source) != {"config", "job_id", "item"}:
+        raise ValueError("Invalid cloud output source")
+    cfg = normalized_config(source["config"])
+    if cfg != source["config"] or "version" not in cfg:
+        raise ValueError("Cloud output source requires exact deployment identity")
+    check_job_id(source["job_id"])
+    item = source["item"]
+    if (not isinstance(item, dict) or set(item) != {"filename", "subfolder", "type"}
+            or item["type"] != "output"):
+        raise ValueError("Invalid cloud output item")
+    output_ref(item)
+    return source
+
+
 def input_name(ref):
-    if not isinstance(ref, dict) or set(ref) != {"sha256", "bytes", "extension"}:
+    fields = {"sha256", "bytes", "extension"}
+    if not isinstance(ref, dict) or set(ref) not in (fields, fields | {"source"}):
         raise ValueError("Invalid persisted input reference")
     digest, size, extension = ref["sha256"], ref["bytes"], ref["extension"]
     if (not isinstance(digest, str) or not HEX.fullmatch(digest) or
             type(size) is not int or size <= 0 or extension not in INPUT_EXTENSIONS):
         raise ValueError("Invalid persisted input evidence")
+    if "source" in ref:
+        source = _source_descriptor(ref["source"])
+        if output_ref(source["item"]).suffix.lower() != extension:
+            raise ValueError("Cloud output extension mismatch")
     return "_durable/" + digest + extension
 
 
 def input_key(ref):
-    return PREFIX + "/inputs/" + input_name(ref).split("/")[-1]
+    name = input_name(ref)
+    if "source" in ref:
+        raise ValueError("Cloud output inputs require authoritative receipt resolution")
+    return PREFIX + "/inputs/" + name.split("/")[-1]
+
+
+def _check_source_scope(source, config, identifier):
+    _source_descriptor(source)
+    if source["config"]["volume"] != config["volume"]:
+        raise ValueError("Cloud output handoff requires the same Volume")
+    if source["config"] == config and source["job_id"] == identifier:
+        raise ValueError("Cloud output cannot reference its own attempt")
+
+
+def _source_file(volume, config, identifier, source):
+    """Read only immutable metadata; never stream output bytes on the staging client."""
+    _check_source_scope(source, config, identifier)
+    upstream = load_request(volume, source["config"], source["job_id"])
+    produced = inspect_execution(volume, upstream)
+    if produced["status"] != "produced" or produced["prompt_id"] != source["job_id"]:
+        raise RuntimeError("Cloud output source has no completed execution")
+    receipt = produced["receipt"]
+    ready = volume_receipt(volume, source["config"], produced["prompt_id"])
+    if ready is None or ready != receipt:
+        raise RuntimeError("Cloud output source has no matching ready receipt")
+    if source["item"] not in produced["remote_files"]:
+        raise ValueError("Cloud output is not a selected upstream artifact")
+    _require_scoped_outputs(receipt, source["job_id"])
+    return receipt_file(receipt, source["item"])
+
+
+def cloud_input_ref(volume, config, identifier, source):
+    file = _source_file(volume, config, identifier, source)
+    ref = {"sha256": file["sha256"], "bytes": file["bytes"],
+           "extension": output_ref(source["item"]).suffix.lower(), "source": source}
+    input_name(ref)
+    return ref
 
 
 def _read_json(volume, key):
@@ -211,6 +267,8 @@ def validate_request(request, config, identifier):
         if not sep or graph.get(node, {}).get("inputs", {}).get(name) != input_name(ref):
             raise ValueError(f"Input reference does not match graph: {field}")
         validate_input_field(graph, field, ref["extension"])
+        if "source" in ref:
+            _check_source_scope(ref["source"], cfg, identifier)
     if nodes is not None and (not isinstance(nodes, list) or not nodes or
                               any(not isinstance(n, str) or n not in graph for n in nodes)):
         raise ValueError("Invalid output node selection")
@@ -266,15 +324,26 @@ def _require_scoped_outputs(receipt, identifier):
 
 
 def stage_request(volume, config, identifier, intent, graph, settings, output_nodes=None,
-                  expected_inputs=None):
-    """Persist the entire resolved graph and its content-addressed media inputs."""
+                  expected_inputs=None, output_inputs=None):
+    """Persist a resolved graph with local objects or verified cloud output references."""
     prompt = json.loads(json.dumps(graph, ensure_ascii=False))
+    config = normalized_config(config)
+    output_inputs = output_inputs or {}
+    if set(output_inputs) - set(settings):
+        raise ValueError("Cloud output inputs must match settings")
     refs, cache = {}, {}
     for field, value in settings.items():
         node, sep, name = field.partition(".")
         if not sep or name not in prompt.get(node, {}).get("inputs", {}):
             raise ValueError(f"Unknown graph input: {field}")
-        if isinstance(value, str) and value.startswith("@"):
+        if field in output_inputs:
+            if value is not None:
+                raise ValueError("Cloud output input cannot also have a local value")
+            ref = cloud_input_ref(volume, config, identifier, output_inputs[field])
+            validate_input_field(prompt, field, ref["extension"])
+            refs[field] = ref
+            value = input_name(ref)
+        elif isinstance(value, str) and value.startswith("@"):
             path = str(Path(value[1:]).resolve())
             validate_input_field(prompt, field, Path(path).suffix.lower())
             expected = (expected_inputs or {}).get(field)
@@ -301,14 +370,25 @@ def materialize_inputs(volume, request, input_root):
     if root.is_symlink() or directory.is_symlink():
         raise ValueError("Unsafe input directory")
     directory.mkdir(parents=True, exist_ok=True)
-    for ref in {input_key(v): v for v in request["inputs"].values()}.values():
-        target = root / input_name(ref)
+    # Resolve and validate every source even when two inputs have identical bytes.
+    resolved = {}
+    for ref in request["inputs"].values():
+        expected = {k: ref[k] for k in ("bytes", "sha256")}
+        if "source" in ref:
+            file = _source_file(volume, request["config"], request["job_id"], ref["source"])
+            if expected != {k: file[k] for k in expected}:
+                raise RuntimeError("Cloud output evidence changed")
+            key = file["key"]
+        else:
+            key = input_key(ref)
+        resolved.setdefault(input_name(ref), (key, expected))
+    for name, (key, expected) in resolved.items():
+        target = root / name
         if target.is_symlink():
             raise ValueError("Unsafe input target")
-        expected = {k: ref[k] for k in ("bytes", "sha256")}
         if target.is_file() and file_digest(target) == expected:
             continue
-        verified_copy(volume.read_file(input_key(ref)), target, expected)
+        verified_copy(volume.read_file(key), target, expected)
 
 
 def _event(request, phase, **fields):

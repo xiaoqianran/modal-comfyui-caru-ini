@@ -153,6 +153,156 @@ class ExecutionTests(unittest.TestCase):
         self.assertEqual(self.vol.objects[a], b"result")
         self.assertEqual(self.vol.objects[b], b"result")
 
+    def cloud_fixture(self):
+        result=self.run_engine(Engine(self.output,self.vol,self.req))
+        source={"config":self.cfg,"job_id":self.identifier,"item":result["remote_files"][0]}
+        key=result["receipt"]["files"][0]["key"]
+        downstream=e.job_id(["cloud"],self.intent)
+        return result,source,key,downstream
+
+    def test_cloud_reference_is_metadata_only_and_materializes_without_copy_object(self):
+        result,source,key,identifier=self.cloud_fixture()
+        read=self.vol.read_file
+        reads=[]
+        def metadata_only(k):
+            reads.append(k)
+            if k==key:
+                raise AssertionError("client downloaded upstream media")
+            yield from read(k)
+        with patch.object(self.vol,"read_file",side_effect=metadata_only):
+            req=e.stage_request(self.vol,self.cfg,identifier,self.intent,self.graph,
+                                {"1.image":None},["2"],output_inputs={"1.image":source})
+        ref=req["inputs"]["1.image"]
+        self.assertEqual(ref["source"],source)
+        self.assertEqual(ref["sha256"],hashlib.sha256(b"result").hexdigest())
+        self.assertEqual(ref["bytes"],6)
+        self.assertNotIn(key,reads)
+        self.assertNotIn(e.PREFIX+"/inputs/"+e.input_name(ref).split("/")[-1],self.vol.objects)
+        for epoch in ("replacement1","replacement2"):
+            root=self.root/epoch
+            e.materialize_inputs(self.vol,e.load_request(self.vol,self.cfg,identifier),root)
+            self.assertEqual((root/e.input_name(ref)).read_bytes(),b"result")
+
+    def test_cloud_source_scope_and_selection_fail_closed(self):
+        result,source,key,identifier=self.cloud_fixture()
+        for changed,error in (
+            ({**source,"config":{**self.cfg,"volume":"other-vol"}},"same Volume"),
+            ({**source,"job_id":identifier},"own attempt"),
+            ({**source,"item":{**source["item"],"filename":"not-selected.png"}},"selected upstream"),
+            ({**source,"item":{**source["item"],"subfolder":"../private"}},"Unsafe delivery path"),
+            ({**source,"item":{**source["item"],"type":"temp"}},"Invalid cloud output item"),
+        ):
+            with self.subTest(error=error),self.assertRaisesRegex(ValueError,error):
+                e.stage_request(self.vol,self.cfg,identifier,self.intent,self.graph,{"1.image":None},["2"],
+                                output_inputs={"1.image":changed})
+        self.assertNotIn(e.request_key(self.cfg,identifier),self.vol.objects)
+
+    def test_cloud_source_must_be_completed_with_matching_ready_receipt(self):
+        source={"config":self.cfg,"job_id":self.identifier,
+                "item":{"filename":"out.png","subfolder":"test","type":"output"}}
+        identifier=e.job_id(["new"],self.intent)
+        with self.assertRaisesRegex(RuntimeError,"no completed execution"):
+            e.stage_request(self.vol,self.cfg,identifier,self.intent,self.graph,{"1.image":None},["2"],
+                            output_inputs={"1.image":source})
+        result,source,key,identifier=self.cloud_fixture()
+        del self.vol.objects[d.receipt_key(self.cfg["workflow"],1,self.identifier)]
+        with self.assertRaisesRegex(RuntimeError,"no matching ready receipt"):
+            e.stage_request(self.vol,self.cfg,identifier,self.intent,self.graph,{"1.image":None},["2"],
+                            output_inputs={"1.image":source})
+        self.assertNotIn(e.request_key(self.cfg,identifier),self.vol.objects)
+
+    def test_cloud_corrupt_bytes_or_ref_cannot_admit_downstream(self):
+        result,source,key,identifier=self.cloud_fixture()
+        req=e.stage_request(self.vol,self.cfg,identifier,self.intent,self.graph,
+                            {"1.image":None},["2"],output_inputs={"1.image":source})
+        forged=json.loads(json.dumps(req))
+        forged["inputs"]["1.image"]["sha256"]="f"*64
+        forged["graph"]["1"]["inputs"]["image"]=e.input_name(forged["inputs"]["1.image"])
+        engine=Mock()
+        with self.assertRaisesRegex(RuntimeError,"Cloud output evidence changed"):
+            e.execute(self.vol,forged,engine,"new",self.root/"new",self.output,self.lock)
+        self.vol.objects[key]=b"broken"
+        with self.assertRaisesRegex(RuntimeError,"SHA-256"):
+            e.execute(self.vol,req,engine,"new",self.root/"new",self.output,self.lock)
+        engine.submit.assert_not_called()
+        self.assertEqual(e.inspect_execution(self.vol,req)["status"],"prepared")
+        self.assertFalse(list((self.root/"new").rglob("*.part")))
+
+    def test_cloud_target_probe_required_before_any_reference_published(self):
+        from storage.execution_client import DurableClient
+        _,source,_,identifier=self.cloud_fixture()
+        client=object.__new__(DurableClient);client.volume=self.vol;client.config=self.cfg
+        client.preflight=Mock(return_value={"execution_schema":1,"execution_media_inputs":1})
+        with self.assertRaisesRegex(RuntimeError,"direct cloud outputs"):
+            client.stage(identifier,self.intent,self.graph,{"1.image":None},["2"],
+                         output_inputs={"1.image":source})
+        self.assertNotIn(e.request_key(self.cfg,identifier),self.vol.objects)
+        client.preflight.return_value={"execution_schema":1,"execution_cloud_inputs":1}
+        req=client.stage(identifier,self.intent,self.graph,{"1.image":None},["2"],
+                         output_inputs={"1.image":source})
+        self.assertEqual(req["inputs"]["1.image"]["source"],source)
+
+    def test_cloud_collection_persists_only_metadata_and_resolves_reference(self):
+        result,source,key,identifier=self.cloud_fixture()
+        folder=self.root/"cloud-job"
+        job={"endpoint":"x","base":"https://example.invalid","delivery":self.cfg,
+             "execution":"durable","collect":"cloud","intent_hash":self.intent,
+             "durable_job_id":self.identifier,"prompt_id":result["prompt_id"],
+             "folder":folder,"status_file":folder/"status.json"}
+        durable=Mock();durable.status.return_value=result
+        delivery=Mock();delivery.download.side_effect=AssertionError("download")
+        with patch("storage.execution_client.DurableClient",return_value=durable), \
+             patch("storage.delivery_client.DeliveryClient",return_value=delivery):
+            outputs=runner._collect_job(("s","main"),job,result["remote_files"])
+        self.assertIsInstance(outputs,runner.CloudOutputs)
+        status=json.loads(job["status_file"].read_text())
+        self.assertEqual(status["files"],[])
+        self.assertEqual(status["artifacts"],{})
+        self.assertEqual(status["collection"],"cloud")
+        self.assertEqual(runner._input_value("$s.image",{},{"s":{"main":outputs}}).source,source)
+        delivery.download.assert_not_called()
+
+    def test_cloud_runner_build_rejects_native_and_cross_volume_consumers(self):
+        (self.root/"graph.json").write_text(json.dumps(self.graph))
+        common={"endpoint":"x","workflow":"graph.json","execution":"durable","delivery":self.cfg}
+        first={**common,"id":"source","collect":"cloud","set":{"1.image":"@"+str(self.source)}}
+        second={**common,"id":"sink","set":{"1.image":"$source.image"}}
+        args=({"x":"https://example.invalid"},self.root,self.root/"out",self.root)
+        jobs,_=runner._build_jobs([first,second],*args)
+        self.assertEqual(jobs["source","main"]["collect"],"cloud")
+        self.assertEqual(jobs["sink","main"]["collect"],"local")
+        for changed in ({**second,"execution":"native"},{**second,"delivery":{**self.cfg,"volume":"other"}}):
+            with self.assertRaisesRegex(ValueError,"same Volume"):
+                runner._build_jobs([first,changed],*args)
+        with self.assertRaisesRegex(ValueError,"cloud requires durable"):
+            runner._build_jobs([{**first,"execution":"native"}],*args)
+
+    def test_cloud_runner_resume_collects_metadata_without_dispatch_or_download(self):
+        from storage.execution_client import DurableClient
+        (self.root/"graph.json").write_text(json.dumps(self.graph))
+        endpoint=self.root/"endpoints.json";endpoint.write_text(json.dumps({"x":"https://example.invalid"}))
+        task=self.root/"task.json"
+        steps=[{"id":"s","endpoint":"x","workflow":"graph.json","execution":"durable",
+                "collect":"cloud","delivery":self.cfg,"set":{"1.image":"@"+str(self.source)}}]
+        task.write_text(json.dumps({"name":"cloud-resume","steps":steps}))
+        out=self.root/"out"
+        jobs,_=runner._build_jobs(steps,{"x":"https://example.invalid"},self.root,out,self.root,run_name="cloud-resume")
+        job=jobs["s","main"];ident=job["durable_job_id"]
+        req=e.stage_request(self.vol,self.cfg,ident,job["intent_hash"],self.graph,job["settings"],["2"])
+        result=e.execute(self.vol,req,Engine(self.output,self.vol,req),"owner",self.root/"owner",self.output,self.lock)
+        runner._save_json(job["status_file"],{"status":"completed","collection":"cloud","files":[],
+            "intent_hash":job["intent_hash"],"durable_job_id":ident,"prompt_id":result["prompt_id"],
+            "remote_files":result["remote_files"],"delivery_receipt":result["receipt"]})
+        client=Mock();client.status.return_value=result
+        delivery=Mock()
+        with patch("storage.execution_client.DurableClient",return_value=client), \
+             patch("storage.delivery_client.DeliveryClient",return_value=delivery):
+            runner.run_task(task,endpoint,output=out,timeout=10)
+        client.start.assert_not_called()
+        client.stage.assert_not_called()
+        delivery.download.assert_not_called()
+        self.assertEqual(json.loads(job["status_file"].read_text())["collection"],"cloud")
+
     def test_video_audio_inputs_restore_exact_bytes_and_deduplicate(self):
         video=self.root/"clip.MP4"; video.write_bytes(b"video-bytes")
         audio=self.root/"voice.WAV"; audio.write_bytes(b"audio-bytes")

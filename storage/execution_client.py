@@ -18,16 +18,21 @@ class DurableClient(DeliveryClient):
         return info
 
     def stage(self, identifier, intent, graph, settings, output_nodes=None,
-              expected_inputs=None):
+              expected_inputs=None, *, output_inputs=None):
         # Old v1 image-only deployments cannot reconstruct media refs. Check
         # the CPU identity probe before publishing any new video/audio input.
-        if any(isinstance(value, str) and value.startswith("@") and
-               Path(value[1:]).suffix.lower() in MEDIA_INPUT_EXTENSIONS
-               for value in settings.values()):
-            if self.preflight().get("execution_media_inputs") != 1:
+        media = any(isinstance(value, str) and value.startswith("@") and
+                    Path(value[1:]).suffix.lower() in MEDIA_INPUT_EXTENSIONS
+                    for value in settings.values())
+        if media or output_inputs:
+            info = self.preflight()
+            if media and info.get("execution_media_inputs") != 1:
                 raise RuntimeError("Deployment does not support durable video/audio inputs; redeploy first")
+            if output_inputs and info.get("execution_cloud_inputs") != 1:
+                raise RuntimeError("Deployment does not support direct cloud outputs; redeploy first")
         return stage_request(self.volume, self.config, identifier, intent, graph,
-                             settings, output_nodes, expected_inputs=expected_inputs)
+                             settings, output_nodes, expected_inputs=expected_inputs,
+                             output_inputs=output_inputs)
 
     def status(self, identifier):
         request = load_request(self.volume, self.config, identifier)

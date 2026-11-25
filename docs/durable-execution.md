@@ -43,8 +43,18 @@ durable 模式不再使用 /upload/image 和客户端直接 /prompt；本地先�
 - GPU 从 SDK 读取已持久化的输入，在原生 input 目录的 _durable/ 子目录按哈希名称原子落盘；校验通过后才允许提交。
 - 显式 @ 本地文件及跨步骤输出引用使用同一套持久化协议。图片：png/jpg/jpeg/webp/bmp；视频：mp4/webm/mov/mkv；音频：wav/mp3/flac/ogg/m4a/aac/opus。后缀统一小写、输入非空、字节与 SHA-256 校验，不保证所有容器/编码均可被原生解码器读取。
 - 原生视频使用 LoadVideo.file，原生音频使用 LoadAudio.audio（也接受带音轨的视频）。图片保持既有能力，LoadImage.image / LoadImageMask.image 仅接受图片；未验证的自定义路径加载节点暂不支持新的视频/音频格式。新版 CPU probe 额外返回 execution_media_inputs=1，旧部署须重新部署后才能上传新媒体输入；不变更已有图片的 v1 request schema。
-- 例如 set 中 `"1.file": "@inputs/clip.mp4"`、`"2.audio": "@inputs/voice.wav"`，或者 `"1.file": "$video_step.video"`、`"2.audio": "$voice_step.audio"`；也可指定 foreach job，如 $voice_step.main.audio。引用须唯一匹配对应类型；下游上传前以已收集的上游 status.json 中 SHA-256 为期望值，内容变化或缺失证据则拒绝派发。音频输出中的 MP4 作为视频引用选择，不会误判为音频文件。多阶段 Runner 仍先在客户端收集已校验产物，再上传持久输入对象，尚未实现跨任务 Volume 内零拷贝。
+- 例如 set 中 `"1.file": "@inputs/clip.mp4"`、`"2.audio": "@inputs/voice.wav"`，或者 `"1.file": "$video_step.video"`、`"2.audio": "$voice_step.audio"`；也可指定 foreach job，如 $voice_step.main.audio。引用须唯一匹配对应类型；下游上传前以已收集的上游 status.json 中 SHA-256 为期望值，内容变化或缺失证据则拒绝派发。音频输出中的 MP4 作为视频引用选择，不会误判为音频文件。默认 collect=local 保留客户端收集及重新上传行为；中间步骤可选择 collect=cloud，直接使用已验证的云端产物引用（见下节）。
 - 普通 UI 上传、graph 内未通过 @ 传入的历史文件名、插件远程 URL 和未适配的自定义节点不在承诺范围。旧 native 模式的 HTTP /upload/image 仍只支持图片；媒体输入使用 durable + CPU delivery。完整任务重启仍须能够计算原始 intent；原始本地文件不存在时，用 recover_job.py 按云端 job UUID 恢复已有尝试。
+
+### 云端产物直接引用（可选）
+
+中间阶段设置 `"collect": "cloud"`，在相同 Output Volume V2、durable execution 内通过原有 $step.video / $step.audio / $step.image（或 $step.job.kind）把上游选中产物传给下游。默认 `"collect": "local"` 不改变现有下载及交付行为；末端保持 local 即可交付最终文件。终端 cloud 步骤也允许，只保存凭证，需显式用 recover_job.py download 取得文件。
+
+- cloud 收集将 status.json 标记 completed、collection=cloud，并保存 remote_files、delivery_receipt 与 durable_job_id；files/artifacts 为空，不创建本地媒体。Runner 重启时重新向云端验证完成证据，不将空文件列表误判为丢失产物。collect=cloud 参与 intent；旧 local 任务身份不变，改变策略应使用新的 Task name 或独立输出目录。
+- 下游输入 ref 增加 source={config,job_id,item}，包含精确上游部署身份及已选中产物标识；sha256/bytes/extension 与原格式一致，不创建新的 .execution/v1/inputs 对象。source 不提供任意 Volume key。stage 和 GPU materialize 分别读取上游不可变 request、produced、ready receipt，校验身份、选中范围、job 专属输出命名空间和内容证据。GPU 按 receipt 导出的原始 key 流式读取，并在 native claim 前完成原子写入和 SHA-256/长度校验；损坏、缺失或不一致一律拒绝提交。同哈希、同扩展名的本地已验证输入可复用。
+- 新版 CPU probe 返回 execution_cloud_inputs=1；目标部署需支持新 ref，图片/音视频的既有 v1 对象不变。仅支持同一 Volume（可跨容器、不同工作流/部署，只要两者都使用兼容协议并且 source receipt 存在）；native 或跨 Volume 下游在构建任务时拒绝，不隐式回退。上游为 local 仍走旧的本地校验上传。
+- 正常 ready 路径仅在客户端读取元数据，无中间媒体下载/重传；GPU 仍要把源内容流式校验到原生 input 目录，不是 GPU 端零拷贝。异常 produced 存在而 ready 缺失时，原有恢复流程仍会校验全部源文件再补 ready；此特殊路径可能通过客户端读回原始媒体，尚未迁移到独立 CPU worker。
+- 直接引用依赖源 request、produced、ready 及实际媒体的保留；GC 必须考虑下游依赖，不能在它们仍被引用时移除源产物。完整 Task Runner 恢复仍需原始本地输入计算 intent；单个已持久化尝试可通过 recover_job.py 按 UUID 恢复。当前不支持自动跨卷搬运。
 
 ## 执行状态
 
@@ -144,3 +154,13 @@ PC2 / Modal profile zhangchenzer。所有测试使用独立 App 和独立 Output
 - load：GCP ap-south，容器 ta-01M897VWG7GJGQ471AVS3Q5ZVR，epoch f5c20f8fe0fd43fb9f1c2c965b7d1d40，原生 0.40s；mux：GCP eu-west，容器 ta-01M89807771X33G584G7MB27XR，epoch 26fbbafa567e44f79d58f48e906d4ee1，原生 0.11s；extract：AWS us-west，容器 ta-01M898283KYK5M0TBJZ4Q32GFR，epoch e9d80f4df2ce4aba9b5c11f88b412e96，原生 0.24s。三个不同 epoch，3 次原生 POST、3 次完成；原生耗时不含调度、传输、校验。
 - 四份输出均通过 FFmpeg 完整解码及 SHA-256/长度核对。load 输出 MP4 解码 RGB、PCM 哈希与原始 MP4 完全一致；输出 FLAC 解码 PCM 与原 WAV 完全一致。mux 视频 96×64、18 帧、12FPS、1.5s，主音频由 440Hz 替换为 880Hz；extract FLAC 1.504s、32kHz、单声道，频谱同为 880Hz。mux MP4 27872 bytes，SHA-256 91f8b2de24de610fafbbd3b6d3b2e4ade27ef314a82dd7f4be65f5d1715c805c；归零后仅凭 job UUID 与 delivery config 重新下载，哈希一致且未启动 GPU。
 - 原始脚本、Task/Graph JSON、运行日志、4份产物及 log-summary.json 保留在 outputs/durable-media-lab-1125/；测试 App stopped、实验容器0、实验 Volume0，公共模型缓存与生产部署不变。本次实测仅覆盖 MP4、WAV、FLAC 和原生媒体节点；其他允许后缀、长视频、大文件压力、自定义节点、真实视频/音频条件生成及零拷贝跨任务传递未验证。
+
+### 第五轮：直接云端引用、真实 H3 三阶段与故障注入（2026-11-25）
+
+- RTX PRO 6000 独立 App ap-zJN0YzCFOXhX1vOwObnMik，版本 66d7942071ea8a98a09cd733501305b5d5bc159e8f61a7b2091d2ee22d3734e4，七个模型缓存命中。首次测试图在 Runner 预检发现断开选择器后的残余链接，未提交 GPU；修正实验图后派发，平台持续 PENDING，账本仍为 prepared、无 claim，取消未开始调用。App 停止、容器及实验卷均为0。未将等待误计为推理或声称 RTX 实测通过。
+- 真实 CPU Volume V2 故障注入：App ap-XZ2VrTj4begeicrsCj3QCc，四个独立 single-use CPU 容器，原生引擎为测试替身，实际 SDK/Volume/commit/不可覆盖事件真实。WAV 16044 bytes，SHA-256 97b68990afdeaf84a9519d92701978c2916f028cc1e91147f3b94e10b47083e3；删除本地输入后首任务完成，客户端只读取元数据构造直接引用，第二容器完成相同字节。故意覆盖实验源文件后第三容器拒绝，Delivery SHA-256/size mismatch、native submit=0、job仍prepared；恢复源字节后第四容器完成同一未领取的尝试，SHA-256一致。实验 App stopped、容器0、Volume0。
+- B200 独立 App ap-ydP9sjHw5P6cAGSQAwBQJP，版本 94563d5ed2f2435a582afc3837cd791db089ad3913e971813a7e1c5588c8d05a，CUDA 13.4.3 / PyTorch 2.15.0+cu134，模型7/7缓存，Snapshot OFF、warmup OFF、scaledown 30秒，首次镜像构建部署283.828s。三个实际 GPU 容器均 AWS ap-south，分别执行真实 H3 INT8 6步视频生成并保存FLAC、直接引用MP4+FLAC合成、直接引用合成MP4输出视频及提取音频。每个阶段使用不同epoch，中间阶段显式 collect=cloud；在后续派发前停止上一容器并确认归零。
+- generate：容器 ta-01M89AGBVDCEDRA9QAEZV6AKWR，epoch 0af2d064b7ab42b8b89bb562c40bbcd8，job 2fed24bb-da47-5152-b4d2-6c72d8ec33ac，原生86.39s（含冷加载），durable 103.775s，输出 MP4 161671B、FLAC 36471B；mux：ta-01M89APRH7EPXMGH2W2T8ABYZR，epoch ac973a2fd48c4381aa060348c10c44b8，job 47d1d18a-8ae8-5ed8-a0a0-d5dbb59e98f9，原生1.66s、durable27.106s，MP4 135303B；final：ta-01M89ATX5427Z4GQSRD39C2VXR，epoch 1b04c609b49b48108a6364a726198067，job 8e3abf22-6761-57ef-8901-c9dd70b9bc2f，原生0.67s、durable26.960s。平台原生3次 got prompt、3次完成。原生耗时不含调度和交付。
+- 实验客户端对 Volume SDK read_file 与 batch_upload 做强制审计，禁止任何中间媒体读取或上传；两份初始输入 PNG 191142B、WAV 149412B 各上传一次；中间三份媒体合计333445B，无客户端payload下载及重传，较原本各下载上传一次避免666890B本地往返媒体字节（不包含元数据/协议开销，不代表端到端加速比例）。两中间步骤只保存 workflow.json、status.json，files/artifacts为空。final 中同一 MP4 供两个节点引用。
+- 最终 MP4 135450B，SHA-256 152a36fa1a91f884406fe94f6f390e6e3133c572045d05aec29504d596e683e0，512×288、56帧、24FPS、2.334秒；FLAC 35980B，SHA-256 650ac6bb42940adfee146379649dce60b50d6aea322aa0eba36fd1e22859e96a，2.336秒、32kHz、单声道。均完整FFmpeg解码、哈希及880Hz频谱校验成功。删除本地最终两文件后完整Runner重启，原始输入仍存在，仅重新下载最终171430B，两文件哈希一致，额外GPU派发0、额外上传0、中间媒体下载0。
+- 108/108本地 unittest 通过；真实实验原始脚本、日志及产物保留于 outputs/durable-cloud-handoff-lab-1125/、outputs/durable-cloud-handoff-cpu-lab-1125/、outputs/durable-cloud-handoff-b200-lab-1125/。三个实验App均 stopped，容器0、实验Volume0。生产默认单容器、部署及共享模型缓存不变。当前直接引用要求 native prompt ID 与预定 job UUID 一致、同一Volume及可验证已选中产物。未实测跨App/跨部署引用、长视频大文件压力、GC保留依赖、异常ready缺失时彻底消除客户端读回、无本地原始输入的完整Task Runner重启。GPU端仍需流式读取并校验到原生input目录。
