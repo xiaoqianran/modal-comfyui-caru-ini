@@ -560,7 +560,12 @@ def _collect_job(key, job, files):
         if receipt is not None:
             from storage.delivery import receipt_file
             expected = receipt_file(receipt, item)
-            if evidence != {k: expected[k] for k in ("bytes", "sha256")}:
+            authoritative = {k: expected[k] for k in ("bytes", "sha256")}
+            if job.get("workflow_plan"):
+                # Plan resumes do not trust mutable local status. A matching
+                # existing local file can be reused against the cloud receipt.
+                evidence = authoritative
+            elif evidence != authoritative:
                 evidence = None
         if not _valid_artifact(target, evidence):
             if delivery_client is not None:
@@ -767,6 +772,13 @@ def _run_task_unlocked(task_path, endpoints_path="endpoints.json", output=None,
                 _remaining(1)
                 DeliveryClient(job["delivery"], job["base"]).preflight()
                 verified_delivery.add(identity)
+    _schedule_jobs(jobs, completed, mode,
+                   lambda key, job, done: _submit_job(key, job, done, task_path, root, upload_caches))
+    return out
+
+
+def _schedule_jobs(jobs, completed, mode, submit_job, collect_job=_collect_job):
+    """Shared scheduler; submission/collection policy is supplied by the caller."""
     jobs_by_step = {}
     for key, job in jobs.items():
         jobs_by_step.setdefault(key[0], []).append(job)
@@ -818,13 +830,13 @@ def _run_task_unlocked(task_path, endpoints_path="endpoints.json", output=None,
                     ):
                         continue
                     busy_endpoints.add(job["base"])
-                    schedule("submit", key, _submit_job, key, job, completed, task_path, root, upload_caches)
+                    schedule("submit", key, submit_job, key, job, completed)
                     counts["submit"] += 1
                 elif state == "submitted" and counts["poll"] < limits["poll"] and time.monotonic() >= next_poll.get(key, 0):
                     schedule("poll", key, _read_outputs, key, job)
                     counts["poll"] += 1
                 elif state == "collecting" and counts["collect"] < limits["collect"]:
-                    schedule("collect", key, _collect_job, key, job, job["remote_files"])
+                    schedule("collect", key, collect_job, key, job, job["remote_files"])
                     counts["collect"] += 1
             if active:
                 wait([f for _, f in active.values()], timeout=_remaining(0.25), return_when=FIRST_COMPLETED)
@@ -833,7 +845,6 @@ def _run_task_unlocked(task_path, endpoints_path="endpoints.json", output=None,
                 if not any(job["state"] == "submitted" for job in jobs.values()):
                     raise RuntimeError("Task scheduler stalled without a submitted job")
                 time.sleep(_remaining(0.25))
-    return out
 
 
 def run_task(task_path, endpoints_path="endpoints.json", output=None,

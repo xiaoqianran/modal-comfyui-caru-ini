@@ -2,12 +2,20 @@
 from __future__ import annotations
 
 from pathlib import Path
+import time
+
+from storage.delivery import receipt_file, volume_receipt
 
 from storage.delivery_client import DeliveryClient
 from storage.execution import (
     MEDIA_INPUT_EXTENSIONS, finalize_produced, inspect_execution, job_id, load_request,
     put_once, request_key, stage_request, validate_request,
 )
+
+
+# A live producer publishes ready immediately after produced. Give that
+# normal publication window a bounded grace before a CPU repair reads media.
+_READY_VISIBILITY_GRACE_SECONDS = 15
 
 
 class DurableClient(DeliveryClient):
@@ -38,7 +46,20 @@ class DurableClient(DeliveryClient):
         request = load_request(self.volume, self.config, identifier)
         state = inspect_execution(self.volume, request)
         if state["status"] == "produced":
-            return finalize_produced(self.volume, request, state)
+            ready = volume_receipt(self.volume, self.config, state["prompt_id"])
+            deadline = time.monotonic() + _READY_VISIBILITY_GRACE_SECONDS
+            while ready is None and time.monotonic() < deadline:
+                time.sleep(min(1, max(0, deadline - time.monotonic())))
+                ready = volume_receipt(self.volume, self.config, state["prompt_id"])
+            if ready is None:
+                # A dead producer may never publish ready. Keep the original
+                # verified repair path; absence is not proof of completion.
+                return finalize_produced(self.volume, request, state)
+            if ready != state["receipt"] or not state["remote_files"]:
+                raise RuntimeError("Execution receipt missing or inconsistent")
+            for item in state["remote_files"]:
+                receipt_file(ready, item)
+            return {**state, "status": "completed", "receipt": ready}
         return state
 
     def prepare_retry(self, identifier, attempt, allow_unknown=False):

@@ -44,7 +44,7 @@ durable 模式不再使用 /upload/image 和客户端直接 /prompt；本地先�
 - 显式 @ 本地文件及跨步骤输出引用使用同一套持久化协议。图片：png/jpg/jpeg/webp/bmp；视频：mp4/webm/mov/mkv；音频：wav/mp3/flac/ogg/m4a/aac/opus。后缀统一小写、输入非空、字节与 SHA-256 校验，不保证所有容器/编码均可被原生解码器读取。
 - 原生视频使用 LoadVideo.file，原生音频使用 LoadAudio.audio（也接受带音轨的视频）。图片保持既有能力，LoadImage.image / LoadImageMask.image 仅接受图片；未验证的自定义路径加载节点暂不支持新的视频/音频格式。新版 CPU probe 额外返回 execution_media_inputs=1，旧部署须重新部署后才能上传新媒体输入；不变更已有图片的 v1 request schema。
 - 例如 set 中 `"1.file": "@inputs/clip.mp4"`、`"2.audio": "@inputs/voice.wav"`，或者 `"1.file": "$video_step.video"`、`"2.audio": "$voice_step.audio"`；也可指定 foreach job，如 $voice_step.main.audio。引用须唯一匹配对应类型；下游上传前以已收集的上游 status.json 中 SHA-256 为期望值，内容变化或缺失证据则拒绝派发。音频输出中的 MP4 作为视频引用选择，不会误判为音频文件。默认 collect=local 保留客户端收集及重新上传行为；中间步骤可选择 collect=cloud，直接使用已验证的云端产物引用（见下节）。
-- 普通 UI 上传、graph 内未通过 @ 传入的历史文件名、插件远程 URL 和未适配的自定义节点不在承诺范围。旧 native 模式的 HTTP /upload/image 仍只支持图片；媒体输入使用 durable + CPU delivery。完整任务重启仍须能够计算原始 intent；原始本地文件不存在时，用 recover_job.py 按云端 job UUID 恢复已有尝试。
+- 普通 UI 上传、graph 内未通过 @ 传入的历史文件名、插件远程 URL 和未适配的自定义节点不在承诺范围。旧 native 模式的 HTTP /upload/image 仍只支持图片；媒体输入使用 durable + CPU delivery。旧 batch_run.py 完整任务重启仍须计算原始 intent；原始本地文件不存在时，旧任务用 recover_job.py 按云端 job UUID 恢复已有尝试，新 workflow_run.py 计划可按工作流 UUID 恢复所有阶段。
 
 ### 云端产物直接引用（可选）
 
@@ -54,7 +54,24 @@ durable 模式不再使用 /upload/image 和客户端直接 /prompt；本地先�
 - 下游输入 ref 增加 source={config,job_id,item}，包含精确上游部署身份及已选中产物标识；sha256/bytes/extension 与原格式一致，不创建新的 .execution/v1/inputs 对象。source 不提供任意 Volume key。stage 和 GPU materialize 分别读取上游不可变 request、produced、ready receipt，校验身份、选中范围、job 专属输出命名空间和内容证据。GPU 按 receipt 导出的原始 key 流式读取，并在 native claim 前完成原子写入和 SHA-256/长度校验；损坏、缺失或不一致一律拒绝提交。同哈希、同扩展名的本地已验证输入可复用。
 - 新版 CPU probe 返回 execution_cloud_inputs=1；目标部署需支持新 ref，图片/音视频的既有 v1 对象不变。仅支持同一 Volume（可跨容器、不同工作流/部署，只要两者都使用兼容协议并且 source receipt 存在）；native 或跨 Volume 下游在构建任务时拒绝，不隐式回退。上游为 local 仍走旧的本地校验上传。
 - 正常 ready 路径仅在客户端读取元数据，无中间媒体下载/重传；GPU 仍要把源内容流式校验到原生 input 目录，不是 GPU 端零拷贝。异常 produced 存在而 ready 缺失时，原有恢复流程仍会校验全部源文件再补 ready；此特殊路径可能通过客户端读回原始媒体，尚未迁移到独立 CPU worker。
-- 直接引用依赖源 request、produced、ready 及实际媒体的保留；GC 必须考虑下游依赖，不能在它们仍被引用时移除源产物。完整 Task Runner 恢复仍需原始本地输入计算 intent；单个已持久化尝试可通过 recover_job.py 按 UUID 恢复。当前不支持自动跨卷搬运。
+- 直接引用依赖源 request、produced、ready 及实际媒体的保留；GC 必须考虑下游依赖，不能在它们仍被引用时移除源产物。旧 batch_run.py 完整任务恢复仍需原始本地输入计算 intent；单个已持久化尝试可通过 recover_job.py 按 UUID 恢复，或预先使用 workflow_run.py 持久化完整计划。当前不支持自动跨卷搬运。
+
+## 完整工作流持久化（可选新入口）
+
+`workflow_run.py` 适用于所有步骤均为 durable、使用同一 Output Volume V2 的多阶段 Task JSON。它与旧 batch_run.py 并存，不接管旧任务身份；不要把已经运行的旧 Task 直接当作同一个新计划续跑，以免产生新的推理。
+
+    uv run python workflow_run.py prepare --task tasks/my-task.json --endpoints endpoints.json
+    uv run python workflow_run.py status --run WORKFLOW_UUID
+    uv run python workflow_run.py resume --run WORKFLOW_UUID --out outputs/my-run --timeout 1800
+
+prepare 输出 workflow_id 和 volume，非默认 Volume 在 status/resume 追加 --volume 实际名称。保留这两个定位字段（默认卷只需 UUID）、同一 Modal 环境访问权限及兼容客户端代码。初始 Task JSON、graph JSON、endpoint 文件和本地媒体在 prepare 成功后均不再是恢复前提。resume 默认在 outputs/workflow-UUID 下重新交付，亦可选择新的本地目录。
+
+- prepare 先展开全部 foreach 和依赖、检查图及 CPU deployment probe，解析所有 $item 及显式 @ 引用，包括未来阶段才需要的源输入；每个源对象按 SHA-256/长度/后缀校验，完成所有持久化之后才发布计划，不派发 GPU。中途失败不发布可恢复计划；已写入的内容对象可能成为无引用对象，等待后续安全 GC。
+- 计划路径为 .execution/v1/workflows/UUID/plan.json；schema=1，图按内容哈希去重，覆盖字段的旧默认值移除，依赖转为明确的 job/type 选择，输入保存内容对象引用而非 @ 路径。计划 JSON 最大4MiB，身份由规范化内容及 Volume 确定；同一计划重复准备得到同一 UUID，改变参数、输入内容、任务名、模式、交付策略或部署身份会得到新计划及新尝试身份。不可覆盖发布，读取时重新校验计划哈希。计划本身不包含执行 claim，Job UUID 从计划 UUID 与各 Job 规范化身份派生，继续使用原执行协议。
+- resume 从计划按依赖调度；每个 Job 的完整 request 从云端初始输入与上游已完成的选中产物重建，若已存在 request 必须完整一致。所有依赖边均使用同 Volume 直接引用，即使上游还要求 local 交付。中间步骤建议 collect=cloud、最终步骤默认 local。旧 Runner 默认行为不变。
+- 完成的 Job 只恢复权威账本和凭证；local 交付可核对现有文件 SHA-256 并复用，或重新下载。若新目录没有本地状态也不重放。prepared 可以派发，已有 claim/submitted 仅 CPU 账本观察，明确失败停止；极端情况下旧 RPC 已派发但尚未写 claim，恢复可能产生额外 RPC，原子 claim 仍只允许一次原生提交。status 只读取记录，produced 且缺失 ready 时如实报告 produced，不修复；resume 使用既有恢复流程补发 ready。
+- 全工作流仍需某处运行 resume 作为调度者；关闭电脑后已派发的 GPU 调用可以独立完成，但尚未派发的后续阶段不会自主启动，需在任意授权客户端继续 resume。并不是云端常驻调度服务、GPU 中间采样 checkpoint 或任意自定义节点依赖的恢复。失败的独立 retry job 不会自动替换原计划中 Job 身份，未知/失败仍需操作员处理；需要有意重新执行时创建新的计划。保留源请求、产物及计划所引用的所有记录。
+- 当前只支持显式持久媒体（与原协议相同），已知原生 LoadImage/LoadImageMask/LoadVideo/LoadAudio 字段必须通过 @ 或明确上游引用绑定，隐式原生文件名拒绝；不能保证任意自定义节点内嵌路径、外部 URL 或第三方服务状态。计划所有部署的精确版本需仍可用于新派发；已完成的结果可以只靠 Volume 恢复。跨 Volume、原生/持久混合流程暂不支持。缺失 ready 的异常恢复可能仍读取客户端媒体字节。
 
 ## 执行状态
 
@@ -75,7 +92,7 @@ claim 通过 Modal Volume V2 batch_upload(force=False) 原子禁止覆盖；只�
 
 当前 upstream 原生 API 可接收客户端指定 prompt_id；若丢失 HTTP 响应，使用计划 UUID 尝试 reconcile。同一容器能找到历史则完成交付；旧版本若忽略客户端 UUID 且响应丢失，仍然严格拒绝重放。返回实际 prompt ID 后持久化 submitted。
 
-成功后依次 commit 输出字节、写不可变 produced 证据、写 ready receipt。CPU 发现 produced 而 ready 缺失时，先重新校验全部源文件，之后才补发 ready。既有 CPU 归档服务无需改协议。常规完成时不额外复制整个原件。源文件若被覆盖，下载及归档的 SHA 校验失败。
+成功后依次 commit 输出字节、写不可变 produced 证据、写 ready receipt。客户端发现 produced 而 ready 暂不可见时，先等待最长15秒的凭证可见性宽限（不包含SDK请求本身的额外耗时）；仍缺失才重新校验全部源文件，之后补发 ready。既有 CPU 归档服务无需改协议。常规完成时不额外复制整个原件。源文件若被覆盖，下载及归档的 SHA 校验失败。
 
 SDK 1.6.4 V2 已实际观察到禁止覆盖冲突以 InvalidError("path ... already exists") 返回，而非 SDK 源码预期的 FileExistsError；只识别对应 exact key 的此类异常，其他错误不得视作成功或已有 claim。
 
@@ -164,3 +181,13 @@ PC2 / Modal profile zhangchenzer。所有测试使用独立 App 和独立 Output
 - 实验客户端对 Volume SDK read_file 与 batch_upload 做强制审计，禁止任何中间媒体读取或上传；两份初始输入 PNG 191142B、WAV 149412B 各上传一次；中间三份媒体合计333445B，无客户端payload下载及重传，较原本各下载上传一次避免666890B本地往返媒体字节（不包含元数据/协议开销，不代表端到端加速比例）。两中间步骤只保存 workflow.json、status.json，files/artifacts为空。final 中同一 MP4 供两个节点引用。
 - 最终 MP4 135450B，SHA-256 152a36fa1a91f884406fe94f6f390e6e3133c572045d05aec29504d596e683e0，512×288、56帧、24FPS、2.334秒；FLAC 35980B，SHA-256 650ac6bb42940adfee146379649dce60b50d6aea322aa0eba36fd1e22859e96a，2.336秒、32kHz、单声道。均完整FFmpeg解码、哈希及880Hz频谱校验成功。删除本地最终两文件后完整Runner重启，原始输入仍存在，仅重新下载最终171430B，两文件哈希一致，额外GPU派发0、额外上传0、中间媒体下载0。
 - 108/108本地 unittest 通过；真实实验原始脚本、日志及产物保留于 outputs/durable-cloud-handoff-lab-1125/、outputs/durable-cloud-handoff-cpu-lab-1125/、outputs/durable-cloud-handoff-b200-lab-1125/。三个实验App均 stopped，容器0、实验Volume0。生产默认单容器、部署及共享模型缓存不变。当前直接引用要求 native prompt ID 与预定 job UUID 一致、同一Volume及可验证已选中产物。未实测跨App/跨部署引用、长视频大文件压力、GC保留依赖、异常ready缺失时彻底消除客户端读回、无本地原始输入的完整Task Runner重启。GPU端仍需流式读取并校验到原生input目录。
+
+### 第六轮：完整工作流持久化、活动 Runner 退出与凭证竞态（2026-11-25）
+
+- 独立 B200 App ap-yvplfR1Axg9hNCxCSKiWCz，版本 e4d2cfdef2d46872d5fe7188f41b29fa5175aa7daa0e315049b7eba6baeae274；同一独立 Volume V2；Snapshot OFF、warmup OFF、scaledown30s，7/7模型缓存命中，部署23.644s。新入口仅修改客户端及调度/计划协议，GPU端原v1 request及claim不变。
+- 实际 CLI prepare 发布工作流27ffca4c-2506-5571-ab22-bbefcc50e57e，三个Job均not_prepared，已通过真实Volume SDK读回校验初始PNG 191142B和仅第二阶段需要的WAV 149412B。随后删除整个ephemeral-original目录（Task JSON、三份Graph、endpoints、PNG、WAV），之后所有执行/恢复只使用UUID与卷名；没有再次上传输入媒体。
+- generate Job 011f34ab-6fcd-5d43-8675-7adc6ed5602f，B200 容器 ta-01M89D1SPART4W5VEEVPMGJ99R，epoch adb32a3b6e594ab2b5150f818c296347，call fc-01M89D1SH471286QZK5RPP00Q4。实验 Runner 在claim已写且状态admitted时使用os._exit(77)真实硬退出，整个lost-run目录被删除。新进程在原账本submitted期间返回observing且call_id为空，未重新派发；原H3 INT8 6步视频生成原生57.14s（含模型加载），成功完成。
+- 初次观察恰遇produced已存在、ready尚不可见，旧status直接启动媒体复核，严格客户端审计拒绝中间视频读而退出；未读取该媒体、未损坏源产物、原GPU仍正常发布ready。保留resume-race.log。修复仅在客户端等待ready可见性（15s宽限，约1s轮询，SDK请求时间可能延长总耗时）；若确实缺失仍执行原有完整哈希/长度验证及不可覆盖修复。独立真实 Volume comfyui-ready-visibility-lab-1125-out 人为延迟ready发布：3次缺失读取、0次媒体读取，8.75s完成；真实缺失ready的修复26.422s成功。两项新增单测含损坏媒体拒绝；122/122本地测试通过。
+- 修复后不重新生成，使用同一计划及原Job身份，从新目录恢复：generate 返回completed、call_id为空；mux Job e168b773-9e49-5c7a-a7c0-540fe57290a1，容器 ta-01M89D9QSN2VY4ETE9T44GKFFR，epoch 03cf83e934854bfd9ffbe54e4b5e0638，直接使用之前预存的WAV与上游MP4，原生1.65s；final Job 1c57a0a1-5563-5518-a79e-3454da7cd1f7，容器 ta-01M89DDS5M8FQKHHKHSMVMHCPR，epoch fb38c3ab81f64722b12f5f7951448e43，原生1.53s。三个容器均AWS ap-south、不同epoch；全程恰好3次原生got prompt/3次完成。
+- 成功恢复阶段强制禁止任何客户端媒体上传及中间媒体读取，仅下载最终MP4 113024B（SHA-256 c552a03c08140fb12059b3676f0127ca27b0e9a9032fca6004f9e5d0b7292194）、FLAC 35991B（SHA-256 0870e2f25ca44b7f386b7f2c0aca279866dafb6d9d7f3a8b5c27a14614a1c14a）。FFmpeg完整解码，MP4 512×288、56帧、24FPS、2.334秒；FLAC 2.336秒、32kHz、单声道，均为880Hz主音轨。再次停止容器并删除整个recovered-run目录，只凭UUID与卷名恢复redelivery目录，最终两文件哈希完全一致、0次新GPU派发、0中间媒体读和0上传。
+- 实验脚本及证据保留于outputs/workflow-recovery-lab-1125/（summary.json、ready-race-summary.json、resume-race.log、crash.log、resume.log、redeliver.log、modal-runtime.log、redelivery/）。实验App已停止，实验容器0，两实验Volume均已删除，原始共享模型缓存和生产部署未变。以上不是自动云端调度或中间采样checkpoint；调度者停止时尚未派发的阶段需新Runner继续，明确失败/无法确认claim不自动重放。跨Volume、GC依赖保留及大规模长期压力未实现/实测。
