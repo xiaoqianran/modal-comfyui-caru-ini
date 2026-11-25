@@ -17,12 +17,14 @@ from uuid import UUID, uuid4, uuid5, NAMESPACE_URL
 
 from storage.delivery import (
     HEX, MAX_RECEIPT_BYTES, build_receipt, file_digest, normalized_config,
-    output_ref, receipt_key, token, validate_receipt, verified_copy, volume_receipt,
+    output_ref, receipt_key, relative_path, token, validate_receipt, verified_copy, volume_receipt,
 )
+from storage.output_formats import CATEGORIES
 
 INPUT_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".bmp"}
 PHASES = ("claim", "submitted", "failed", "produced")
 PREFIX = ".execution/v1"
+OUTPUT_NAMESPACE = "_durable_outputs"
 
 
 def canonical(value):
@@ -199,6 +201,46 @@ def load_request(volume, config, identifier):
     return validate_request(request, config, identifier)
 
 
+def scoped_output_graph(graph, identifier, output_nodes=None):
+    """Derive a job-private native output graph without changing the request.
+
+    Keep category-first prefixes (e.g. video/...) for existing asset browsers.
+    A new attempt gets a new namespace even when the original graph is reused.
+    """
+    identifier = check_job_id(identifier)
+    prompt = json.loads(json.dumps(graph, ensure_ascii=False))
+    scoped = set()
+    for node_id, node in prompt.items():
+        inputs = node.get("inputs", {})
+        if "filename_prefix" not in inputs:
+            if str(node.get("class_type", "")).startswith("Save"):
+                raise ValueError(f"Durable save node requires a literal filename_prefix: {node_id}")
+            continue
+        prefix = inputs["filename_prefix"]
+        if not isinstance(prefix, str):
+            raise ValueError(f"Durable filename_prefix must be a literal string: {node_id}")
+        parts = list(relative_path(prefix).parts)
+        if OUTPUT_NAMESPACE in parts:
+            raise ValueError("Reserved durable output namespace in filename_prefix")
+        category = parts.pop(0) if len(parts) > 1 and parts[0] in CATEGORIES else None
+        inputs["filename_prefix"] = "/".join(
+            ([category] if category else []) + [OUTPUT_NAMESPACE, identifier] + parts)
+        scoped.add(node_id)
+    if not scoped or (output_nodes is not None and not set(output_nodes).issubset(scoped)):
+        raise ValueError("Durable outputs require explicit, literal filename_prefix fields")
+    return prompt
+
+
+def _require_scoped_outputs(receipt, identifier):
+    """Fail closed if a native output bypasses its assigned namespace."""
+    for file in receipt["files"]:
+        parts = list(output_ref(file).parts)
+        if parts[0] in CATEGORIES:
+            parts.pop(0)
+        if len(parts) < 3 or parts[:2] != [OUTPUT_NAMESPACE, identifier]:
+            raise RuntimeError(f"Native output escaped durable job namespace: {file['key']}")
+
+
 def stage_request(volume, config, identifier, intent, graph, settings, output_nodes=None,
                   expected_inputs=None):
     """Persist the entire resolved graph and its content-addressed image inputs."""
@@ -220,6 +262,8 @@ def stage_request(volume, config, identifier, intent, graph, settings, output_no
     request = {"schema": 1, "config": normalized_config(config), "job_id": identifier,
                "intent": intent, "graph": prompt, "inputs": refs, "output_nodes": output_nodes}
     validate_request(request, config, identifier)
+    # Validate the derived native graph before publishing an executable request.
+    scoped_output_graph(prompt, identifier, output_nodes)
     put_once(volume, request_key(config, identifier), request)
     return request
 
@@ -375,6 +419,8 @@ def execute(volume, request, engine, epoch, input_root, output_root, commit_lock
         return state
 
     if state["status"] == "prepared":
+        # Derive the private output namespace before admission, never on retry by mutation.
+        native_graph = scoped_output_graph(request["graph"], identifier, request["output_nodes"])
         materialize_inputs(volume, request, input_root)
         claim = _event(request, "claim", epoch=epoch, owner=uuid4().hex, prompt_id=identifier)
         try:
@@ -388,7 +434,7 @@ def execute(volume, request, engine, epoch, input_root, output_root, commit_lock
             won = False
         if won:
             try:
-                actual = engine.submit(request["graph"], identifier)
+                actual = engine.submit(native_graph, identifier)
             except RejectedPrompt as exc:
                 return {"status": "failed", **_write_event(volume, request, "failed",
                          epoch=epoch, prompt_id=identifier, error=str(exc)[:1500])}
@@ -431,6 +477,7 @@ def execute(volume, request, engine, epoch, input_root, output_root, commit_lock
             if status.get("status_str") == "success" and status.get("completed") is True:
                 receipt = build_receipt(Path(output_root), cfg, prompt_id, history,
                                         dual=dual, version=cfg["version"])
+                _require_scoped_outputs(receipt, identifier)
                 files = _selected_files(history, request["output_nodes"], receipt)
                 # First publish the actual bytes, then the evidence of success.
                 # A CPU reader can reconstruct ready after a crash in this gap.

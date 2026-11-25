@@ -30,11 +30,15 @@ def main():
     parser.add_argument("--attempt", help="New retry identity (retry only)")
     parser.add_argument("--allow-unknown", action="store_true", help="Acknowledge that the old claimed attempt might still finish")
     parser.add_argument("--call-id", help="Reattach to an existing Modal call (resume only)")
+    parser.add_argument("--reconcile", action="store_true",
+                        help="Explicitly dispatch the SAME claimed job to check a live native queue/history (requires --endpoint; never replays a claim)")
     parser.add_argument("--out", type=Path, help="Directory for verified downloads")
     parser.add_argument("--timeout", type=int, default=3600)
     args = parser.parse_args()
     if args.timeout <= 0:
         parser.error("--timeout must be positive")
+    if args.reconcile and (args.action != "resume" or not args.endpoint or args.call_id):
+        parser.error("--reconcile requires resume and --endpoint, without --call-id")
     config = normalized_config(json.loads(Path(args.config).read_text(encoding="utf-8-sig")))
     client = DurableClient(config, args.endpoint)
     if args.action == "retry":
@@ -47,20 +51,24 @@ def main():
             if args.call_id:
                 state = {"status": "dispatched", "call_id": args.call_id}
             else:
-                if not args.endpoint:
-                    parser.error("Specify --endpoint to dispatch/reconcile an unfinished job")
-                state = client.start(args.job)
-            if state["status"] == "dispatched":
-                call_id = state["call_id"]
-                print(json.dumps({"job_id": args.job, "call_id": call_id}), flush=True)
+                if state["status"] == "prepared" and not args.endpoint:
+                    parser.error("Specify --endpoint to dispatch an unclaimed job")
+                state = client.start(args.job, reconcile=args.reconcile)
+            if state["status"] in ("dispatched", "observing"):
+                call_id = state.get("call_id")
+                print(json.dumps({"job_id": args.job, "call_id": call_id,
+                                  "status": state["status"]}), flush=True)
                 deadline = time.monotonic() + args.timeout
                 while time.monotonic() < deadline:
                     state = client.poll(args.job, call_id)
                     if state is not None:
-                        break
+                        if state["status"] != "observing":
+                            break
+                        print(json.dumps(state, ensure_ascii=False), flush=True)
+                        call_id = None
                     time.sleep(2)
                 else:
-                    raise TimeoutError("Observation timeout; keep the job ID and call ID to reattach")
+                    raise TimeoutError("Observation timeout; retain the job ID and call ID; no replay performed")
     else:
         state = client.status(args.job)
     if args.action == "download":

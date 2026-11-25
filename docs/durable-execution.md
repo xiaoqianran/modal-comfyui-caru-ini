@@ -55,7 +55,8 @@ durable 模式不再使用 /upload/image 和客户端直接 /prompt；本地先�
 | produced | 成功 history、输出字节先 commit，已写 receipt 证据 | CPU 可校验全部文件并补发缺失的 ready marker |
 | completed | ready receipt 已存在且与 produced 一致 | 直接 SDK 下载或 CPU 归档，不唤醒 GPU |
 | failed | 原生明确拒绝或执行 error | 终止该尝试；显式创建新尝试 |
-| interrupted / uncertain | 恢复调用发现跨 epoch 或 queue/history 不可确认 | 不覆盖原 claim，不自动重放 |
+| interrupted / uncertain | 单次 GPU 调用跨 epoch 或 queue/history 不可确认；不代表整个 job 已终止 | 不覆盖原 claim，不自动重放 |
+| observing（客户端状态） | 已有 claim，但观察调用结束、丢失或未附着；拥有者可能仍在运行 | 只查询 Volume，最终以 completed/failed 凭证为准 |
 
 claim 通过 Modal Volume V2 batch_upload(force=False) 原子禁止覆盖；只有实际写成功的调用可以发送一次 native POST。每个实例内长 method 串行执行；不同实例保持各自锁，commit 共享锁。容器 epoch 在 post-snapshot enter 生成，绝不被捕获到 GPU Snapshot。
 
@@ -75,9 +76,13 @@ SDK 1.6.4 V2 已实际观察到禁止覆盖冲突以 InvalidError("path ... alre
 
     uv run python recover_job.py resume --config config.json --job JOB_UUID --endpoint https://actual-comfy-endpoint
 
+    uv run python recover_job.py resume --config config.json --job JOB_UUID
+
+    uv run python recover_job.py resume --config config.json --job JOB_UUID --endpoint https://actual-comfy-endpoint --reconcile
+
     uv run python recover_job.py download --config config.json --job JOB_UUID --out outputs/recovered
 
-resume 首先读取持久化证据，已完成不调用 GPU；未完成才附着已有 call 或派发同一 job ID。重复派发受同一个 claim 限制；已有 call 尚在运行时优先附着原 call。Runner 超时或退出不主动取消已 spawn 的远端 method；call ID 可继续查询。
+resume 首先读取持久化证据，已有 completed/failed 直接返回；只有 prepared（尚未 claim）才默认派发。已有 claim 时，指定 --call-id 可附着原调用，否则默认仅观察 Volume（即使提供 --endpoint）。重复调用的 interrupted/uncertain 或通信异常不能覆盖原任务状态；已 claim 的未决任务进入 observing，不再轮询已结束的调用，也不会额外唤醒 GPU。Runner 将 observing 和已有 call ID 写入 status.json，重启继续观察。CLI 使用 --timeout（默认3600秒）；Runner 使用整体 --timeout，若关闭整体超时，每次 ledger-only 观察仍有18000秒上限。超时只停止本地观察，不取消远端 method，不写 failed。只有显式 --reconcile 才派发同一已领取 job 来核对仍然存在的 native queue/history；依旧受 claim 约束，不会自动重放。若拥有者已消失且没有终态记录，不能仅凭观察超时宣告失败；需要操作员明确评估后使用 retry。
 
 原调用确认停止后，明确需要重跑的用户可以创建新尝试，复用旧的完整请求和输入，无需重新上传：
 
@@ -108,3 +113,12 @@ PC2 / Modal profile zhangchenzer。所有测试使用独立 App 和独立 Output
 - 第二条任务由独立 Python 子进程连续 spawn 两个调用后退出，分别 fc-01M88W32Y8SXF6BTMM0X08Z2PA 和 fc-01M88W33MHMSP5SPMD138MC09K。第二个 GPU 容器 ta-01M88W5QCTJ1CW6XGS49F4G6RR，epoch 43c1d3409586412cbb905c52c6393a37，与第一容器不同；实际创建新 GPU snapshot（不是复用旧 snapshot）。输入源仍不存在。原生 Prompt executed 0.05s；两个 durable method 返回相同 receipt，PNG 452 bytes，SHA-256 6fa6868e61ad774a7347efe516be0ab33469da0e22d2d122c5e7345b40c6d50b，RGB 像素 SHA-256 与第一张和原输入相同。两个调用等待+验证分别 115.297s / 6.937s，不是模型推理时间。
 - 故障注入 job 17b59218-16fa-590e-960d-9cfd0973a4f0 预写第一 epoch claim，在第二容器执行恢复调用返回 interrupted，云端原 claim 保留，未提交 native prompt。最终平台日志精确计数：4 次 durable method 返回（3 completed、1 interrupted），仅 2 次 got prompt、2 次 Prompt executed。两次业务执行、一次重复派发、一次旧 claim 检查，无额外原生执行。GPU 完整实验 pass；并未真实杀死正在运行的 H3 采样进程，也未测试 GPU snapshot 恢复命中、长视频/双实例吞吐及成本。
 - 实验对象不进行 HF/R2 归档（此前 CPU 交付已独立验证）。本地原始证据 evidence.jsonl、cpu-evidence.jsonl、modal-runtime.log、log-summary.json、两张生成图与 CLI 恢复图保留，不纳入 Git。
+
+### 第二轮：真实视频、Snapshot 与双容器并发（2026-11-25）
+
+- Snapshot ON / warmup OFF：初始两次启动均重新捕获；完整平台日志共 7 次创建、1 次明确恢复。17:45:30 恢复 capture_id fa41c9c4e7194a958400ce9f4752dadd，新的容器 epoch 实际完成两个 PNG 任务。未验证预热模型快照的稳定命中率或成本收益。
+- 双容器：4 个独立 Pika H3 视频任务均完成并通过 SHA-256、FFmpeg 完整解码验证，896×512、124 帧、5.167 秒、双声道；批次派发至全部返回 149.109 秒。跨容器重复派发未产生额外原生 POST，但重复调用在原任务仍执行时返回 interrupted；该状态不能解释为原任务已失败，仍需改善客户端状态合并。
+- 强制两个独立容器使用同一输出前缀，复现了相同 Volume key 被覆盖、蓝色 PNG 下载校验失败的严重缺陷。
+- 修复：durable 原生提交使用派生 graph，将显式字面量 filename_prefix 放入 _durable_outputs/<job_uuid>/ 命名空间，保留原始请求、原始文件名与类别目录；成功凭证发布前校验所有产物归属。显式新尝试使用独立命名空间。动态链接、不安全路径及不符合前缀约束的输出节点不受支持；原生非 durable 模式保持原样。未知自定义输出节点绕开前缀时拒绝发布成功凭证，不保证阻止它写入任意路径。
+- 修复后使用 Snapshot OFF 的隔离部署 83681a4db7e8a41b4b7da5cfc7a98dac1ddf16f5f13cb648460be42fbc81681e 验证：两种不同像素输入经独立 epoch 并发保存同名 PNG，Volume key 不同，两份 SHA-256 和 RGB 像素校验均通过。随后实际 Pika SaveVideo 输出 512×288、56 帧、2.333333 秒、双声道 MP4，完整解码通过，再读两份 PNG 仍通过。5 次原生 POST、5 次完成。80/80 unittest 通过。
+- 原始脚本、证据和生成文件位于 outputs/durable-snapshot-lab-1125/ 与 outputs/durable-namespace-lab-1125/。两个隔离 App 已停止并删除各自实验 Output Volume；生产部署、公共模型缓存和生产 max_containers=1 不变。尚未验证长时间并发压力、预热快照或全部自定义输出节点，因此不默认开放多容器。

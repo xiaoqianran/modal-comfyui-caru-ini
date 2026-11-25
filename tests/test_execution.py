@@ -59,11 +59,13 @@ class Engine:
         # The native POST must be preceded by an authoritative claim.
         assert e.inspect_execution(self.volume, self.request)["status"] == "admitted"
         self.submits += 1
-        p = self.root / "test" / "result.png"
+        prefix = Path(graph["2"]["inputs"]["filename_prefix"])
+        p = self.root / "test" / prefix.parent / (prefix.name + ".png")
         p.parent.mkdir(parents=True, exist_ok=True)
         p.write_bytes(b"result")
         self.record = {"status": {"status_str": "success", "completed": True},
-                       "outputs": {"2": {"images": [{"filename": "result.png", "type": "output"}]}}}
+                       "outputs": {"2": {"images": [{"filename": p.name, "subfolder": "" if prefix.parent == Path(".") else prefix.parent.as_posix(),
+                                                    "type": "output"}]}}}
         if self.crash:
             raise OSError("Lost native reply after acceptance")
         return identifier
@@ -97,6 +99,59 @@ class ExecutionTests(unittest.TestCase):
     def run_engine(self, engine, epoch="epoch1"):
         return e.execute(self.vol,self.req,engine,epoch,self.root/epoch,self.output,self.lock,
                          timeout=0.1,poll_interval=0.001,missing_grace=0)
+
+    def test_output_namespace_is_unique_and_preserves_original_graph(self):
+        other = e.job_id(["other"], self.intent)
+        graph = json.loads(json.dumps(self.graph))
+        graph["2"]["inputs"]["filename_prefix"] = "video/scene/same"
+        first = e.scoped_output_graph(graph, self.identifier, ["2"])
+        second = e.scoped_output_graph(graph, other, ["2"])
+        self.assertEqual(first["2"]["inputs"]["filename_prefix"],
+                         f"video/{e.OUTPUT_NAMESPACE}/{self.identifier}/scene/same")
+        self.assertEqual(second["2"]["inputs"]["filename_prefix"],
+                         f"video/{e.OUTPUT_NAMESPACE}/{other}/scene/same")
+        self.assertEqual(graph["2"]["inputs"]["filename_prefix"], "video/scene/same")
+        self.assertNotEqual(first, second)
+
+    def test_unsafe_or_linked_output_prefix_rejected_before_admission(self):
+        for prefix in (["3", 0], "../shared", "/absolute", "_durable_outputs/other/foo"):
+            graph = json.loads(json.dumps(self.graph))
+            graph["2"]["inputs"]["filename_prefix"] = prefix
+            with self.subTest(prefix=prefix), self.assertRaises(ValueError):
+                e.scoped_output_graph(graph, self.identifier, ["2"])
+        graph = json.loads(json.dumps(self.graph))
+        del graph["2"]["inputs"]["filename_prefix"]
+        with self.assertRaisesRegex(ValueError, "literal filename_prefix"):
+            e.scoped_output_graph(graph, self.identifier, ["2"])
+
+    def test_native_output_escape_cannot_publish_success(self):
+        engine = Engine(self.output, self.vol, self.req)
+        raw_submit = engine.submit
+        def bypass(graph, identifier):
+            original = json.loads(json.dumps(graph))
+            original["2"]["inputs"]["filename_prefix"] = "unscoped"
+            return raw_submit(original, identifier)
+        engine.submit = bypass
+        with self.assertRaisesRegex(RuntimeError, "escaped durable job namespace"):
+            self.run_engine(engine)
+        self.assertEqual(e.inspect_execution(self.vol, self.req)["status"], "submitted")
+        self.assertNotIn(d.receipt_key("test", 1, self.identifier), self.vol.objects)
+
+    def test_two_attempts_same_prefix_have_distinct_receipt_keys(self):
+        other = e.job_id(["other"], self.intent)
+        request = e.stage_request(self.vol, self.cfg, other, self.intent, self.graph,
+                                  {"1.image": "@"+str(self.source)}, ["2"])
+        first = self.run_engine(Engine(self.output, self.vol, self.req))
+        second = e.execute(self.vol, request, Engine(self.output,self.vol,request),
+                           "epoch2", self.root/"epoch2", self.output, self.lock,
+                           timeout=0.1, poll_interval=0.001, missing_grace=0)
+        a = first["receipt"]["files"][0]["key"]
+        b = second["receipt"]["files"][0]["key"]
+        self.assertNotEqual(a, b)
+        self.assertIn(self.identifier, a)
+        self.assertIn(other, b)
+        self.assertEqual(self.vol.objects[a], b"result")
+        self.assertEqual(self.vol.objects[b], b"result")
 
     def test_input_content_address_and_restore_after_local_loss(self):
         self.source.unlink()
@@ -232,6 +287,151 @@ class ExecutionTests(unittest.TestCase):
         self.assertIsNone(client.poll(self.identifier,"fc-pending"))
         client.status.assert_not_called()
 
+    def test_start_existing_claim_does_not_wake_gpu(self):
+        from storage.execution_client import DurableClient
+        client=object.__new__(DurableClient)
+        client.config=self.cfg
+        client.status=Mock(return_value={"status":"submitted","job_id":self.identifier})
+        client.preflight=Mock(side_effect=AssertionError("GPU preflight must not run"))
+        client._model=Mock(side_effect=AssertionError("GPU must not spawn"))
+        state=client.start(self.identifier)
+        self.assertEqual(state["status"],"observing")
+        self.assertEqual(state["ledger_status"],"submitted")
+        client.preflight.assert_not_called()
+        client._model.assert_not_called()
+
+    def test_explicit_reconcile_dispatches_same_identity(self):
+        from storage.execution_client import DurableClient
+        client=object.__new__(DurableClient)
+        client.config=self.cfg
+        client.status=Mock(return_value={"status":"submitted","job_id":self.identifier})
+        client.preflight=Mock()
+        client._model=Mock()
+        spawn=client._model.return_value.execute_durable.spawn
+        spawn.return_value.object_id="fc-reconcile"
+        state=client.start(self.identifier,reconcile=True)
+        self.assertEqual(state["status"],"dispatched")
+        spawn.assert_called_once_with(self.identifier,1,self.cfg["version"])
+
+    def test_cli_claimed_resume_observes_even_with_endpoint(self):
+        import recover_job
+        cfg_path=self.root/"config.json"
+        cfg_path.write_text(json.dumps(self.cfg),encoding="utf-8")
+        client=Mock()
+        client.status.return_value={"status":"submitted","job_id":self.identifier}
+        client.start.return_value={"status":"observing","job_id":self.identifier}
+        client.poll.return_value={"status":"completed","job_id":self.identifier}
+        args=["recover_job.py","resume","--config",str(cfg_path),"--job",self.identifier,
+              "--endpoint","https://example.invalid","--timeout","5"]
+        with patch.object(recover_job,"DurableClient",return_value=client), patch("sys.argv",args):
+            recover_job.main()
+        client.start.assert_called_once_with(self.identifier,reconcile=False)
+        client.poll.assert_called_once_with(self.identifier,None)
+
+    def test_dispatch_existing_claim_persists_observation_without_call_id(self):
+        client=Mock()
+        client.start.return_value={"status":"observing","job_id":self.identifier,
+                                   "ledger_status":"admitted","previous_call_id":None,
+                                   "observer_call_status":"not_attached"}
+        job={"endpoint":"test","base":"https://example.invalid","delivery":self.cfg,
+             "intent_hash":self.intent,"durable_job_id":self.identifier,
+             "status_file":self.root/"status.json","state":"pending"}
+        runner._dispatch_durable(("s","j"),job,client)
+        self.assertTrue(job["durable_observe_only"])
+        state=json.loads(job["status_file"].read_text())
+        self.assertEqual(state["status"],"observing")
+        self.assertNotIn("durable_call_id",state)
+        client.start.assert_called_once_with(self.identifier)
+
+    def test_authoritative_terminal_evidence_beats_observer_interruption(self):
+        from storage.execution_client import DurableClient
+        client=object.__new__(DurableClient)
+        client.modal=Mock()
+        client.modal.FunctionCall.from_id.return_value.get.return_value={
+            "job_id":self.identifier,"status":"interrupted"}
+        for state in ("completed","failed"):
+            record={"status":state,"job_id":self.identifier}
+            client.status=Mock(return_value=record)
+            self.assertEqual(client.poll(self.identifier,"fc-observer"),record)
+
+    def test_cli_switches_from_finished_call_to_ledger(self):
+        import recover_job
+        cfg_path=self.root/"config.json"
+        cfg_path.write_text(json.dumps(self.cfg),encoding="utf-8")
+        client=Mock()
+        client.status.return_value={"status":"submitted","job_id":self.identifier}
+        client.poll.side_effect=[{"status":"observing","job_id":self.identifier},
+                                 {"status":"completed","job_id":self.identifier}]
+        args=["recover_job.py","resume","--config",str(cfg_path),"--job",self.identifier,
+              "--call-id","fc-observer","--timeout","5"]
+        with patch.object(recover_job,"DurableClient",return_value=client), \
+             patch("sys.argv",args), patch.object(recover_job.time,"sleep"):
+            recover_job.main()
+        self.assertEqual([c.args for c in client.poll.call_args_list],
+                         [(self.identifier,"fc-observer"),(self.identifier,None)])
+        client.start.assert_not_called()
+
+    def test_duplicate_observer_follows_ledger_to_completed(self):
+        from storage.execution_client import DurableClient
+        client=object.__new__(DurableClient)
+        client.modal=Mock()
+        call=client.modal.FunctionCall.from_id.return_value
+        call.get.return_value={"job_id":self.identifier,"status":"interrupted","error":"other epoch"}
+        active={"status":"submitted","job_id":self.identifier,"epoch":"owner"}
+        complete={**active,"status":"completed","receipt":{}}
+        client.status=Mock(side_effect=[active,active,complete])
+        observed=client.poll(self.identifier,"fc-duplicate")
+        self.assertEqual(observed["status"],"observing")
+        self.assertEqual(observed["ledger_status"],"submitted")
+        self.assertEqual(observed["observer_call_status"],"interrupted")
+        self.assertIsNone(client.poll(self.identifier,None))
+        self.assertEqual(client.poll(self.identifier,None),complete)
+        call.get.assert_called_once_with(timeout=0)
+        client.modal.FunctionCall.from_id.assert_called_once_with("fc-duplicate")
+
+    def test_claimed_call_transport_error_is_observation_not_failure(self):
+        from storage.execution_client import DurableClient
+        client=object.__new__(DurableClient)
+        client.modal=Mock()
+        client.modal.FunctionCall.from_id.return_value.get.side_effect=OSError("connection lost")
+        active={"status":"admitted","job_id":self.identifier}
+        failed={**active,"status":"failed","error":"native execution failed"}
+        client.status=Mock(side_effect=[active,failed])
+        self.assertEqual(client.poll(self.identifier,"fc-lost")["status"],"observing")
+        self.assertEqual(client.poll(self.identifier,None),failed)
+
+    def test_unclaimed_call_error_remains_uncertain(self):
+        from storage.execution_client import DurableClient
+        client=object.__new__(DurableClient)
+        client.modal=Mock()
+        client.modal.FunctionCall.from_id.return_value.get.side_effect=OSError("connection lost")
+        client.status=Mock(return_value={"status":"prepared","job_id":self.identifier})
+        self.assertEqual(client.poll(self.identifier,"fc-lost")["status"],"uncertain")
+        with self.assertRaisesRegex(RuntimeError,"claim is missing"):
+            client.poll(self.identifier,None)
+
+    def test_runner_observing_state_survives_restart(self):
+        job={"endpoint":"test","base":"https://example.invalid","delivery":self.cfg,
+             "intent_hash":self.intent,"durable_job_id":self.identifier,
+             "durable_call_id":"fc-observer","status_file":self.root/"status.json"}
+        result={"status":"observing","ledger_status":"submitted",
+                "observer_call_status":"interrupted","previous_call_id":"fc-observer"}
+        self.assertIsNone(runner._apply_durable_result(("s","j"),job,result))
+        status=json.loads(job["status_file"].read_text())
+        self.assertEqual(status["status"],"observing")
+        self.assertEqual(status["durable_call_id"],"fc-observer")
+        self.assertTrue(job["durable_observe_only"])
+        client=Mock()
+        client.poll.return_value=None
+        job["execution"]="durable"
+        with patch("storage.execution_client.DurableClient",return_value=client):
+            self.assertIsNone(runner._read_outputs(("s","j"),job))
+            client.poll.assert_called_once_with(self.identifier,None)
+            job["durable_observe_deadline"]=0
+            with self.assertRaises(TimeoutError):
+                runner._read_outputs(("s","j"),job)
+        self.assertEqual(json.loads(job["status_file"].read_text()),status)
+
     def test_runner_reattaches_saved_call_and_downloads(self):
         result=self.run_engine(Engine(self.output,self.vol,self.req))
         root=self.root/"pipeline"
@@ -264,6 +464,40 @@ class ExecutionTests(unittest.TestCase):
         delivery.receipt.assert_not_called()
         self.assertEqual((out/"s/main/result.png").read_bytes(),b"result")
         self.assertEqual(json.loads(job["status_file"].read_text())["status"],"completed")
+
+    def test_runner_resumes_saved_observation_without_new_dispatch(self):
+        result=self.run_engine(Engine(self.output,self.vol,self.req))
+        root=self.root/"observe-pipeline"
+        root.mkdir()
+        (root/"graph.json").write_text(json.dumps(self.graph))
+        endpoints=root/"endpoints.json"
+        endpoints.write_text(json.dumps({"x":"https://example.invalid"}))
+        task=root/"task.json"
+        steps=[{"id":"s","endpoint":"x","workflow":"graph.json","delivery":self.cfg,
+                "execution":"durable","set":{"1.image":"@"+str(self.source)}}]
+        task.write_text(json.dumps({"name":"observe","steps":steps}))
+        out=root/"out"
+        jobs,_=runner._build_jobs(steps,{"x":"https://example.invalid"},root,out,root,run_name="observe")
+        job=jobs["s","main"]
+        identifier=job["durable_job_id"]
+        runner._save_json(job["status_file"],{"status":"observing","endpoint":"x",
+            "intent_hash":job["intent_hash"],"durable_job_id":identifier,"durable_call_id":"fc-observer"})
+        durable=Mock()
+        durable.poll.side_effect=[None,{**result,"job_id":identifier}]
+        durable.status.return_value=result
+        delivery=Mock()
+        delivery.download.side_effect=lambda receipt,item,target,deadline: d.verified_copy(
+            [b"result"],target,receipt["files"][0],deadline)
+        with patch("storage.execution_client.DurableClient",return_value=durable), \
+             patch("storage.delivery_client.DeliveryClient",return_value=delivery), \
+             patch.object(runner,"request",side_effect=AssertionError("native request")):
+            runner.run_task(task,endpoints,output=out,timeout=10)
+        self.assertEqual(durable.poll.call_count,2)
+        for call in durable.poll.call_args_list:
+            self.assertEqual(call.args,(identifier,None))
+        durable.start.assert_not_called()
+        durable.stage.assert_not_called()
+        self.assertEqual((out/"s/main/result.png").read_bytes(),b"result")
 
     def test_explicit_retry_uses_cloud_manifest_and_acknowledgement(self):
         from storage.execution_client import DurableClient

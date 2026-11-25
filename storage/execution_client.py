@@ -42,19 +42,36 @@ class DurableClient(DeliveryClient):
         put_once(self.volume, request_key(self.config, replacement), request)
         return {"status": "prepared", "job_id": replacement, "previous_job_id": identifier}
 
-    def start(self, identifier):
-        """Reattach or dispatch. Repeated dispatches are protected by cloud claim."""
+    def start(self, identifier, *, reconcile=False):
+        """Dispatch unclaimed work; observe a claimed job unless explicitly asked to reconcile."""
         state = self.status(identifier)
         if state["status"] in ("completed", "failed"):
             return state
+        if state["status"] in ("admitted", "submitted") and not reconcile:
+            return {**state, "status": "observing", "ledger_status": state["status"],
+                    "previous_call_id": None, "observer_call_status": "not_attached",
+                    "error": "Existing claim; observing without GPU dispatch"}
+        if state["status"] not in ("prepared", "admitted", "submitted"):
+            raise RuntimeError("Unexpected durable ledger state; refusing dispatch")
         self.preflight()
         call = self._model().execute_durable.spawn(
             identifier, self.config["instance"], self.config["version"])
         return {"status": "dispatched", "call_id": call.object_id,
                 "job_id": identifier}
 
-    def poll(self, identifier, call_id):
-        """Read a Modal call result; never create another execution implicitly."""
+    def poll(self, identifier, call_id=None):
+        """Observe a call, or only the durable ledger when no call is supplied.
+
+        A finished observer call is not proof that the owning GPU stopped.
+        Only immutable terminal evidence can resolve a claimed job.
+        """
+        if call_id is None:
+            state = self.status(identifier)
+            if state["status"] in ("completed", "failed"):
+                return state
+            if state["status"] not in ("admitted", "submitted"):
+                raise RuntimeError("Observed durable claim is missing; refusing replay")
+            return None
         from modal.exception import TimeoutError as ModalTimeoutError
         error = None
         try:
@@ -78,8 +95,13 @@ class DurableClient(DeliveryClient):
         state = self.status(identifier)
         if state["status"] in ("completed", "failed"):
             return state
-        if result is not None and result.get("status") in ("interrupted", "uncertain"):
-            return result
+        reason = error or (result or {}).get("error") or "No durable terminal evidence"
+        if state["status"] in ("admitted", "submitted"):
+            # This invocation is finished, but another owner may still publish.
+            # Switch to CPU ledger observation rather than polling this call again.
+            return {**state, "status": "observing", "ledger_status": state["status"],
+                    "previous_call_id": call_id,
+                    "observer_call_status": (result or {}).get("status", "unavailable"),
+                    "error": reason}
         return {**state, "status": "uncertain", "previous_call_id": call_id,
-                "error": ("Modal call result unavailable; reconcile the same job. "
-                          + (error or "No durable terminal evidence"))}
+                "error": "Modal call result unavailable before claim; reconcile the same job. " + reason}

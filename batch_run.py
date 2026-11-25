@@ -22,6 +22,9 @@ VIDEO_EXT = {".mp4", ".webm", ".mov", ".mkv"}
 MODEL_EXT = {".glb", ".gltf", ".obj", ".stl", ".ply", ".splat", ".ksplat", ".spz"}
 
 _DEADLINE = ContextVar("runner_deadline", default=None)
+# A claimed job may outlive its observer. Bound each ledger-only observation
+# session even when the caller disables the overall batch timeout.
+_DURABLE_OBSERVATION_SECONDS = 18000
 
 
 class RequestFailed(RuntimeError):
@@ -348,6 +351,16 @@ def _apply_durable_result(key, job, result):
         _durable_status(job, "collecting", prompt_id=job["prompt_id"],
                         remote_files=job["remote_files"], delivery_receipt=result["receipt"])
         return result["remote_files"]
+    if result["status"] == "observing":
+        job["state"] = "submitted"
+        job["durable_observe_only"] = True
+        job["durable_observe_deadline"] = time.monotonic() + _DURABLE_OBSERVATION_SECONDS
+        _durable_status(job, "observing", ledger_status=result["ledger_status"],
+                        observer_call_status=result["observer_call_status"],
+                        previous_call_id=result.get("previous_call_id"),
+                        error=result.get("error", "Owning execution may still finish"))
+        print(f"{key[0]}/{key[1]}: observing durable ledger; no automatic replay", flush=True)
+        return None
     previous_call = job.pop("durable_call_id", None)
     _durable_status(job, result["status"], error=result.get("error", "Execution not complete"),
                     previous_call_id=previous_call or result.get("previous_call_id"))
@@ -378,7 +391,12 @@ def _read_outputs(key, job):
     if job.get("execution") == "durable":
         from storage.execution_client import DurableClient
         client = DurableClient(job["delivery"], job["base"])
-        result = client.poll(job["durable_job_id"], job["durable_call_id"])
+        if job.get("durable_observe_only"):
+            if time.monotonic() >= job["durable_observe_deadline"]:
+                raise TimeoutError("Durable ledger observation expired; resume the same job, do not replay")
+            result = client.poll(job["durable_job_id"], None)
+        else:
+            result = client.poll(job["durable_job_id"], job["durable_call_id"])
         return None if result is None else _apply_durable_result(key, job, result)
     try:
         history = get_json(job["base"], f"/history/{job['prompt_id']}")
@@ -651,6 +669,12 @@ def _run_task_unlocked(task_path, endpoints_path="endpoints.json", output=None,
                 job["prompt_id"] = status["prompt_id"]
                 job["remote_files"] = status["remote_files"]
                 job["state"] = "collecting"
+            elif status.get("status") == "observing":
+                if status.get("durable_call_id"):
+                    job["durable_call_id"] = status["durable_call_id"]
+                job["durable_observe_only"] = True
+                job["durable_observe_deadline"] = time.monotonic() + _DURABLE_OBSERVATION_SECONDS
+                job["state"] = "submitted"
             elif status.get("durable_call_id"):
                 job["durable_call_id"] = status["durable_call_id"]
                 job["state"] = "submitted"
