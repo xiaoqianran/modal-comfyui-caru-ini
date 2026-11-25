@@ -6,10 +6,14 @@ import re
 import shlex
 import subprocess
 import sys
+import time
 from pathlib import Path
+from uuid import uuid4
 from urllib.parse import urlsplit
 
 import modal
+
+from runtime_policy import resolve_policy, log_event, wait_for_server, stop_process
 
 # Modal 镜像构建与应用声明顺序（必须保持）：
 # 1. 安装 ComfyUI。
@@ -75,6 +79,7 @@ HIGH_VRAM = (GPU_TYPE.strip().upper() in HIGH_VRAM_GPUS or model_config.get("hig
 DUAL_COMFYUI = GPU_TYPE.strip().upper() == "B300"
 COMFY_PORTS = (8000, 8001) if DUAL_COMFYUI else (8000,)
 COMFY_VER = os.getenv("COMFY_VER")
+POLICY = resolve_policy(WORKFLOW, model_config)
 
 # ============================================================================
 # 2. 运行时模型链接：下载统一由 download-models.py 并行分片完成；GPU 端仅读缓存。
@@ -94,6 +99,10 @@ def link_cached_models():
     # Use exact revisions written by the verified downloader.
     revision_file = Path(MODEL_CACHE_DIR) / ".workflow-revisions" / f"{WORKFLOW}.json"
     revisions = json.loads(revision_file.read_text()) if revision_file.is_file() else {}
+    receipt_path = Path(MODEL_CACHE_DIR) / ".workflow-hf-sizes" / f"{WORKFLOW}.json"
+    sizes = json.loads(receipt_path.read_text()) if receipt_path.is_file() else None
+    if sizes is None and models:
+        log_event("legacy_model_cache", workflow=WORKFLOW, note="run downloader --ensure to migrate size receipts")
 
     for model in models:
         key = f"{model['repo_id']}/{model['filename']}"
@@ -113,6 +122,12 @@ def link_cached_models():
                 raise RuntimeError(
                     f"Model not cached: {key} (revision={revision!r}). "
                     "Run: uv run modal run comfyui.py::download_models") from exc
+        if sizes is not None:
+            expected = sizes.get(key, {})
+            if (expected.get("revision") != revision
+                    or not isinstance(expected.get("size"), int) or expected["size"] <= 0
+                    or Path(cached).stat().st_size != expected["size"]):
+                raise RuntimeError(f"Model cache size/revision mismatch: {key}. Run downloader --ensure.")
         name = model.get("local_filename") or Path(model["filename"]).name
         target = resolve_model_dir(model["model_dir"]) / name
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -346,9 +361,8 @@ if WORKFLOW == "comfyui-yue2-3b":
         copy=True,
     )
 
-# Only the 010 INT8 H3 suite snapshots a warmed model. Other workflows retain
-# their existing fast, server-only snapshot startup.
-if WORKFLOW == "010-minimax-h3-b200plus-suite":
+# Only mount a verified, workflow-specific warmup graph when requested.
+if POLICY.warmup == "h3-int8":
     image = image.add_local_file(
         root_dir / "snapshot_warmup.py", "/root/snapshot_warmup.py", copy=True,
     ).add_local_file(
@@ -387,20 +401,6 @@ if WORKFLOW in {"comfyui-qwen-image-2-1", "comfyui-b300-image-video-suite"}:
 # 6. Output staging Volume; R2 only stores small previews
 #    wait_for_port 用于后续 ComfyUI 启动时检查 HTTP 服务是否就绪。
 # ============================================================================
-def wait_for_port(port: int, timeout: int = 60):
-    """Block until the port is accepting connections."""
-    import time
-    import socket
-    
-    deadline = time.time() + timeout
-    while time.time() < deadline:
-        try:
-            with socket.create_connection(("127.0.0.1", port), timeout=1):
-                return  # port is open — ComfyUI is ready
-        except OSError:
-            time.sleep(0.5)
-    raise TimeoutError(f"ComfyUI never became ready on port {port}")
-    
 # Generated files stay in a persistent staging Volume until HF archive succeeds.
 output_volume = modal.Volume.from_name("modal-comfyui-models-output", create_if_missing=True, version=2)
 preview_mount = modal.CloudBucketMount(
@@ -418,7 +418,13 @@ image = image.uv_pip_install("boto3", "imageio-ffmpeg").add_local_file(
 ).add_local_file(
     root_dir / "storage" / "output_formats.py", "/root/storage/output_formats.py", copy=True
 ).env({"WORKFLOW": WORKFLOW, "MODEL_VOLUME_NAME": MODEL_VOLUME_NAME,
-       "MODAL_GPU": GPU_TYPE, "MODAL_REGION": ",".join(MODAL_REGIONS or [])})
+       "MODAL_GPU": GPU_TYPE, "MODAL_REGION": ",".join(MODAL_REGIONS or []),
+       "COMFYUI_RUNTIME_PROFILE": POLICY.profile,
+       "COMFYUI_SNAPSHOT_MODE": POLICY.snapshot,
+       "COMFYUI_SCALEDOWN_SECONDS": str(POLICY.scaledown_window),
+       "COMFYUI_WARMUP_MODE": POLICY.warmup})
+# runtime_policy is imported when Modal deserializes this source module.
+image = image.add_local_python_source("runtime_policy")
 
 # Runtime configuration is mounted after builds; editing models.json cannot
 # invalidate the plugin installation image layers.
@@ -468,21 +474,22 @@ def download_models():
         "/r2-previews": preview_mount,
     },
     secrets=[modal.Secret.from_name("huggingface-s3")],
-    # 不保留常驻容器；Idol 空闲 5 分钟缩容，其余工作流保持 30 分钟。
     min_containers=0,
-    scaledown_window=300 if WORKFLOW == "comfyui-idol" else 1800,
-    enable_memory_snapshot=True,
-    experimental_options={"enable_gpu_snapshot": True},
+    scaledown_window=POLICY.scaledown_window,
+    enable_memory_snapshot=POLICY.gpu_snapshot,
+    experimental_options={"enable_gpu_snapshot": True} if POLICY.gpu_snapshot else {},
 )
 # ============================================================================
 # 8. ComfyUI 生命周期：启动 Web 服务、恢复快照、执行退出清理
 # ============================================================================
 @modal.concurrent(max_inputs=32)
 class ComfyUI:
-    @modal.enter(snap=True)
-    def start_checkpoint(self):
+    def _start_engine(self):
+        started = time.monotonic()
+        log_event("engine_start", workflow=WORKFLOW, gpu=GPU_TYPE,
+                  profile=POLICY.profile, snapshot=POLICY.snapshot,
+                  scaledown_window=POLICY.scaledown_window, warmup=POLICY.warmup)
         # Reload the shared model Volume before resolving newly committed weights.
-        import time
         for attempt in range(3):
             try:
                 vol.reload()
@@ -493,7 +500,9 @@ class ComfyUI:
                     raise
                 print(f"Model Volume not ready ({attempt + 1}/3): {exc}", flush=True)
                 time.sleep(5)
+        log_event("model_cache_linked", seconds=time.monotonic()-started)
         self.procs = []
+        launch_started = time.monotonic()
         for index, port in enumerate(COMFY_PORTS, start=1):
             output_dir = f"/outputs/{WORKFLOW}/instance-{index}" if DUAL_COMFYUI else f"/outputs/{WORKFLOW}"
             user_dir = f"/tmp/comfyui-user-{index}"
@@ -510,30 +519,44 @@ class ComfyUI:
                     "--temp-directory", temp_dir, "--user-directory", user_dir]
             if HIGH_VRAM:
                 args.append("--highvram")
-            self.procs.append(subprocess.Popen(args))
-        for port in COMFY_PORTS:
-            wait_for_port(port, timeout=300)
-        if WORKFLOW == "010-minimax-h3-b200plus-suite" and os.getenv("SNAPSHOT_H3_WARMUP", "1") != "0":
+            self.procs.append(subprocess.Popen(args, start_new_session=True))
+        for port, proc in zip(COMFY_PORTS, self.procs):
+            wait_for_server(port, proc, timeout=300)
+        log_event("server_http_ready", seconds=time.monotonic()-launch_started,
+                  ports=COMFY_PORTS)
+        if POLICY.warmup == "h3-int8":
+            warmup_started = time.monotonic()
             # Official Modal pattern: localhost warmup inside snap=True, before
             # the container is exposed to real requests. A full H3 inference
             # (five frames, one step) initializes weights and CUDA kernels.
             import runpy
             warmup_h3 = runpy.run_path("/root/snapshot_warmup.py")["warmup_h3"]
-            warmup_h3(
-                COMFY_PORTS[0], "/root/snapshot_h3_int8_warmup_api.json",
-                f"/outputs/{WORKFLOW}",
-            )
+            # Preserve the established warmup scope; a second instance
+            # requires separate validation rather than doubling GPU work.
+            output_root = f"/outputs/{WORKFLOW}/instance-1" if DUAL_COMFYUI else f"/outputs/{WORKFLOW}"
+            warmup_h3(COMFY_PORTS[0], "/root/snapshot_h3_int8_warmup_api.json", output_root)
+            log_event("warmup_completed", seconds=time.monotonic()-warmup_started)
+        self.engine_initialization_seconds = time.monotonic()-started
+        log_event("engine_initialized", seconds=self.engine_initialization_seconds)
+
+    if POLICY.gpu_snapshot:
+        @modal.enter(snap=True)
+        def start_checkpoint(self):
+            self._start_engine()
+            self.snapshot_capture_id = uuid4().hex
+            log_event("snapshot_capture_ready", capture_id=self.snapshot_capture_id,
+                      engine_seconds=self.engine_initialization_seconds)
 
     @staticmethod
     def _output_snapshot():
         """Track completed-looking output files without touching temp files."""
-        from storage.output_formats import EXTENSIONS
+        from storage.output_formats import EXTENSIONS, is_output_file
         root = Path("/outputs") / WORKFLOW
         snapshot = {}
         if not root.is_dir():
             return snapshot
         for path in root.rglob("*"):
-            if not path.is_file() or path.suffix.lower() not in EXTENSIONS:
+            if not is_output_file(path, root, EXTENSIONS) or not path.is_file():
                 continue
             try:
                 stat = path.stat()
@@ -553,29 +576,37 @@ class ComfyUI:
                 stable = {p: version for p, version in current.items()
                           if previous.get(p) == version}
                 if stable != committed and stable:
+                    started = time.monotonic()
                     output_volume.commit()
                     committed = stable
-                    print(f"Output Volume V2 committed: {len(stable)} stable files", flush=True)
+                    log_event("output_commit", files=len(stable), seconds=time.monotonic()-started)
                 previous = current
             except Exception as exc:
                 print(f"Output Volume V2 commit failed (will retry): {exc}", flush=True)
 
     @modal.enter(snap=False)
     def start_restore(self):
-        print(f"GPU Region: {os.getenv('MODAL_REGION', 'unknown')}", flush=True)
-        print(f"Cloud Provider: {os.getenv('MODAL_CLOUD_PROVIDER', 'unknown')}", flush=True)
-        for port in COMFY_PORTS:
-            wait_for_port(port, timeout=30)
+        started = time.monotonic()
+        log_event("post_snapshot_enter", capture_id=getattr(self, "snapshot_capture_id", None))
+        if not POLICY.gpu_snapshot:
+            self._start_engine()
+        for port, proc in zip(COMFY_PORTS, self.procs):
+            wait_for_server(port, proc, timeout=30)
         self.sync_proc = subprocess.Popen(
             ["python", "-u", "/root/hf_sync.py"],
             env={**os.environ, "WORKFLOW": WORKFLOW, "COMFY_OUTPUT_ROOT": f"/outputs/{WORKFLOW}"},
+            start_new_session=True,
         )
         # Start only after snapshot restore: background threads must not enter snapshots.
         import threading
         self.commit_stop = threading.Event()
         self.commit_thread = threading.Thread(target=self._commit_outputs_loop, daemon=True)
         self.commit_thread.start()
-        print("App Restored!")
+        log_event("model_ready", workflow=WORKFLOW,
+                  capture_id=getattr(self, "snapshot_capture_id", None),
+                  engine_seconds=self.engine_initialization_seconds,
+                  post_hook_seconds=time.monotonic()-started,
+                  region=os.getenv("MODAL_REGION"), provider=os.getenv("MODAL_CLOUD_PROVIDER"))
     
     @modal.web_server(8000, startup_timeout=1800 if WORKFLOW == "010-minimax-h3-b200plus-suite" else 300, label="comfyui-h3-int8" if WORKFLOW == "010-minimax-h3-b200plus-suite" else "comfyui-1")
     def ui(self):
@@ -588,26 +619,40 @@ class ComfyUI:
 
     @modal.exit()
     def cleanup(self):
-        # Stop background commits before the final flush on graceful shutdown.
+        started = time.monotonic()
+        log_event("shutdown_begin")
+        errors = []
         commit_stop = getattr(self, "commit_stop", None)
         if commit_stop is not None:
             commit_stop.set()
-            self.commit_thread.join(timeout=10)
-        # Persist staging files even if HF was temporarily unavailable.
-        output_volume.commit()
-        sync_proc = getattr(self, "sync_proc", None)
-        if sync_proc is not None:
-            sync_proc.terminate()
+        # Stop all producers before the final staging commit, even if one
+        # producer fails to terminate. Preserve Volume files for future archive.
+        procs = [(f"comfy-{i}", proc) for i, proc in enumerate(getattr(self, "procs", []), 1)]
+        sync = getattr(self, "sync_proc", None)
+        if sync is not None:
+            procs.append(("hf-sync", sync))
+        for name, proc in procs:
             try:
-                sync_proc.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                sync_proc.kill()
-        for proc in getattr(self, "procs", []):
+                stop_process(proc, name)
+            except Exception as exc:
+                errors.append(f"{name}: {exc}")
+                log_event("shutdown_process_error", process=name, error=str(exc))
+        thread = getattr(self, "commit_thread", None)
+        if thread is not None:
+            thread.join(timeout=10)
+        if thread is not None and thread.is_alive():
+            # Never run a second commit concurrently with a blocked writer.
+            errors.append("background Volume commit still running")
+        if errors:
+            log_event("shutdown_commit_deferred", reason="; ".join(errors))
+        else:
+            commit_started = time.monotonic()
             try:
-                proc.terminate()
-                proc.wait(timeout=10)
-            except subprocess.TimeoutExpired:
-                proc.kill()
-            except (ProcessLookupError, OSError):
-                pass
-        print("App CleanUp!")
+                output_volume.commit()
+                log_event("shutdown_commit", seconds=time.monotonic()-commit_started)
+            except Exception as exc:
+                errors.append(str(exc))
+                log_event("shutdown_commit_error", error=str(exc))
+        log_event("shutdown_end", seconds=time.monotonic()-started, errors=errors)
+        if errors:
+            raise RuntimeError("; ".join(errors))

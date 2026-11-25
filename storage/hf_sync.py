@@ -11,7 +11,7 @@ from botocore.config import Config
 from boto3.s3.transfer import TransferConfig
 from botocore.exceptions import ClientError
 
-from storage.output_formats import AUDIO, CATEGORIES, EXTENSIONS, IMAGES, MODELS, VIDEOS
+from storage.output_formats import AUDIO, CATEGORIES, EXTENSIONS, IMAGES, MODELS, VIDEOS, is_output_file
 
 ROOT = Path(os.getenv("COMFY_OUTPUT_ROOT", "/outputs"))
 WORKFLOW = os.getenv("WORKFLOW", "default")
@@ -75,7 +75,7 @@ def iter_outputs():
     if not ROOT.is_dir():
         return
     for path in ROOT.rglob("*"):
-        if not path.is_file() or path.suffix.lower() not in EXTENSIONS:
+        if not is_output_file(path, ROOT, EXTENSIONS) or not path.is_file():
             continue
         parts = path.relative_to(ROOT).parts
         instance = parts[0] if parts[0] in {"instance-1", "instance-2"} else ""

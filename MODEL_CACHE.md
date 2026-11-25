@@ -104,3 +104,7 @@ HF 缓存位于 `/data/hf`。ComfyUI 的标准 models 目录由软链接指向�
 下载暂存目录直接使用 `/data/hf/.benchmark-downloads/`，不再做路径替换。
 该 Volume 的原始 SDK 回读由上层库自行补齐 `/comfyui` 前缀。
 输出依旧保留独立的 `/outputs` Volume 与 R2 预览。
+
+## HF 精确版本与大小凭证
+
+成功发布时除 .workflow-revisions 外，同时提交 .workflow-hf-sizes/<workflow>.json，记录固定 revision、HF 元数据大小及摘要。quick_check 检查实际文件大小，GPU 链接时也核对版本与大小。旧缓存首次 ensure 补充凭证，正确大小的已缓存文件不需要重新下载。该快速检查不等于全文件二次哈希，仍保留原有 Xet 传输及发布凭证。

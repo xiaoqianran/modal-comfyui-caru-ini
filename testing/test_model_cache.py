@@ -318,8 +318,19 @@ class DownloaderTests(unittest.TestCase):
             self.volume.commit.reset_mock()
             cached_plan = self.ns['fetch_manifest'](config, 'test')
             self.assertFalse(cached_plan['missing'])
-            self.assertTrue(cached_plan['published'])
+            # Old revisions-only record must migrate without redownloading.
+            self.assertFalse(cached_plan['published'])
+            self.assertEqual(self.ns['quick_check'](config, 'test'), ['org/repo/weight'])
             self.volume.commit.assert_not_called()
+            self.assertTrue(self.ns['merge_shards']({
+                'items': cached_plan['items'], 'run_id': 'migrate-receipt',
+                'workflow': 'test', 'downloaded_items': [],
+            })['ok'])
+            self.assertEqual(self.ns['quick_check'](config, 'test'), [])
+            self.assertTrue(self.ns['fetch_manifest'](config, 'test')['published'])
+            cached.write_bytes(b'bad')
+            self.assertEqual(self.ns['quick_check'](config, 'test'), ['org/repo/weight'])
+            cached.write_bytes(b'valid')
             self.ns['fetch_manifest'](config, 'test', True)
             self.assertEqual(api.model_info.call_args.kwargs['revision'], 'main')
 

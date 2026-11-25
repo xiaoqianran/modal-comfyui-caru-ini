@@ -11,7 +11,8 @@ import urllib.parse
 import urllib.request
 import uuid
 from contextlib import contextmanager
-from contextvars import ContextVar
+from contextvars import ContextVar, copy_context
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from pathlib import Path
 
 IMAGE_EXT = {".png", ".jpg", ".jpeg", ".webp", ".bmp"}
@@ -46,6 +47,7 @@ def request(url, data=None, headers=None, timeout=300, retries=6, destination=No
                     result = r.read()
                 else:
                     size = 0
+                    digest = hashlib.sha256()
                     with destination.open("wb") as handle:
                         while True:
                             _remaining(timeout)
@@ -54,10 +56,11 @@ def request(url, data=None, headers=None, timeout=300, retries=6, destination=No
                                 break
                             handle.write(chunk)
                             size += len(chunk)
+                            digest.update(chunk)
                     expected = r.headers.get("Content-Length")
                     if not size or (expected is not None and size != int(expected)):
                         raise http.client.IncompleteRead(b"", int(expected or 1))
-                    result = size
+                    result = {"bytes": size, "sha256": digest.hexdigest()}
                 _remaining(timeout)
                 return result
         except urllib.error.HTTPError as e:
@@ -132,9 +135,11 @@ def download(base, item, dest):
         "type": item.get("type", "output"),
     })
     temp = dest.with_name(dest.name + ".part")
+    temp.unlink(missing_ok=True)
     try:
-        request(f"{base}/view?{q}", timeout=60, destination=temp)
+        evidence = request(f"{base}/view?{q}", timeout=60, destination=temp)
         temp.replace(dest)
+        return evidence
     finally:
         temp.unlink(missing_ok=True)
 
@@ -288,33 +293,37 @@ def _submit_job(key, job, completed, task_path, root, upload_caches):
                           upload_caches.setdefault(job["base"], {}))
     job["folder"].mkdir(parents=True, exist_ok=True)
     _save_json(job["folder"] / "workflow.json", prompt)
-    _save_json(job["status_file"], {"status": "submitting", "endpoint": job["endpoint"],
-                                    "intent_hash": job["intent_hash"]})
-    body = json.dumps({"prompt": prompt, "client_id": uuid.uuid4().hex}).encode()
+    client_id = uuid.uuid4().hex
+    identity = {"endpoint": job["endpoint"], "intent_hash": job["intent_hash"],
+                "client_id": client_id}
+    _save_json(job["status_file"], {"status": "submitting", **identity})
+    body = json.dumps({"prompt": prompt, "client_id": client_id}).encode()
+    started = time.monotonic()
     try:
         reply = request(job["base"] + "/prompt", body,
                         {"Content-Type": "application/json"}, retries=1)
         pid = json.loads(reply)["prompt_id"]
     except Exception as exc:
-        _save_json(job["status_file"], {"status": "uncertain",
-                                        "endpoint": job["endpoint"], "error": str(exc),
-                                        "intent_hash": job["intent_hash"]})
+        _save_json(job["status_file"], {"status": "uncertain", **identity,
+                                        "error": str(exc)})
         raise RuntimeError(f"{sid}/{jid}: submission uncertain; inspect remote queue") from exc
     job["prompt_id"] = pid
     job["state"] = "submitted"
-    _save_json(job["status_file"], {"status": "submitted", "endpoint": job["endpoint"],
-                                    "prompt_id": pid, "intent_hash": job["intent_hash"]})
+    _save_json(job["status_file"], {"status": "submitted", **identity,
+                                    "prompt_id": pid,
+                                    "submit_seconds": time.monotonic() - started})
     print(f"{sid}/{jid}: submitted {pid}", flush=True)
 
-def _check_job(key, job, completed):
+def _read_outputs(key, job):
+    """Poll a prompt without performing any output transfer."""
     sid, jid = key
     try:
         history = get_json(job["base"], f"/history/{job['prompt_id']}")
     except RequestFailed as exc:
         print(f"{sid}/{jid}: polling deferred: {exc}", flush=True)
-        return False
+        return None
     if job["prompt_id"] not in history:
-        return False
+        return None
     record = history[job["prompt_id"]]
     status = record.get("status", {})
     if status.get("status_str") == "error":
@@ -322,33 +331,99 @@ def _check_job(key, job, completed):
     if not record.get("outputs"):
         if status.get("completed"):
             raise RuntimeError(f"{sid}/{jid}: no downloadable output")
-        return False
+        return None
+    if status.get("completed") is False:
+        return None
     outputs = record["outputs"]
     if job.get("output_nodes") is not None:
         outputs = {node: outputs[node] for node in job["output_nodes"] if node in outputs}
-    output_files = collect_files(outputs)
-    if not output_files:
+    files = collect_files(outputs)
+    if not files:
         raise RuntimeError(f"{sid}/{jid}: no downloadable output")
+    return [{"filename": f["filename"], "subfolder": f.get("subfolder", ""),
+             "type": f.get("type", "output")} for f in files]
+
+
+def _file_evidence(path):
+    sha = hashlib.sha256()
+    size = 0
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            _remaining(1)
+            sha.update(chunk)
+            size += len(chunk)
+    return {"bytes": size, "sha256": sha.hexdigest()}
+
+
+def _valid_artifact(target, evidence):
+    return (isinstance(evidence, dict) and not target.is_symlink()
+            and target.is_file() and isinstance(evidence.get("bytes"), int)
+            and evidence["bytes"] > 0 and target.stat().st_size == evidence["bytes"]
+            and _file_evidence(target) == {k: evidence.get(k) for k in ("bytes", "sha256")})
+
+
+def _artifact_targets(job, files):
+    used = {"status.json", "status.json.tmp", "workflow.json", "workflow.json.tmp"}
+    for i, item in enumerate(files):
+        filename = Path(item["filename"].replace("\\", "/")).name
+        if filename in ("", ".", "..") or ":" in filename or filename.lower().endswith(".part"):
+            raise ValueError(f"Unsafe output filename: {filename!r}")
+        target_name = filename
+        counter = i
+        while target_name.casefold() in used:
+            target_name = f"{counter:03d}_{filename}"
+            counter += 1
+        used.add(target_name.casefold())
+        yield job["folder"] / target_name, item
+
+
+def _collect_job(key, job, files):
+    """Download independently of submit/poll; persist verified files incrementally."""
+    sid, jid = key
+    started = time.monotonic()
+    path = job["status_file"]
+    saved = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
+    previous = saved.get("artifacts", {}) if (
+        saved.get("remote_files") == files
+        and saved.get("prompt_id") == job["prompt_id"]
+        and saved.get("intent_hash") == job["intent_hash"]
+    ) else {}
+    state = {"status": "collecting", "endpoint": job["endpoint"],
+             "intent_hash": job["intent_hash"], "prompt_id": job["prompt_id"],
+             "remote_files": files, "artifacts": dict(previous)}
+    for field in ("client_id", "submit_seconds"):
+        if field in saved:
+            state[field] = saved[field]
+    _save_json(path, state)
     local = []
-    used = set()
-    for i, item in enumerate(output_files):
-        filename = Path(item["filename"]).name
-        if filename in used:
-            filename = f"{i:03d}_{filename}"
-        used.add(filename)
-        target = job["folder"] / filename
-        if not target.is_file() or target.stat().st_size == 0:
-            download(job["base"], item, target)
+    for target, item in _artifact_targets(job, files):
+        evidence = previous.get(target.name)
+        if not _valid_artifact(target, evidence):
+            evidence = download(job["base"], item, target)
+            # download returns the digest calculated during streaming, without a reread.
+            if not isinstance(evidence, dict):
+                evidence = _file_evidence(target)
+            if not evidence["bytes"]:
+                raise RuntimeError(f"Empty artifact: {target}")
+        state["artifacts"][target.name] = evidence
+        _save_json(path, state)
         local.append(target.resolve())
-    _save_json(job["status_file"], {"status": "completed",
-                                    "prompt_id": job["prompt_id"],
-                                    "endpoint": job["endpoint"],
-                                    "files": [str(p) for p in local],
-                                    "intent_hash": job["intent_hash"]})
-    completed[sid][jid] = local
+    state.update(status="completed", files=[str(p) for p in local],
+                 collect_seconds=time.monotonic() - started)
+    _save_json(path, state)
+    print(f"{sid}/{jid}: completed {len(local)} output(s) in {state['collect_seconds']:.2f}s", flush=True)
+    return local
+
+
+def _check_job(key, job, completed):
+    """Synchronous compatibility helper; the runner uses separate I/O pools."""
+    files = _read_outputs(key, job)
+    if files is None:
+        return False
+    completed[key[0]][key[1]] = _collect_job(key, job, files)
     job["state"] = "completed"
-    print(f"{sid}/{jid}: completed {len(local)} output(s)", flush=True)
     return True
+
 
 def _build_jobs(steps, endpoints, root, out, task_dir):
     """Expand task steps and validate all graphs/dependencies before execution."""
@@ -426,7 +501,6 @@ def _run_task_unlocked(task_path, endpoints_path="endpoints.json", output=None,
         raise ValueError(f"Invalid mode: {mode!r}; expected 'batch' or 'stream'")
     if timeout < 0:
         raise ValueError("Batch timeout must be >= 0 (0 disables timeout)")
-    batch_started_at = time.monotonic()
 
     jobs, step_ids = _build_jobs(steps, endpoints, root, out, task_path.parent)
 
@@ -456,49 +530,90 @@ def _run_task_unlocked(task_path, endpoints_path="endpoints.json", output=None,
             status["intent_hash"] = job["intent_hash"]
             _save_json(job["status_file"], status)
         files = [Path(p) for p in status.get("files", [])]
-        if status.get("status") == "completed" and files and all(p.is_file() and p.stat().st_size for p in files):
+        if any(p.resolve().parent != job["folder"].resolve() for p in files):
+            raise RuntimeError(f"{key}: saved output path is outside its job directory")
+        artifacts = status.get("artifacts")
+        valid = bool(files) and all(p.is_file() and not p.is_symlink() and p.stat().st_size for p in files)
+        if valid and artifacts is not None:
+            valid = all(_valid_artifact(p, artifacts.get(p.name)) for p in files)
+        if status.get("status") == "completed" and valid:
             completed[key[0]][key[1]] = files
             job["state"] = "completed"
-            print(f"{key[0]}/{key[1]}: resumed complete", flush=True)
+            quality = "SHA-256 verified" if artifacts is not None else "legacy size-only"
+            print(f"{key[0]}/{key[1]}: resumed complete ({quality})", flush=True)
         elif status.get("prompt_id"):
-            job["state"] = "submitted"
             job["prompt_id"] = status["prompt_id"]
+            job["remote_files"] = status.get("remote_files")
+            job["state"] = "collecting" if job["remote_files"] else "submitted"
             print(f"{key[0]}/{key[1]}: recovering {status['prompt_id']}", flush=True)
-        elif status.get("status") in ("submitting", "uncertain"):
-            raise RuntimeError(f"{key[0]}/{key[1]}: uncertain prior submission, inspect remote queue")
+        elif status.get("status") in ("submitting", "uncertain", "completed", "collecting"):
+            raise RuntimeError(f"{key[0]}/{key[1]}: prior state cannot be safely recovered; inspect status and remote queue")
     jobs_by_step = {}
     for key, job in jobs.items():
         jobs_by_step.setdefault(key[0], []).append(job)
-    while any(job["state"] != "completed" for job in jobs.values()):
-        if timeout and time.monotonic() - batch_started_at > timeout:
-            raise TimeoutError(
-                f"Batch exceeded {timeout}s; saved prompt IDs remain resumable. "
-                "Use --timeout 0 to disable the batch deadline."
-            )
-        progress = False
-        for key, job in jobs.items():
+    # Three independent bounded I/O pools. Submit in order per endpoint so shared
+    # uploads and native ComfyUI queue ordering remain safe. Different endpoints,
+    # history polls and artifact transfers cannot block one another.
+    active = {}
+    busy_endpoints = set()
+    next_poll = {}
+    limits = {"submit": 4, "poll": 8, "collect": 4}
+    with ThreadPoolExecutor(max_workers=limits["submit"]) as submits, \
+         ThreadPoolExecutor(max_workers=limits["poll"]) as polls, \
+         ThreadPoolExecutor(max_workers=limits["collect"]) as transfers:
+        pools = {"submit": submits, "poll": polls, "collect": transfers}
+        def schedule(kind, key, fn, *args):
+            active[key] = (kind, pools[kind].submit(copy_context().run, fn, *args))
+        while active or any(job["state"] != "completed" for job in jobs.values()):
             _remaining(1)
-            if job["state"] != "pending" or not all(dep[1] in completed[dep[0]] for dep in job["deps"]):
-                continue
-            if mode == "batch" and any(
-                other["state"] != "completed"
-                for dep_step in {dep[0] for dep in job["deps"]}
-                if dep_step != key[0]
-                for other in jobs_by_step[dep_step]
-            ):
-                continue
-            _submit_job(key, job, completed, task_path, root, upload_caches)
-            progress = True
-
-        # Poll every submitted job once. Never block later jobs behind the first job.
-        for key, job in jobs.items():
-            _remaining(1)
-            if job["state"] != "submitted":
-                continue
-            if _check_job(key, job, completed):
-                progress = True
-        if not progress:
-            time.sleep(_remaining(3))
+            for key, (kind, future) in list(active.items()):
+                if not future.done():
+                    continue
+                del active[key]
+                job = jobs[key]
+                result = future.result()
+                if kind == "submit":
+                    busy_endpoints.remove(job["base"])
+                elif kind == "poll":
+                    if result is not None:
+                        job["remote_files"] = result
+                        job["state"] = "collecting"
+                    else:
+                        next_poll[key] = time.monotonic() + 1
+                else:
+                    completed[key[0]][key[1]] = result
+                    job["state"] = "completed"
+            counts = {kind: sum(k == kind for k, _ in active.values()) for kind in limits}
+            for key, job in jobs.items():
+                if key in active:
+                    continue
+                state = job["state"]
+                if state == "pending" and counts["submit"] < limits["submit"]:
+                    if job["base"] in busy_endpoints or not all(dep[1] in completed[dep[0]] for dep in job["deps"]):
+                        continue
+                    if mode == "batch" and any(
+                        other["state"] != "completed"
+                        for dep_step in {dep[0] for dep in job["deps"]}
+                        if dep_step != key[0]
+                        for other in jobs_by_step[dep_step]
+                    ):
+                        continue
+                    busy_endpoints.add(job["base"])
+                    schedule("submit", key, _submit_job, key, job, completed, task_path, root, upload_caches)
+                    counts["submit"] += 1
+                elif state == "submitted" and counts["poll"] < limits["poll"] and time.monotonic() >= next_poll.get(key, 0):
+                    schedule("poll", key, _read_outputs, key, job)
+                    counts["poll"] += 1
+                elif state == "collecting" and counts["collect"] < limits["collect"]:
+                    schedule("collect", key, _collect_job, key, job, job["remote_files"])
+                    counts["collect"] += 1
+            if active:
+                wait([f for _, f in active.values()], timeout=_remaining(0.25), return_when=FIRST_COMPLETED)
+            elif any(job["state"] != "completed" for job in jobs.values()):
+                # Only delayed polls may leave a valid graph with no active work.
+                if not any(job["state"] == "submitted" for job in jobs.values()):
+                    raise RuntimeError("Task scheduler stalled without a submitted job")
+                time.sleep(_remaining(0.25))
     return out
 
 

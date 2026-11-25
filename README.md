@@ -22,6 +22,13 @@ Task Runner 的 `output_nodes` 为可选非空节点 ID 列表，用于筛选下
 
 > 本项目是社区 Fork，并非原作者的官方发布。部分工作流依赖第三方自定义节点和云端凭据；部署前请自行核对依赖与权限。
 
+## 运行性能配置
+
+本轮迁移详见 [ComfyUI 性能与可靠性实测](docs/runtime-optimization.md)。
+Task Runner 将提交、history 轮询及产物下载分离为有界并行池；同一 endpoint 保持提交顺序，已下载文件记录 SHA-256，可恢复部分下载。模型缓存新增精确版本/大小凭证，旧缓存由 ensure 自动补充。
+
+可在 workflow 的 models.json 中配置 runtime，或在部署环境设置 COMFYUI_RUNTIME_PROFILE=batch、COMFYUI_SNAPSHOT_MODE=gpu/off、COMFYUI_SCALEDOWN_SECONDS、COMFYUI_WARMUP_MODE。默认仍为原有交互式缩容（Idol 300 秒，其余 1800 秒），batch 默认 60 秒仅用于持续调度和经验证的工作负载。具体快照收益须按工作流实测。
+
 ## 命名约定
 
 - `tasks/` 批量任务：参见 [TASK_NAMING.md](TASK_NAMING.md)，新任务统一以三位序号开头，日期放在编号之后。

@@ -170,6 +170,13 @@ def _size_valid(path: Path, item: dict) -> bool:
     return stat.S_ISREG(info.st_mode) and info.st_size > 0 and (expected is None or info.st_size == expected)
 
 
+def _hf_size_receipt(items: list[dict]) -> dict:
+    """Compact expected sizes tied to pinned revisions; no weight rereads."""
+    return {f"{item['repo_id']}/{item['filename']}": {
+        "revision": item["revision"], "size": item["size"], "digest": item["digest"],
+    } for item in items if item["kind"] == "hf"}
+
+
 def _verify_content(path: Path, item: dict) -> None:
     import hashlib
     if not _size_valid(path, item):
@@ -259,13 +266,16 @@ def fetch_manifest(config_json: str, workflow: str = WORKFLOW, update: bool = Fa
         _atomic_json(pins, revisions)
         volume.commit()
     published = json.loads(success.read_text(encoding="utf-8")) if success.is_file() else None
+    receipt_path = root / ".workflow-hf-sizes" / f"{workflow}.json"
+    receipt = json.loads(receipt_path.read_text(encoding="utf-8")) if receipt_path.is_file() else None
     missing = []
     for item in items:
         hit = _size_valid(_cached_path(Path(CACHE_DIR), item), item)
         print("CACHE HIT" if hit else "CACHE MISS", item["filename"], flush=True)
         if not hit:
             missing.append(item)
-    return dict(items=items, missing=missing, published=published == revisions)
+    return dict(items=items, missing=missing,
+                published=published == revisions and receipt == _hf_size_receipt(items))
 
 
 @app.function(image=image, serialized=False, volumes={"/data": volume.with_mount_options(sub_path="/comfyui")}, timeout=300, cpu=1.0, memory=1024)
@@ -276,6 +286,8 @@ def quick_check(config_json: str, workflow: str) -> list[str]:
     config = json.loads(config_json)
     record = root / ".workflow-revisions" / f"{workflow}.json"
     revisions = json.loads(record.read_text(encoding="utf-8")) if record.is_file() else {}
+    receipt_path = root / ".workflow-hf-sizes" / f"{workflow}.json"
+    receipt = json.loads(receipt_path.read_text(encoding="utf-8")) if receipt_path.is_file() else {}
     missing = []
     for model in config.get("models", []):
         key = f"{model['repo_id']}/{model['filename']}"
@@ -284,8 +296,15 @@ def quick_check(config_json: str, workflow: str) -> list[str]:
         if not revision or (pinned and len(pinned) == 40 and pinned != revision):
             missing.append(key)
             continue
+        expected = receipt.get(key, {})
+        if (expected.get("revision") != revision
+                or not isinstance(expected.get("size"), int) or expected["size"] <= 0):
+            # Legacy revisions-only cache: ensure resolves HF metadata once.
+            # Existing correctly-sized weights are reused; no forced download.
+            missing.append(key)
+            continue
         item = {"kind": "hf", "repo_id": model["repo_id"], "filename": model["filename"],
-                "revision": revision}
+                "revision": revision, "size": expected["size"]}
         if not _size_valid(_cached_path(root, item), item):
             missing.append(key)
     for model in config.get("models_ext", []):
@@ -579,6 +598,8 @@ def merge_shards(payload: dict) -> dict:
     # The second commit publishes the success record and optional cleanup.
     # If it fails, the first commit still preserves all model data for retry.
     _atomic_json(root / ".workflow-revisions" / f"{payload['workflow']}.json", revisions)
+    _atomic_json(root / ".workflow-hf-sizes" / f"{payload['workflow']}.json",
+                 _hf_size_receipt(payload["items"]))
     cleanup_dirs = [run_root]
     if hf_pending:
         benchmark_stage = Path(payload["benchmark_base"])
