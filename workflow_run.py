@@ -139,7 +139,11 @@ def _submit_planned(key, job, completed, plan, identifier, volume):
     request = w.build_request(volume, plan, identifier, job["spec"], selected)
     w.persist_request(volume, request)
     runner._save_json(job["folder"] / "workflow.json", request["graph"])
-    client = ec.DurableClient(job["delivery"], job["base"])
+    client = runner._get_client(job, durable=True)
+    # The exact request just won/verified its immutable publication. Avoid
+    # downloading its graph again for the subsequent ledger status check.
+    if hasattr(client, "remember_request"):
+        client.remember_request(request)
     runner._dispatch_durable(key, job, client)
 
 
@@ -158,7 +162,7 @@ def resume(identifier, volume_name=DEFAULT_VOLUME, output=None, timeout=0, *, vo
     plan = w.load_plan(volume, volume_name, identifier)
     out = Path(output).resolve() if output else Path("outputs", "workflow-" + identifier).resolve()
     locator = {"workflow_id": identifier, "volume": volume_name}
-    with runner._task_lock(out):
+    with runner._task_lock(out), runner._client_scope():
         marker = out / "workflow-run.json"
         if marker.exists() and json.loads(marker.read_text(encoding="utf-8")) != locator:
             raise RuntimeError("Output directory belongs to another workflow")

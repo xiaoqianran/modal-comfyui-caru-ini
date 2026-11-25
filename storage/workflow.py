@@ -186,6 +186,7 @@ def build_request(volume, plan, identifier, spec, selected_outputs):
     graph = _base_graph(plan, spec)
     refs = dict(spec["inputs"])
     by_key = {job_key(s): s for s in plan["jobs"]}
+    source_refs = {}
     for field, source in spec["sources"].items():
         key = tuple(source["job"])
         upstream = by_key[key]
@@ -196,7 +197,10 @@ def build_request(volume, plan, identifier, spec, selected_outputs):
         if len(matches) != 1:
             raise ValueError(f"Workflow reference {key}.{source['kind']}: expected one media output, found {len(matches)}")
         descriptor = {"config": upstream["delivery"], "job_id": upstream_id, "item": matches[0]}
-        ref = e.cloud_input_ref(volume, cfg, ident, descriptor)
+        source_key = e.sha_json(descriptor)
+        if source_key not in source_refs:
+            source_refs[source_key] = e.cloud_input_ref(volume, cfg, ident, descriptor)
+        ref = source_refs[source_key]
         target, name = _graph_input(graph, field)
         target[name] = e.input_name(ref)
         refs[field] = ref

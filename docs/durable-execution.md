@@ -73,6 +73,19 @@ prepare 输出 workflow_id 和 volume，非默认 Volume 在 status/resume 追�
 - 全工作流仍需某处运行 resume 作为调度者；关闭电脑后已派发的 GPU 调用可以独立完成，但尚未派发的后续阶段不会自主启动，需在任意授权客户端继续 resume。并不是云端常驻调度服务、GPU 中间采样 checkpoint 或任意自定义节点依赖的恢复。失败的独立 retry job 不会自动替换原计划中 Job 身份，未知/失败仍需操作员处理；需要有意重新执行时创建新的计划。保留源请求、产物及计划所引用的所有记录。
 - 当前只支持显式持久媒体（与原协议相同），已知原生 LoadImage/LoadImageMask/LoadVideo/LoadAudio 字段必须通过 @ 或明确上游引用绑定，隐式原生文件名拒绝；不能保证任意自定义节点内嵌路径、外部 URL 或第三方服务状态。计划所有部署的精确版本需仍可用于新派发；已完成的结果可以只靠 Volume 恢复。跨 Volume、原生/持久混合流程暂不支持。缺失 ready 的异常恢复可能仍读取客户端媒体字节。
 
+## Runner SDK 会话复用与离线依赖感知 GC
+
+Runner 在一次 run_task / workflow_run resume 生命周期内，以完整部署配置、端点、客户端类型为键共享 SDK 客户端，退出即释放；相同 App ID、部署生命周期 version、配置及 web URL 的已验证 CPU probe 结果和 model 句柄可复用。每次 preflight 仍查询当前 App 信息及版本函数是否存在；生命周期变化或完整验证失败不会使用旧证明。每个 durable client 的不可变 request.json 缓存最多64条/16MiB，只缓存经过验证的已发布请求（以规范化 JSON 字节隔离调用者修改）；实时 produced/failed/submitted/claim 和 ready 仍读取权威账本。活动 FunctionCall 对象复用到调用终止；轮询频率不变。刚由 start/poll 获得的完成证据可在同一 Runner 中直接交付，重新启动或仅有本地 status.json 时必须重新向云端验证。相同计划请求内同一 source descriptor 只解析一次，GPU实际媒体哈希校验不变。不增加常驻 CPU 服务。上述缓存依赖不可覆盖的账本协议，不支持绕过协议并发强制覆盖不可变记录。
+
+离线 GC 独立入口：
+
+    uv run python gc_storage.py plan --volume YOUR_OUTPUT_VOLUME --out gc-plan.json
+    uv run python gc_storage.py apply --volume YOUR_OUTPUT_VOLUME --plan gc-plan.json --confirm-quiescent
+
+- plan 只做只读元数据扫描，默认候选年龄至少168小时（可通过 --min-age-hours 修改）；不下载媒体内容，不自动删除。扫描所有 .execution/v1/workflows、jobs、inputs 和 .delivery/ready，识别每个计划的所有阶段（包括尚未准备的未来阶段）及所有请求（含显式 retry）的初始 CAS 引用、同卷云端产物引用、所有 produced/ready receipt 文件。校验计划哈希、请求身份、event请求哈希、source选择与凭证一致性、保留媒体存在及大小。遇未知执行schema、缺失/损坏引用、冲突事件、非预期管理对象等异常停止；未解决 claim 允许生成预览但禁止 apply。
+- 当前所有计划、请求、执行事件、ready/produced及其引用内容永久保留。候选仅是未被任何根引用且超过年龄阈值的 CAS input，以及已明确写入 failed 的唯一已知 Job 私有命名空间内、未被任何凭证引用的合法媒体。未知 Job 的私有产物、成功 Job 未列出的产物、传统/native 文件、归档对象和所有账本/凭证均不会删除。不会隐式退休成功工作流或删除历史结果；未来应另设计显式保留期限/退休语义，同时永久保留防重放墓碑。
+- apply 仅支持独占离线维护：必须由操作者停止针对该 Volume 的所有 Runner、GPU/CPU App、挂载、UI、归档进程和其他读写者，确保从重新扫描到删除完成没有并发访问。--confirm-quiescent 是操作者确认，并非分布式锁或自动检测所有访问者；现有旧客户端未接入在线 GC 协议。重扫对比卷名、Volume ID、全部管理对象的路径/大小/mtime、根JSON内容摘要、候选列表；预览超过1小时、扫描变化、存在未解决claim或其他校验失败均拒绝删除。逐个 exact key 非递归删除并输出已删除证据；SDK 不提供跨对象原子删除，部分失败必须重新 plan，不可直接重放旧计划。仅测试隔离卷，不对生产卷自动执行。
+
 ## 执行状态
 
 每个尝试的 request 和事件文件位于 .execution/v1/jobs/<app>/<workflow>/<version>/<instance>/<job_uuid>/。使用只追加、不可覆盖的记录；Volume SDK 为权威，不依赖容器的旧 mount 视图。
@@ -191,3 +204,10 @@ PC2 / Modal profile zhangchenzer。所有测试使用独立 App 和独立 Output
 - 修复后不重新生成，使用同一计划及原Job身份，从新目录恢复：generate 返回completed、call_id为空；mux Job e168b773-9e49-5c7a-a7c0-540fe57290a1，容器 ta-01M89D9QSN2VY4ETE9T44GKFFR，epoch 03cf83e934854bfd9ffbe54e4b5e0638，直接使用之前预存的WAV与上游MP4，原生1.65s；final Job 1c57a0a1-5563-5518-a79e-3454da7cd1f7，容器 ta-01M89DDS5M8FQKHHKHSMVMHCPR，epoch fb38c3ab81f64722b12f5f7951448e43，原生1.53s。三个容器均AWS ap-south、不同epoch；全程恰好3次原生got prompt/3次完成。
 - 成功恢复阶段强制禁止任何客户端媒体上传及中间媒体读取，仅下载最终MP4 113024B（SHA-256 c552a03c08140fb12059b3676f0127ca27b0e9a9032fca6004f9e5d0b7292194）、FLAC 35991B（SHA-256 0870e2f25ca44b7f386b7f2c0aca279866dafb6d9d7f3a8b5c27a14614a1c14a）。FFmpeg完整解码，MP4 512×288、56帧、24FPS、2.334秒；FLAC 2.336秒、32kHz、单声道，均为880Hz主音轨。再次停止容器并删除整个recovered-run目录，只凭UUID与卷名恢复redelivery目录，最终两文件哈希完全一致、0次新GPU派发、0中间媒体读和0上传。
 - 实验脚本及证据保留于outputs/workflow-recovery-lab-1125/（summary.json、ready-race-summary.json、resume-race.log、crash.log、resume.log、redeliver.log、modal-runtime.log、redelivery/）。实验App已停止，实验容器0，两实验Volume均已删除，原始共享模型缓存和生产部署未变。以上不是自动云端调度或中间采样checkpoint；调度者停止时尚未派发的阶段需新Runner继续，明确失败/无法确认claim不自动重放。跨Volume、GC依赖保留及大规模长期压力未实现/实测。
+
+### 第七轮：Runner SDK 会话复用及离线依赖感知 GC（2026-11-25）
+
+- 独立测试 App ap-9d9mL6IpSK7rrdmTlc96kT，版本 aa6073093a937c981c90378bb35c55be9d750fe3e94ee8f3fa02080f273bbb5a，Volume comfyui-sdk-gc-lab-1125-out。实际部署 CPU identity probe，未派发 GPU；模型缓存7/7命中。基线加载提交 afabc32 的原客户端代码，对照同一真实 SDK App 与 Volume。
+- 三次同部署预检：App info 6→4、CPU probe remote 3→1、Class lookup 3→1、web URL 3→1；实测耗时15.188s→6.047s。四次 prepared 账本查询：Volume read_file 20→17、request.json读取4→1、耗时15.343s→9.422s。已完成任务查询至cloud收集：元数据读取6→3，无中间媒体下载。以上为独立样本调用链实测，不代表GPU推理或全流程固定加速比例；轮询频率未改变。
+- 真实Volume V2写入26个小型测试文件（模拟执行记录与媒体，非真实GPU推理），预览识别1份计划、5份请求、1份ready、2份produced、5个保留媒体；候选3个共66B，元数据扫描未读取媒体内容。新增请求引用其中14B原孤立CAS后，旧计划重扫拒绝，删除0次；新计划精确删除31B孤立CAS及21B failed-job未发布残留，共52B，未使用递归删除。再次扫描候选0，原有保留输入、上游产物、produced未ready产物、未知及传统产物逐字节/哈希验证成功，下游materialize及缺失ready修复成功。
+- 本地142/142回归通过（20项新增）；真实实验脚本、summary.json、evidence.jsonl、gc-before.json、gc-apply-plan.json、cleanup-summary.json保留于 outputs/sdk-gc-lab-1125/。实验App停止、容器0、Volume0，生产部署及生产Volume没有执行删除。GC当前为离线保守回收，不自动退休历史工作流、不保证在线并发删除安全；大规模扫描性能及大媒体压力未实测。

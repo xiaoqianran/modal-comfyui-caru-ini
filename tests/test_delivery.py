@@ -193,9 +193,8 @@ class DeliveryTests(unittest.TestCase):
         self.assertEqual(len(hf.uploads),1)
 
     def test_preflight_rejects_wrong_version_without_gpu(self):
-        client = object.__new__(DeliveryClient)
-        client.config = self.cfg
-        client.base = "https://correct.invalid"
+        with patch("modal.Volume.from_name", return_value=Mock()):
+            client = DeliveryClient(self.cfg, "https://correct.invalid")
         client.modal = Mock()
         client.modal.App.lookup.return_value.info.return_value = SimpleNamespace(
             app_id="ap-test", lifecycle=SimpleNamespace(version=1), functions={"other":None})
@@ -206,9 +205,8 @@ class DeliveryTests(unittest.TestCase):
         client._model.assert_not_called()
 
     def test_preflight_rejects_wrong_native_endpoint(self):
-        client = object.__new__(DeliveryClient)
-        client.config = self.cfg
-        client.base = "https://wrong.invalid"
+        with patch("modal.Volume.from_name", return_value=Mock()):
+            client = DeliveryClient(self.cfg, "https://wrong.invalid")
         client.modal = Mock()
         client.modal.App.lookup.return_value.info.return_value = SimpleNamespace(
             app_id="ap-test", lifecycle=SimpleNamespace(version=1),

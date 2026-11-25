@@ -5,6 +5,7 @@ import http.client
 import json
 import mimetypes
 import os
+import threading
 import time
 import urllib.error
 import urllib.parse
@@ -24,6 +25,33 @@ VIDEO_EXT = {".mp4", ".webm", ".mov", ".mkv"}
 MODEL_EXT = {".glb", ".gltf", ".obj", ".stl", ".ply", ".splat", ".ksplat", ".spz"}
 
 _DEADLINE = ContextVar("runner_deadline", default=None)
+_CLIENTS = ContextVar("runner_clients", default=None)
+
+
+@contextmanager
+def _client_scope():
+    """Reuse exact endpoint/config clients across the scheduler's I/O pools."""
+    token = _CLIENTS.set(({}, threading.Lock()))
+    try:
+        yield
+    finally:
+        _CLIENTS.reset(token)
+
+
+def _get_client(job, durable=False):
+    from storage.delivery_client import DeliveryClient
+    from storage.execution_client import DurableClient
+    factory = DurableClient if durable else DeliveryClient
+    pool = _CLIENTS.get()
+    if pool is None:
+        return factory(job["delivery"], job["base"])
+    clients, lock = pool
+    key = (durable, job["base"], json.dumps(job["delivery"], sort_keys=True))
+    with lock:
+        if key not in clients:
+            clients[key] = factory(job["delivery"], job["base"])
+        return clients[key]
+
 # A claimed job may outlive its observer. Bound each ledger-only observation
 # session even when the caller disables the overall batch timeout.
 _DURABLE_OBSERVATION_SECONDS = 18000
@@ -341,7 +369,6 @@ def _submit_job(key, job, completed, task_path, root, upload_caches):
                 raise FileNotFoundError(f"{sid}/{jid} input {field}: {file}")
             resolved[field] = "@" + str(file.resolve())
     if job.get("execution") == "durable":
-        from storage.execution_client import DurableClient
         expected_inputs = dict(job.get("local_input_hashes") or {})
         output_inputs = {}
         for field, raw in job["settings"].items():
@@ -350,7 +377,7 @@ def _submit_job(key, job, completed, task_path, root, upload_caches):
                 resolved[field] = None
             elif isinstance(raw, str) and raw.startswith("$") and not raw.startswith("$item."):
                 expected_inputs[field] = _upstream_input_hash(Path(resolved[field][1:]))
-        client = DurableClient(job["delivery"], job["base"])
+        client = _get_client(job, durable=True)
         options = {"output_inputs": output_inputs} if output_inputs else {}
         manifest = client.stage(job["durable_job_id"], job["intent_hash"], job["graph"],
                                resolved, job.get("output_nodes"), expected_inputs, **options)
@@ -396,6 +423,9 @@ def _apply_durable_result(key, job, result):
     if result["status"] == "completed":
         job["prompt_id"] = result["prompt_id"]
         job["remote_files"] = result["remote_files"]
+        # This is in-memory authoritative evidence from start/poll, not a local
+        # status.json receipt. Reuse it for collection in this runner only.
+        job["_verified_completion"] = result
         job["state"] = "collecting"
         _durable_status(job, "collecting", prompt_id=job["prompt_id"],
                         remote_files=job["remote_files"], delivery_receipt=result["receipt"])
@@ -419,8 +449,7 @@ def _apply_durable_result(key, job, result):
 
 
 def _dispatch_durable(key, job, client=None):
-    from storage.execution_client import DurableClient
-    client = client or DurableClient(job["delivery"], job["base"])
+    client = client or _get_client(job, durable=True)
     # Persist the ID before the spawn RPC, whose reply may be lost.
     _durable_status(job, "prepared")
     started = time.monotonic()
@@ -438,8 +467,7 @@ def _read_outputs(key, job):
     """Poll a prompt without performing any output transfer."""
     sid, jid = key
     if job.get("execution") == "durable":
-        from storage.execution_client import DurableClient
-        client = DurableClient(job["delivery"], job["base"])
+        client = _get_client(job, durable=True)
         if job.get("durable_observe_only"):
             if time.monotonic() >= job["durable_observe_deadline"]:
                 raise TimeoutError("Durable ledger observation expired; resume the same job, do not replay")
@@ -529,18 +557,20 @@ def _collect_job(key, job, files):
     delivery_client = None
     receipt = None
     if job.get("delivery") is not None:
-        from storage.delivery_client import DeliveryClient
-        delivery_client = DeliveryClient(job["delivery"], job["base"])
         _remaining(1)
         if job.get("execution") == "durable":
-            from storage.execution_client import DurableClient
-            durable = DurableClient(job["delivery"], job["base"])
-            result = durable.status(job["durable_job_id"])
+            result = job.pop("_verified_completion", None)
+            if result is None:
+                # Fresh process / restored local collecting state: revalidate.
+                result = _get_client(job, durable=True).status(job["durable_job_id"])
             if (result["status"] != "completed" or result["prompt_id"] != job["prompt_id"]
                     or result["remote_files"] != files):
                 raise RuntimeError("Durable result not ready or output references changed")
             receipt = result["receipt"]
+            if job.get("collect") != "cloud":
+                delivery_client = _get_client(job)
         else:
+            delivery_client = _get_client(job)
             receipt = delivery_client.receipt(job["prompt_id"])
         state["delivery_receipt"] = receipt
         _save_json(path, state)
@@ -766,11 +796,10 @@ def _run_task_unlocked(task_path, endpoints_path="endpoints.json", output=None,
     for job in jobs.values():
         if (job["state"] == "pending" and job.get("delivery") is not None
                 and job.get("execution") != "durable"):
-            from storage.delivery_client import DeliveryClient
             identity = (job["base"], json.dumps(job["delivery"], sort_keys=True))
             if identity not in verified_delivery:
                 _remaining(1)
-                DeliveryClient(job["delivery"], job["base"]).preflight()
+                _get_client(job).preflight()
                 verified_delivery.add(identity)
     _schedule_jobs(jobs, completed, mode,
                    lambda key, job, done: _submit_job(key, job, done, task_path, root, upload_caches))
@@ -855,7 +884,7 @@ def run_task(task_path, endpoints_path="endpoints.json", output=None,
     else:
         name = _safe_name(json.loads(Path(task_path).read_text(encoding="utf-8-sig"))["name"])
         out = Path(endpoints_path).resolve().parent / "outputs" / name
-    with _task_lock(out):
+    with _task_lock(out), _client_scope():
         token = _DEADLINE.set(time.monotonic() + timeout if timeout > 0 else None)
         try:
             return _run_task_unlocked(task_path, endpoints_path, output, timeout,

@@ -1,14 +1,17 @@
 """SDK client for durable jobs; no public prompt/upload request is sent."""
 from __future__ import annotations
 
+import json
 from pathlib import Path
+from collections import OrderedDict
+import threading
 import time
 
 from storage.delivery import receipt_file, volume_receipt
 
 from storage.delivery_client import DeliveryClient
 from storage.execution import (
-    MEDIA_INPUT_EXTENSIONS, finalize_produced, inspect_execution, job_id, load_request,
+    MEDIA_INPUT_EXTENSIONS, canonical, finalize_produced, inspect_execution, job_id, load_request,
     put_once, request_key, stage_request, validate_request,
 )
 
@@ -19,6 +22,57 @@ _READY_VISIBILITY_GRACE_SECONDS = 15
 
 
 class DurableClient(DeliveryClient):
+    def __init__(self, config, base):
+        super().__init__(config, base)
+        self._cache_lock = threading.RLock()
+        self._requests = OrderedDict()
+        self._request_bytes = 0
+        self._calls = {}
+
+    def remember_request(self, request):
+        """Remember only validated immutable requests, bounded per SDK client."""
+        cache = getattr(self, "_requests", None)
+        if cache is None:
+            return
+        identifier = request["job_id"]
+        validate_request(request, self.config, identifier)
+        raw = canonical(request)
+        with self._cache_lock:
+            previous = cache.pop(identifier, None)
+            if previous is not None:
+                self._request_bytes -= len(previous)
+            cache[identifier] = raw
+            self._request_bytes += len(raw)
+            while len(cache) > 64 or self._request_bytes > 16 * 1024 * 1024:
+                _, evicted = cache.popitem(last=False)
+                self._request_bytes -= len(evicted)
+
+    def _request(self, identifier):
+        cache = getattr(self, "_requests", None)
+        if cache is not None:
+            with self._cache_lock:
+                if identifier in cache:
+                    cache.move_to_end(identifier)
+                    return json.loads(cache[identifier])
+        request = load_request(self.volume, self.config, identifier)
+        self.remember_request(request)
+        return request
+
+    def _call(self, call_id):
+        cache = getattr(self, "_calls", None)
+        if cache is None:
+            return self.modal.FunctionCall.from_id(call_id)
+        with self._cache_lock:
+            if call_id not in cache:
+                cache[call_id] = self.modal.FunctionCall.from_id(call_id)
+            return cache[call_id]
+
+    def _forget_call(self, call_id):
+        cache = getattr(self, "_calls", None)
+        if cache is not None:
+            with self._cache_lock:
+                cache.pop(call_id, None)
+
     def preflight(self):
         info = super().preflight()
         if info.get("execution_schema") != 1:
@@ -38,12 +92,14 @@ class DurableClient(DeliveryClient):
                 raise RuntimeError("Deployment does not support durable video/audio inputs; redeploy first")
             if output_inputs and info.get("execution_cloud_inputs") != 1:
                 raise RuntimeError("Deployment does not support direct cloud outputs; redeploy first")
-        return stage_request(self.volume, self.config, identifier, intent, graph,
-                             settings, output_nodes, expected_inputs=expected_inputs,
-                             output_inputs=output_inputs)
+        request = stage_request(self.volume, self.config, identifier, intent, graph,
+                                settings, output_nodes, expected_inputs=expected_inputs,
+                                output_inputs=output_inputs)
+        self.remember_request(request)
+        return request
 
     def status(self, identifier):
-        request = load_request(self.volume, self.config, identifier)
+        request = self._request(identifier)
         state = inspect_execution(self.volume, request)
         if state["status"] == "produced":
             ready = volume_receipt(self.volume, self.config, state["prompt_id"])
@@ -92,6 +148,10 @@ class DurableClient(DeliveryClient):
         self.preflight()
         call = self._model().execute_durable.spawn(
             identifier, self.config["instance"], self.config["version"])
+        calls = getattr(self, "_calls", None)
+        if calls is not None:
+            with self._cache_lock:
+                calls[call.object_id] = call
         return {"status": "dispatched", "call_id": call.object_id,
                 "job_id": identifier}
 
@@ -111,7 +171,7 @@ class DurableClient(DeliveryClient):
         from modal.exception import TimeoutError as ModalTimeoutError
         error = None
         try:
-            result = self.modal.FunctionCall.from_id(call_id).get(timeout=0)
+            result = self._call(call_id).get(timeout=0)
         except (TimeoutError, ModalTimeoutError) as exc:
             # SDK 1.6.4 poll_function raises builtins.TimeoutError while pending.
             # FunctionTimeoutError / OutputExpiredError are terminal subclasses.
@@ -124,6 +184,7 @@ class DurableClient(DeliveryClient):
             # before reporting an uncertain attempt to the operator.
             result = None
             error = f"{type(exc).__name__}: {exc}"
+        self._forget_call(call_id)
         if result is not None and (not isinstance(result, dict) or
                                    result.get("job_id") != identifier):
             raise RuntimeError("Durable call result identity mismatch")
