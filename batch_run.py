@@ -15,6 +15,8 @@ from contextvars import ContextVar, copy_context
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from pathlib import Path
 
+from storage.delivery import normalized_config
+
 IMAGE_EXT = {".png", ".jpg", ".jpeg", ".webp", ".bmp"}
 VIDEO_EXT = {".mp4", ".webm", ".mov", ".mkv"}
 MODEL_EXT = {".glb", ".gltf", ".obj", ".stl", ".ply", ".splat", ".ksplat", ".spz"}
@@ -272,6 +274,8 @@ def _job_intent_hash(job, jobs, task_dir, root):
     }
     if job.get("output_nodes") is not None:
         payload["output_nodes"] = job["output_nodes"]
+    if job.get("delivery") is not None:
+        payload["delivery"] = job["delivery"]
     raw = json.dumps(payload, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
@@ -396,10 +400,22 @@ def _collect_job(key, job, files):
             state[field] = saved[field]
     _save_json(path, state)
     local = []
+    delivery_client = None
+    receipt = None
+    if job.get("delivery") is not None:
+        from storage.delivery_client import DeliveryClient
+        delivery_client = DeliveryClient(job["delivery"], job["base"])
+        _remaining(1)
+        receipt = delivery_client.receipt(job["prompt_id"])
+        state["delivery_receipt"] = receipt
+        _save_json(path, state)
     for target, item in _artifact_targets(job, files):
         evidence = previous.get(target.name)
         if not _valid_artifact(target, evidence):
-            evidence = download(job["base"], item, target)
+            if delivery_client is not None:
+                evidence = delivery_client.download(receipt, item, target, lambda: _remaining(1))
+            else:
+                evidence = download(job["base"], item, target)
             # download returns the digest calculated during streaming, without a reread.
             if not isinstance(evidence, dict):
                 evidence = _file_evidence(target)
@@ -443,6 +459,9 @@ def _build_jobs(steps, endpoints, root, out, task_dir):
         if "nodes" in graph:
             raise ValueError("Expected ComfyUI API JSON")
         _validate_graph(graph, {}, step.get("output_nodes"))
+        delivery = normalized_config(step["delivery"]) if "delivery" in step else None
+        if delivery is not None and "version" not in delivery:
+            raise ValueError("Task delivery requires an explicit deployment version")
         entries = step.get("foreach", [{"name": "main"}])
         if not isinstance(entries, list) or not entries:
             raise ValueError(f"Empty foreach: {sid}")
@@ -475,6 +494,7 @@ def _build_jobs(steps, endpoints, root, out, task_dir):
             jobs[key] = dict(entry=entry, settings=settings, deps=deps, base=base,
                              output_nodes=sorted({str(n) for n in step["output_nodes"]}) if step.get("output_nodes") is not None else None,
                              endpoint=endpoint_name, graph=graph, folder=folder,
+                             delivery=delivery,
                              status_file=folder / "status.json", state="pending")
         step_ids.add(sid)
 
@@ -548,6 +568,16 @@ def _run_task_unlocked(task_path, endpoints_path="endpoints.json", output=None,
             print(f"{key[0]}/{key[1]}: recovering {status['prompt_id']}", flush=True)
         elif status.get("status") in ("submitting", "uncertain", "completed", "collecting"):
             raise RuntimeError(f"{key[0]}/{key[1]}: prior state cannot be safely recovered; inspect status and remote queue")
+    # Validate every new delivery endpoint before starting any new GPU work.
+    verified_delivery = set()
+    for job in jobs.values():
+        if job["state"] == "pending" and job.get("delivery") is not None:
+            from storage.delivery_client import DeliveryClient
+            identity = (job["base"], json.dumps(job["delivery"], sort_keys=True))
+            if identity not in verified_delivery:
+                _remaining(1)
+                DeliveryClient(job["delivery"], job["base"]).preflight()
+                verified_delivery.add(identity)
     jobs_by_step = {}
     for key, job in jobs.items():
         jobs_by_step.setdefault(key[0], []).append(job)

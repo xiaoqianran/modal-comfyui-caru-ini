@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import os
 import re
 import shlex
@@ -14,6 +15,7 @@ from urllib.parse import urlsplit
 import modal
 
 from runtime_policy import resolve_policy, log_event, wait_for_server, stop_process
+from storage.delivery import DEFAULT_VOLUME, token, build_receipt, publish_receipt, receipt_key, validate_receipt
 
 # Modal 镜像构建与应用声明顺序（必须保持）：
 # 1. 安装 ComfyUI。
@@ -80,6 +82,46 @@ DUAL_COMFYUI = GPU_TYPE.strip().upper() == "B300"
 COMFY_PORTS = (8000, 8001) if DUAL_COMFYUI else (8000,)
 COMFY_VER = os.getenv("COMFY_VER")
 POLICY = resolve_policy(WORKFLOW, model_config)
+DELIVERY_MODE = os.getenv("COMFYUI_DELIVERY_MODE", "legacy")
+if DELIVERY_MODE not in ("legacy", "cpu"):
+    raise ValueError("COMFYUI_DELIVERY_MODE must be legacy or cpu")
+APP_NAME = token(os.getenv("COMFYUI_APP_NAME", f"modal-{WORKFLOW}"), "app")
+OUTPUT_VOLUME_NAME = token(os.getenv("COMFYUI_OUTPUT_VOLUME_NAME", DEFAULT_VOLUME), "volume")
+
+
+def _deployment_version():
+    # Remote imports use the exact build identity baked into the image.
+    if not modal.is_local():
+        return os.environ["COMFYUI_DEPLOYMENT_VERSION"]
+    digest = hashlib.sha256()
+    config = {"workflow": WORKFLOW, "app": APP_NAME, "volume": OUTPUT_VOLUME_NAME,
+              "model_volume": os.getenv("MODEL_VOLUME_NAME", "model-store"),
+              "gpu": GPU_TYPE, "regions": MODAL_REGIONS, "comfy_ver": COMFY_VER,
+              "policy": vars(POLICY), "delivery": DELIVERY_MODE}
+    digest.update(json.dumps(config, sort_keys=True).encode("utf-8"))
+    paths = [root_dir / name for name in ("comfyui.py", "runtime_policy.py",
+             "storage/delivery.py", "storage/output_formats.py", "storage/hf_sync.py",
+             "requirements_comfy.txt", "snapshot_warmup.py", "delivery_probe.py",
+             "wheel_build.py", "testing/qwen21_patch_memfd.py")]
+    paths.extend(WORKFLOW_DIR.rglob("*.json"))
+    paths.extend((root_dir / "vendor_nodes").rglob("*.py"))
+    if POLICY.warmup == "h3-int8":
+        paths.extend([root_dir / "testing/snapshot_h3_int8_warmup_api.json", root_dir / "inputs/001.png"])
+    if WORKFLOW in {"010-minimax-h3-b200plus-suite", "010-minimax-h3-bf16-b200plus-suite", "001-minimax-h3-fl2va-bf16"}:
+        paths.extend(root_dir / "inputs" / name for name in ("ref_popart_woman.png", "lastP_spin_jump_hole.png"))
+    for path in sorted(paths, key=lambda x: x.relative_to(root_dir).as_posix()):
+        content = path.read_bytes()
+        if path.suffix in {".py", ".json", ".txt"}:
+            content = content.replace(b"\r\n", b"\n")
+        digest.update(path.relative_to(root_dir).as_posix().encode() + b"\0")
+        digest.update(hashlib.sha256(content).digest())
+    return digest.hexdigest()
+
+
+DEPLOYMENT_VERSION = _deployment_version()
+# Preserve existing public routes, but isolate explicitly named test Apps.
+WEB_LABEL_PREFIX = (f"{APP_NAME[:36]}-{hashlib.sha256(APP_NAME.encode()).hexdigest()[:8]}"
+                    if APP_NAME != f"modal-{WORKFLOW}" else "comfyui")
 
 # ============================================================================
 # 2. 运行时模型链接：下载统一由 download-models.py 并行分片完成；GPU 端仅读缓存。
@@ -402,7 +444,7 @@ if WORKFLOW in {"comfyui-qwen-image-2-1", "comfyui-b300-image-video-suite"}:
 #    wait_for_port 用于后续 ComfyUI 启动时检查 HTTP 服务是否就绪。
 # ============================================================================
 # Generated files stay in a persistent staging Volume until HF archive succeeds.
-output_volume = modal.Volume.from_name("modal-comfyui-models-output", create_if_missing=True, version=2)
+output_volume = modal.Volume.from_name(OUTPUT_VOLUME_NAME, create_if_missing=True, version=2)
 preview_mount = modal.CloudBucketMount(
     bucket_name="modal-studio-assets",
     bucket_endpoint_url=os.getenv(
@@ -422,9 +464,12 @@ image = image.uv_pip_install("boto3", "imageio-ffmpeg").add_local_file(
        "COMFYUI_RUNTIME_PROFILE": POLICY.profile,
        "COMFYUI_SNAPSHOT_MODE": POLICY.snapshot,
        "COMFYUI_SCALEDOWN_SECONDS": str(POLICY.scaledown_window),
-       "COMFYUI_WARMUP_MODE": POLICY.warmup})
+       "COMFYUI_WARMUP_MODE": POLICY.warmup,
+       "COMFYUI_APP_NAME": APP_NAME, "COMFYUI_OUTPUT_VOLUME_NAME": OUTPUT_VOLUME_NAME,
+       "COMFYUI_DELIVERY_MODE": DELIVERY_MODE,
+       "COMFYUI_DEPLOYMENT_VERSION": DEPLOYMENT_VERSION})
 # runtime_policy is imported when Modal deserializes this source module.
-image = image.add_local_python_source("runtime_policy")
+image = image.add_local_python_source("runtime_policy", "storage.delivery", "storage.output_formats")
 
 # Runtime configuration is mounted after builds; editing models.json cannot
 # invalidate the plugin installation image layers.
@@ -446,7 +491,21 @@ for workflow_json in sorted(WORKFLOW_DIR.rglob("*.json")):
 # ============================================================================
 # 7. 声明 Modal App：为每个 Workflow 分配独立应用、GPU、Volume 和 Secret
 # ============================================================================
-app = modal.App(name=f"modal-{WORKFLOW}", image=image)
+app = modal.App(name=APP_NAME, image=image)
+
+# CPU probe is registered by the local deploy process. Importing the GPU
+# class remotely must not require the CPU probe's separate source mount.
+if DELIVERY_MODE == "cpu" and modal.is_local():
+    from delivery_probe import deployment_info
+    probe_image = (modal.Image.debian_slim(python_version="3.11")
+        .env({"COMFYUI_DEPLOYMENT_VERSION": DEPLOYMENT_VERSION, "COMFYUI_APP_NAME": APP_NAME,
+              "WORKFLOW": WORKFLOW, "COMFYUI_OUTPUT_VOLUME_NAME": OUTPUT_VOLUME_NAME,
+              "COMFYUI_INSTANCE_COUNT": str(len(COMFY_PORTS))})
+        .add_local_python_source("delivery_probe"))
+    app.function(image=probe_image, cpu=0.25, memory=256, timeout=15,
+                 min_containers=0, max_containers=1, scaledown_window=5,
+                 name="delivery_info_" + DEPLOYMENT_VERSION[:32])(deployment_info)
+
 
 
 @app.local_entrypoint()
@@ -471,9 +530,9 @@ def download_models():
     volumes={
         "/data": vol.with_mount_options(sub_path="/comfyui"),
         "/outputs": output_volume,
-        "/r2-previews": preview_mount,
+        **({"/r2-previews": preview_mount} if DELIVERY_MODE == "legacy" else {}),
     },
-    secrets=[modal.Secret.from_name("huggingface-s3")],
+    secrets=[modal.Secret.from_name("huggingface-s3")] if DELIVERY_MODE == "legacy" else [],
     min_containers=0,
     scaledown_window=POLICY.scaledown_window,
     enable_memory_snapshot=POLICY.gpu_snapshot,
@@ -577,7 +636,8 @@ class ComfyUI:
                           if previous.get(p) == version}
                 if stable != committed and stable:
                     started = time.monotonic()
-                    output_volume.commit()
+                    with self.commit_lock:
+                        output_volume.commit()
                     committed = stable
                     log_event("output_commit", files=len(stable), seconds=time.monotonic()-started)
                 previous = current
@@ -592,13 +652,15 @@ class ComfyUI:
             self._start_engine()
         for port, proc in zip(COMFY_PORTS, self.procs):
             wait_for_server(port, proc, timeout=30)
-        self.sync_proc = subprocess.Popen(
-            ["python", "-u", "/root/hf_sync.py"],
-            env={**os.environ, "WORKFLOW": WORKFLOW, "COMFY_OUTPUT_ROOT": f"/outputs/{WORKFLOW}"},
-            start_new_session=True,
-        )
+        if DELIVERY_MODE == "legacy":
+            self.sync_proc = subprocess.Popen(
+                ["python", "-u", "/root/hf_sync.py"],
+                env={**os.environ, "WORKFLOW": WORKFLOW, "COMFY_OUTPUT_ROOT": f"/outputs/{WORKFLOW}"},
+                start_new_session=True,
+            )
         # Start only after snapshot restore: background threads must not enter snapshots.
         import threading
+        self.commit_lock = threading.Lock()
         self.commit_stop = threading.Event()
         self.commit_thread = threading.Thread(target=self._commit_outputs_loop, daemon=True)
         self.commit_thread.start()
@@ -606,14 +668,50 @@ class ComfyUI:
                   capture_id=getattr(self, "snapshot_capture_id", None),
                   engine_seconds=self.engine_initialization_seconds,
                   post_hook_seconds=time.monotonic()-started,
-                  region=os.getenv("MODAL_REGION"), provider=os.getenv("MODAL_CLOUD_PROVIDER"))
+                  region=os.getenv("MODAL_REGION"), provider=os.getenv("MODAL_CLOUD_PROVIDER"),
+                  deployment_version=DEPLOYMENT_VERSION, delivery=DELIVERY_MODE)
+
+    if DELIVERY_MODE == "cpu":
+        @modal.method()
+        def publish_outputs(self, prompt_id: str, instance: int = 1, expected_version: str | None = None):
+            """Authenticated publication of a successful native ComfyUI prompt."""
+            import urllib.request
+            from storage.delivery import instance_number
+            token(prompt_id, "prompt ID")
+            instance_number(instance)
+            if instance > len(COMFY_PORTS):
+                raise ValueError("Invalid ComfyUI instance")
+            if expected_version is not None and expected_version != DEPLOYMENT_VERSION:
+                raise RuntimeError("Deployment version changed")
+            config = {"app": APP_NAME, "workflow": WORKFLOW, "instance": instance,
+                      "volume": OUTPUT_VOLUME_NAME, "version": DEPLOYMENT_VERSION}
+            root = Path("/outputs")
+            started = time.monotonic()
+            with self.commit_lock:
+                ready = root / receipt_key(WORKFLOW, instance, prompt_id)
+                if ready.is_file():
+                    receipt = validate_receipt(json.loads(ready.read_text(encoding="utf-8")),
+                                               config, prompt_id)
+                else:
+                    url = f"http://127.0.0.1:{COMFY_PORTS[instance-1]}/history/{prompt_id}"
+                    with urllib.request.urlopen(url, timeout=10) as response:
+                        history = json.load(response)
+                    if prompt_id not in history:
+                        raise FileNotFoundError("Prompt history not available; do not resubmit automatically")
+                    receipt = build_receipt(root, config, prompt_id, history[prompt_id],
+                                            dual=DUAL_COMFYUI, version=DEPLOYMENT_VERSION)
+                receipt = publish_receipt(root, output_volume, receipt)
+            log_event("delivery_ready", prompt_id=prompt_id, files=len(receipt["files"]),
+                      seconds=time.monotonic()-started)
+            return receipt
     
-    @modal.web_server(8000, startup_timeout=1800 if WORKFLOW == "010-minimax-h3-b200plus-suite" else 300, label="comfyui-h3-int8" if WORKFLOW == "010-minimax-h3-b200plus-suite" else "comfyui-1")
+    @modal.web_server(8000, startup_timeout=1800 if WORKFLOW == "010-minimax-h3-b200plus-suite" else 300, label=("comfyui-h3-int8" if APP_NAME == f"modal-{WORKFLOW}" and WORKFLOW == "010-minimax-h3-b200plus-suite"
+                       else WEB_LABEL_PREFIX + "-1"))
     def ui(self):
         print("App Ready!")
 
     if DUAL_COMFYUI:
-        @modal.web_server(8001, startup_timeout=300, label="comfyui-2")
+        @modal.web_server(8001, startup_timeout=300, label=WEB_LABEL_PREFIX + "-2")
         def ui_second(self):
             print("ComfyUI instance 2 ready!")
 

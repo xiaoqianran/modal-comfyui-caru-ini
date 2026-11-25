@@ -19,3 +19,7 @@
 **Important:** If HF upload is failing, leave the Modal account/Volume intact until the HF asset appears in the archive. The GPU container shrinking cannot be treated as proof of archival success. Historical R2 files are retained and visible but are not bulk-migrated to HF by this change.
 
 This change affects new deployments; the local regression tests do not substitute for a live Modal Volume/HF/R2 verification.
+
+## 独立 CPU 交付（可选）
+
+旧模式仍按元数据稳定扫描；HF gateway 不持久化自定义 SHA metadata，旧模式验证大小。新 CPU 模式消费已提交的 prompt receipt、在上传前按源 SHA-256 验证，独立持久化归档及预览状态；详见 [CPU 交付协议](../docs/cpu-delivery.md)。
