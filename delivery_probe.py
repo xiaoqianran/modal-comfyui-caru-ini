@@ -7,4 +7,4 @@ def deployment_info():
             "volume": os.environ["COMFYUI_OUTPUT_VOLUME_NAME"],
             "version": os.environ["COMFYUI_DEPLOYMENT_VERSION"],
             "instance_count": int(os.environ["COMFYUI_INSTANCE_COUNT"]),
-            "delivery": "cpu"}
+            "delivery": "cpu", "execution_schema": 1}

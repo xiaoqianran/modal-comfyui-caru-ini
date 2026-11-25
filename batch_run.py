@@ -266,6 +266,7 @@ def _job_intent_hash(job, jobs, task_dir, root):
             for chunk in iter(lambda: f.read(1024 * 1024), b""):
                 sha.update(chunk)
         local_inputs[field] = sha.hexdigest()
+    job["local_input_hashes"] = local_inputs
     payload = {
         "version": 1, "endpoint": job["base"], "graph": job["graph"],
         "settings": job["settings"], "item": job["entry"],
@@ -276,12 +277,17 @@ def _job_intent_hash(job, jobs, task_dir, root):
         payload["output_nodes"] = job["output_nodes"]
     if job.get("delivery") is not None:
         payload["delivery"] = job["delivery"]
+    if job.get("execution") == "durable":
+        payload["durable_scope"] = job["durable_scope"]
     raw = json.dumps(payload, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 
 def _submit_job(key, job, completed, task_path, root, upload_caches):
     sid, jid = key
+    if job.get("execution") == "durable" and job.get("resume_manifest"):
+        _dispatch_durable(key, job)
+        return
     resolved = {k: _input_value(v, job["entry"], completed)
                 for k, v in job["settings"].items()}
     for field, value in resolved.items():
@@ -293,6 +299,14 @@ def _submit_job(key, job, completed, task_path, root, upload_caches):
             if not file.is_file():
                 raise FileNotFoundError(f"{sid}/{jid} input {field}: {file}")
             resolved[field] = "@" + str(file.resolve())
+    if job.get("execution") == "durable":
+        from storage.execution_client import DurableClient
+        client = DurableClient(job["delivery"], job["base"])
+        manifest = client.stage(job["durable_job_id"], job["intent_hash"], job["graph"],
+                               resolved, job.get("output_nodes"), job.get("local_input_hashes"))
+        _save_json(job["folder"] / "workflow.json", manifest["graph"])
+        _dispatch_durable(key, job, client)
+        return
     prompt = build_prompt(job["graph"], resolved, job["base"],
                           upload_caches.setdefault(job["base"], {}))
     job["folder"].mkdir(parents=True, exist_ok=True)
@@ -318,9 +332,54 @@ def _submit_job(key, job, completed, task_path, root, upload_caches):
                                     "submit_seconds": time.monotonic() - started})
     print(f"{sid}/{jid}: submitted {pid}", flush=True)
 
+def _durable_status(job, status, **fields):
+    state = {"status": status, "endpoint": job["endpoint"], "intent_hash": job["intent_hash"],
+             "durable_job_id": job["durable_job_id"], **fields}
+    if job.get("durable_call_id"):
+        state["durable_call_id"] = job["durable_call_id"]
+    _save_json(job["status_file"], state)
+
+
+def _apply_durable_result(key, job, result):
+    if result["status"] == "completed":
+        job["prompt_id"] = result["prompt_id"]
+        job["remote_files"] = result["remote_files"]
+        job["state"] = "collecting"
+        _durable_status(job, "collecting", prompt_id=job["prompt_id"],
+                        remote_files=job["remote_files"], delivery_receipt=result["receipt"])
+        return result["remote_files"]
+    previous_call = job.pop("durable_call_id", None)
+    _durable_status(job, result["status"], error=result.get("error", "Execution not complete"),
+                    previous_call_id=previous_call or result.get("previous_call_id"))
+    raise RuntimeError(f"{key[0]}/{key[1]} durable job {job['durable_job_id']}: "
+                       f"{result['status']}; {result.get('error', '')}. "
+                       "Inspect or resume the same job; use a new task name only for an intentional new attempt.")
+
+
+def _dispatch_durable(key, job, client=None):
+    from storage.execution_client import DurableClient
+    client = client or DurableClient(job["delivery"], job["base"])
+    # Persist the ID before the spawn RPC, whose reply may be lost.
+    _durable_status(job, "prepared")
+    started = time.monotonic()
+    result = client.start(job["durable_job_id"])
+    if result["status"] == "dispatched":
+        job["durable_call_id"] = result["call_id"]
+        job["state"] = "submitted"
+        _durable_status(job, "submitted", submit_seconds=time.monotonic()-started)
+        print(f"{key[0]}/{key[1]}: durable job {job['durable_job_id']} dispatched {result['call_id']}", flush=True)
+    else:
+        _apply_durable_result(key, job, result)
+
+
 def _read_outputs(key, job):
     """Poll a prompt without performing any output transfer."""
     sid, jid = key
+    if job.get("execution") == "durable":
+        from storage.execution_client import DurableClient
+        client = DurableClient(job["delivery"], job["base"])
+        result = client.poll(job["durable_job_id"], job["durable_call_id"])
+        return None if result is None else _apply_durable_result(key, job, result)
     try:
         history = get_json(job["base"], f"/history/{job['prompt_id']}")
     except RequestFailed as exc:
@@ -395,7 +454,7 @@ def _collect_job(key, job, files):
     state = {"status": "collecting", "endpoint": job["endpoint"],
              "intent_hash": job["intent_hash"], "prompt_id": job["prompt_id"],
              "remote_files": files, "artifacts": dict(previous)}
-    for field in ("client_id", "submit_seconds"):
+    for field in ("client_id", "submit_seconds", "durable_job_id", "durable_call_id"):
         if field in saved:
             state[field] = saved[field]
     _save_json(path, state)
@@ -406,11 +465,25 @@ def _collect_job(key, job, files):
         from storage.delivery_client import DeliveryClient
         delivery_client = DeliveryClient(job["delivery"], job["base"])
         _remaining(1)
-        receipt = delivery_client.receipt(job["prompt_id"])
+        if job.get("execution") == "durable":
+            from storage.execution_client import DurableClient
+            durable = DurableClient(job["delivery"], job["base"])
+            result = durable.status(job["durable_job_id"])
+            if (result["status"] != "completed" or result["prompt_id"] != job["prompt_id"]
+                    or result["remote_files"] != files):
+                raise RuntimeError("Durable result not ready or output references changed")
+            receipt = result["receipt"]
+        else:
+            receipt = delivery_client.receipt(job["prompt_id"])
         state["delivery_receipt"] = receipt
         _save_json(path, state)
     for target, item in _artifact_targets(job, files):
         evidence = previous.get(target.name)
+        if receipt is not None:
+            from storage.delivery import receipt_file
+            expected = receipt_file(receipt, item)
+            if evidence != {k: expected[k] for k in ("bytes", "sha256")}:
+                evidence = None
         if not _valid_artifact(target, evidence):
             if delivery_client is not None:
                 evidence = delivery_client.download(receipt, item, target, lambda: _remaining(1))
@@ -441,7 +514,7 @@ def _check_job(key, job, completed):
     return True
 
 
-def _build_jobs(steps, endpoints, root, out, task_dir):
+def _build_jobs(steps, endpoints, root, out, task_dir, run_name=None):
     """Expand task steps and validate all graphs/dependencies before execution."""
     jobs = {}
     step_ids = set()
@@ -462,6 +535,9 @@ def _build_jobs(steps, endpoints, root, out, task_dir):
         delivery = normalized_config(step["delivery"]) if "delivery" in step else None
         if delivery is not None and "version" not in delivery:
             raise ValueError("Task delivery requires an explicit deployment version")
+        execution = step.get("execution", "native")
+        if execution not in ("native", "durable") or (execution == "durable" and delivery is None):
+            raise ValueError("execution must be native or durable; durable requires delivery")
         entries = step.get("foreach", [{"name": "main"}])
         if not isinstance(entries, list) or not entries:
             raise ValueError(f"Empty foreach: {sid}")
@@ -494,12 +570,16 @@ def _build_jobs(steps, endpoints, root, out, task_dir):
             jobs[key] = dict(entry=entry, settings=settings, deps=deps, base=base,
                              output_nodes=sorted({str(n) for n in step["output_nodes"]}) if step.get("output_nodes") is not None else None,
                              endpoint=endpoint_name, graph=graph, folder=folder,
-                             delivery=delivery,
+                             delivery=delivery, execution=execution,
+                             durable_scope=[run_name or out.name, sid, jid],
                              status_file=folder / "status.json", state="pending")
         step_ids.add(sid)
 
     for job in jobs.values():
         job["intent_hash"] = _job_intent_hash(job, jobs, task_dir, root)
+        if job["execution"] == "durable":
+            from storage.execution import job_id
+            job["durable_job_id"] = job_id(job["durable_scope"], job["intent_hash"])
 
     return jobs, step_ids
 
@@ -522,7 +602,8 @@ def _run_task_unlocked(task_path, endpoints_path="endpoints.json", output=None,
     if timeout < 0:
         raise ValueError("Batch timeout must be >= 0 (0 disables timeout)")
 
-    jobs, step_ids = _build_jobs(steps, endpoints, root, out, task_path.parent)
+    jobs, step_ids = _build_jobs(steps, endpoints, root, out, task_path.parent,
+                                 run_name=_safe_name(task["name"]))
 
     # Validate *every* persisted job before submitting anything or adopting legacy state.
     statuses = {}
@@ -561,6 +642,22 @@ def _run_task_unlocked(task_path, endpoints_path="endpoints.json", output=None,
             job["state"] = "completed"
             quality = "SHA-256 verified" if artifacts is not None else "legacy size-only"
             print(f"{key[0]}/{key[1]}: resumed complete ({quality})", flush=True)
+        elif job.get("execution") == "durable" and status:
+            if status.get("durable_job_id") != job["durable_job_id"]:
+                raise RuntimeError(f"{key}: saved durable job identity mismatch")
+            if status.get("status") == "failed":
+                raise RuntimeError(f"{key}: durable execution failed; use an explicit new task name to retry")
+            if status.get("prompt_id") and status.get("remote_files"):
+                job["prompt_id"] = status["prompt_id"]
+                job["remote_files"] = status["remote_files"]
+                job["state"] = "collecting"
+            elif status.get("durable_call_id"):
+                job["durable_call_id"] = status["durable_call_id"]
+                job["state"] = "submitted"
+            else:
+                job["resume_manifest"] = True
+                job["state"] = "pending"
+            print(f"{key[0]}/{key[1]}: recovering durable job {job['durable_job_id']}", flush=True)
         elif status.get("prompt_id"):
             job["prompt_id"] = status["prompt_id"]
             job["remote_files"] = status.get("remote_files")
@@ -571,7 +668,8 @@ def _run_task_unlocked(task_path, endpoints_path="endpoints.json", output=None,
     # Validate every new delivery endpoint before starting any new GPU work.
     verified_delivery = set()
     for job in jobs.values():
-        if job["state"] == "pending" and job.get("delivery") is not None:
+        if (job["state"] == "pending" and job.get("delivery") is not None
+                and job.get("execution") != "durable"):
             from storage.delivery_client import DeliveryClient
             identity = (job["base"], json.dumps(job["delivery"], sort_keys=True))
             if identity not in verified_delivery:

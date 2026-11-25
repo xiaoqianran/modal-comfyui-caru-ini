@@ -1,0 +1,85 @@
+"""SDK client for durable jobs; no public prompt/upload request is sent."""
+from __future__ import annotations
+
+from storage.delivery_client import DeliveryClient
+from storage.execution import (
+    finalize_produced, inspect_execution, job_id, load_request, put_once, request_key, stage_request, validate_request,
+)
+
+
+class DurableClient(DeliveryClient):
+    def preflight(self):
+        info = super().preflight()
+        if info.get("execution_schema") != 1:
+            raise RuntimeError("Deployment does not support durable execution v1")
+        return info
+
+    def stage(self, identifier, intent, graph, settings, output_nodes=None,
+              expected_inputs=None):
+        return stage_request(self.volume, self.config, identifier, intent, graph,
+                             settings, output_nodes, expected_inputs=expected_inputs)
+
+    def status(self, identifier):
+        request = load_request(self.volume, self.config, identifier)
+        state = inspect_execution(self.volume, request)
+        if state["status"] == "produced":
+            return finalize_produced(self.volume, request, state)
+        return state
+
+    def prepare_retry(self, identifier, attempt, allow_unknown=False):
+        """Explicitly create a new attempt from persisted inputs, without dispatch."""
+        from storage.delivery import token
+        token(attempt, "retry attempt")
+        original = load_request(self.volume, self.config, identifier)
+        state = self.status(identifier)
+        if state["status"] not in ("failed", "admitted", "submitted"):
+            raise RuntimeError("Only failed or unresolved admitted jobs may be retried")
+        if state["status"] != "failed" and not allow_unknown:
+            raise RuntimeError("Prior execution may still finish; explicit duplicate-risk acknowledgement required")
+        replacement = job_id(["retry", identifier, attempt], original["intent"])
+        request = {**original, "job_id": replacement}
+        validate_request(request, self.config, replacement)
+        put_once(self.volume, request_key(self.config, replacement), request)
+        return {"status": "prepared", "job_id": replacement, "previous_job_id": identifier}
+
+    def start(self, identifier):
+        """Reattach or dispatch. Repeated dispatches are protected by cloud claim."""
+        state = self.status(identifier)
+        if state["status"] in ("completed", "failed"):
+            return state
+        self.preflight()
+        call = self._model().execute_durable.spawn(
+            identifier, self.config["instance"], self.config["version"])
+        return {"status": "dispatched", "call_id": call.object_id,
+                "job_id": identifier}
+
+    def poll(self, identifier, call_id):
+        """Read a Modal call result; never create another execution implicitly."""
+        from modal.exception import TimeoutError as ModalTimeoutError
+        error = None
+        try:
+            result = self.modal.FunctionCall.from_id(call_id).get(timeout=0)
+        except (TimeoutError, ModalTimeoutError) as exc:
+            # SDK 1.6.4 poll_function raises builtins.TimeoutError while pending.
+            # FunctionTimeoutError / OutputExpiredError are terminal subclasses.
+            if type(exc) in (TimeoutError, ModalTimeoutError):
+                return None
+            result = None
+            error = f"{type(exc).__name__}: {exc}"
+        except Exception as exc:
+            # A call can fail after durable output publication. Check evidence
+            # before reporting an uncertain attempt to the operator.
+            result = None
+            error = f"{type(exc).__name__}: {exc}"
+        if result is not None and (not isinstance(result, dict) or
+                                   result.get("job_id") != identifier):
+            raise RuntimeError("Durable call result identity mismatch")
+        # Success or failure is accepted from authoritative Volume records.
+        state = self.status(identifier)
+        if state["status"] in ("completed", "failed"):
+            return state
+        if result is not None and result.get("status") in ("interrupted", "uncertain"):
+            return result
+        return {**state, "status": "uncertain", "previous_call_id": call_id,
+                "error": ("Modal call result unavailable; reconcile the same job. "
+                          + (error or "No durable terminal evidence"))}

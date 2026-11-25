@@ -88,3 +88,7 @@ PC2 / Modal profile zhangchenzer。临时 CPU fixture workflow comfyui-delivery-
 回归：58 项 unittest、29 项模型缓存测试及 testing.test_batch_run_pipeline 全部通过。
 
 独立 CPU 对该真实 MP4 的归档实测：20.859s，processed=1/completed=1/failed=0；再次执行 processed=0。HF 全量 GET 读回 1,888,239 bytes，SHA-256 与原件一致；R2 视频 PNG 封面读回 828,981 bytes，SHA-256 11081ac3fdbcf3f792de96c8b1119247f85f2b289fc492f44a39bbb354d532fe。归档前后 GPU 容器数均为0。实验对象已删除，原件、封面及 archive-evidence.jsonl 保留于 PC2 本地证据目录。
+
+## 后续持久化执行模式
+
+对于需要持久化输入、脱离 Runner 执行以及跨容器任务恢复的批量任务，另见 [持久化执行协议](durable-execution.md)。此前文中对原生 CPU 交付模式的限制仍适用于未开启 execution=durable 的任务。

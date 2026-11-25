@@ -22,6 +22,10 @@ Task Runner 的 `output_nodes` 为可选非空节点 ID 列表，用于筛选下
 
 > 本项目是社区 Fork，并非原作者的官方发布。部分工作流依赖第三方自定义节点和云端凭据；部署前请自行核对依赖与权限。
 
+## 持久化输入与任务恢复（可选）
+
+在 CPU 交付模式的 Task step 增加 execution="durable"：内容寻址输入、完整 graph 和不可覆盖的任务凭证保存在 Volume V2，GPU SDK method 独立持有执行生命周期；支持按 job ID 恢复、下载以及明确创建新尝试。未知执行结果不自动重放。详见 [持久化执行协议与恢复命令](docs/durable-execution.md)。
+
 ## CPU 独立产物交付（可选）
 
 面向批量 Task Runner：GPU 只生成并发布带 SHA-256 的持久化 receipt，客户端直接从 Modal Volume 下载；独立 CPU 服务归档 HF、发布 R2 预览、持久化失败恢复。通过 COMFYUI_DELIVERY_MODE=cpu 与 Task step.delivery 显式启用，保留 legacy 交互式模式默认值。详见 [CPU 交付协议、部署及实测](docs/cpu-delivery.md)。

@@ -100,7 +100,7 @@ def _deployment_version():
               "policy": vars(POLICY), "delivery": DELIVERY_MODE}
     digest.update(json.dumps(config, sort_keys=True).encode("utf-8"))
     paths = [root_dir / name for name in ("comfyui.py", "runtime_policy.py",
-             "storage/delivery.py", "storage/output_formats.py", "storage/hf_sync.py",
+             "storage/delivery.py", "storage/execution.py", "storage/output_formats.py", "storage/hf_sync.py",
              "requirements_comfy.txt", "snapshot_warmup.py", "delivery_probe.py",
              "wheel_build.py", "testing/qwen21_patch_memfd.py")]
     paths.extend(WORKFLOW_DIR.rglob("*.json"))
@@ -469,7 +469,7 @@ image = image.uv_pip_install("boto3", "imageio-ffmpeg").add_local_file(
        "COMFYUI_DELIVERY_MODE": DELIVERY_MODE,
        "COMFYUI_DEPLOYMENT_VERSION": DEPLOYMENT_VERSION})
 # runtime_policy is imported when Modal deserializes this source module.
-image = image.add_local_python_source("runtime_policy", "storage.delivery", "storage.output_formats")
+image = image.add_local_python_source("runtime_policy", "storage.delivery", "storage.execution", "storage.output_formats")
 
 # Runtime configuration is mounted after builds; editing models.json cannot
 # invalidate the plugin installation image layers.
@@ -523,6 +523,8 @@ def download_models():
 
 @app.cls(
     serialized=False,
+    timeout=14400 if DELIVERY_MODE == "cpu" else 300,
+    retries=0,
     max_containers=1,  # Hard cap: never start a second B300 container for this app.
     startup_timeout=1800 if WORKFLOW == "010-minimax-h3-b200plus-suite" else 300,
     gpu=GPU_TYPE,
@@ -576,6 +578,8 @@ class ComfyUI:
             args = ["comfy", "launch", "--", "--listen", "0.0.0.0",
                     "--port", str(port), "--output-directory", output_dir,
                     "--temp-directory", temp_dir, "--user-directory", user_dir]
+            if DELIVERY_MODE == "cpu":
+                args.extend(["--input-directory", "/root/comfy/ComfyUI/input"])
             if HIGH_VRAM:
                 args.append("--highvram")
             self.procs.append(subprocess.Popen(args, start_new_session=True))
@@ -661,6 +665,9 @@ class ComfyUI:
         # Start only after snapshot restore: background threads must not enter snapshots.
         import threading
         self.commit_lock = threading.Lock()
+        # A fresh process/restore epoch must never be captured in a snapshot.
+        self.execution_epoch = uuid4().hex
+        self.execution_locks = [threading.Lock() for _ in COMFY_PORTS]
         self.commit_stop = threading.Event()
         self.commit_thread = threading.Thread(target=self._commit_outputs_loop, daemon=True)
         self.commit_thread.start()
@@ -672,6 +679,26 @@ class ComfyUI:
                   deployment_version=DEPLOYMENT_VERSION, delivery=DELIVERY_MODE)
 
     if DELIVERY_MODE == "cpu":
+        @modal.method()
+        def execute_durable(self, job_id: str, instance: int, expected_version: str):
+            """Keep the GPU invocation active until native execution is published."""
+            from storage.delivery import instance_number
+            from storage.execution import NativeEngine, execute, load_request
+            instance_number(instance)
+            if instance > len(COMFY_PORTS) or expected_version != DEPLOYMENT_VERSION:
+                raise RuntimeError("Durable execution instance or version mismatch")
+            config = {"app": APP_NAME, "workflow": WORKFLOW, "instance": instance,
+                      "volume": OUTPUT_VOLUME_NAME, "version": DEPLOYMENT_VERSION}
+            request = load_request(output_volume, config, job_id)
+            started = time.monotonic()
+            with self.execution_locks[instance - 1]:
+                result = execute(output_volume, request, NativeEngine(COMFY_PORTS[instance-1]),
+                                 self.execution_epoch, Path("/root/comfy/ComfyUI/input"),
+                                 Path("/outputs"), self.commit_lock, dual=DUAL_COMFYUI)
+            log_event("durable_execution", job_id=job_id, status=result["status"],
+                      epoch=self.execution_epoch, seconds=time.monotonic()-started)
+            return result
+
         @modal.method()
         def publish_outputs(self, prompt_id: str, instance: int = 1, expected_version: str | None = None):
             """Authenticated publication of a successful native ComfyUI prompt."""
