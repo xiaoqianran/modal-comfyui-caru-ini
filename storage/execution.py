@@ -19,9 +19,19 @@ from storage.delivery import (
     HEX, MAX_RECEIPT_BYTES, build_receipt, file_digest, normalized_config,
     output_ref, receipt_key, relative_path, token, validate_receipt, verified_copy, volume_receipt,
 )
-from storage.output_formats import CATEGORIES
+from storage.output_formats import AUDIO, CATEGORIES, VIDEOS
 
-INPUT_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".bmp"}
+IMAGE_INPUT_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".bmp"}
+MEDIA_INPUT_EXTENSIONS = VIDEOS | AUDIO
+INPUT_EXTENSIONS = IMAGE_INPUT_EXTENSIONS | MEDIA_INPUT_EXTENSIONS
+# The core loaders resolve relative paths against ComfyUI's native input root.
+# Do not assume custom loaders accept the same contract.
+_MEDIA_FIELDS = {
+    ("LoadImage", "image"): IMAGE_INPUT_EXTENSIONS,
+    ("LoadImageMask", "image"): IMAGE_INPUT_EXTENSIONS,
+    ("LoadVideo", "file"): VIDEOS,
+    ("LoadAudio", "audio"): AUDIO | VIDEOS,
+}
 PHASES = ("claim", "submitted", "failed", "produced")
 PREFIX = ".execution/v1"
 OUTPUT_NAMESPACE = "_durable_outputs"
@@ -136,12 +146,12 @@ def put_once(volume, key, value):
     return True
 
 
-def stage_input(volume, path):
-    """Snapshot a local image before upload; no partial or mutable input identity."""
+def stage_input(volume, path, expected_sha256=None):
+    """Snapshot local media before upload; no partial or mutable input identity."""
     path = Path(path)
     extension = path.suffix.lower()
     if extension not in INPUT_EXTENSIONS or not path.is_file():
-        raise ValueError(f"Durable input must be an existing supported image: {path}")
+        raise ValueError(f"Durable input must be an existing supported media file: {path}")
     before = path.stat()
     digest, size = hashlib.sha256(), 0
     with tempfile.TemporaryDirectory(prefix="comfy-input-") as folder:
@@ -156,6 +166,8 @@ def stage_input(volume, path):
                 after.st_size, after.st_mtime_ns, after.st_ino):
             raise RuntimeError("Input changed while staging")
         ref = {"sha256": digest.hexdigest(), "bytes": size, "extension": extension}
+        if expected_sha256 is not None and ref["sha256"] != expected_sha256:
+            raise RuntimeError("Input changed after intent hashing or upstream delivery")
         key = input_key(ref)
         try:
             _verify_chunks(volume.read_file(key), ref)
@@ -168,6 +180,17 @@ def stage_input(volume, path):
                     raise
                 _verify_chunks(volume.read_file(key), ref)
         return ref
+
+
+def validate_input_field(graph, field, extension):
+    """Require a verified native path-loading field for video/audio inputs."""
+    node_id, _, name = field.partition(".")
+    node = graph.get(node_id, {})
+    allowed = _MEDIA_FIELDS.get((node.get("class_type"), name))
+    if extension not in INPUT_EXTENSIONS or (
+        extension not in (allowed if allowed is not None else IMAGE_INPUT_EXTENSIONS)
+    ):
+        raise ValueError(f"Unsupported durable input {field} ({node.get('class_type')}): {extension}")
 
 
 def validate_request(request, config, identifier):
@@ -187,6 +210,7 @@ def validate_request(request, config, identifier):
         node, sep, name = field.partition(".")
         if not sep or graph.get(node, {}).get("inputs", {}).get(name) != input_name(ref):
             raise ValueError(f"Input reference does not match graph: {field}")
+        validate_input_field(graph, field, ref["extension"])
     if nodes is not None and (not isinstance(nodes, list) or not nodes or
                               any(not isinstance(n, str) or n not in graph for n in nodes)):
         raise ValueError("Invalid output node selection")
@@ -243,7 +267,7 @@ def _require_scoped_outputs(receipt, identifier):
 
 def stage_request(volume, config, identifier, intent, graph, settings, output_nodes=None,
                   expected_inputs=None):
-    """Persist the entire resolved graph and its content-addressed image inputs."""
+    """Persist the entire resolved graph and its content-addressed media inputs."""
     prompt = json.loads(json.dumps(graph, ensure_ascii=False))
     refs, cache = {}, {}
     for field, value in settings.items():
@@ -252,11 +276,13 @@ def stage_request(volume, config, identifier, intent, graph, settings, output_no
             raise ValueError(f"Unknown graph input: {field}")
         if isinstance(value, str) and value.startswith("@"):
             path = str(Path(value[1:]).resolve())
+            validate_input_field(prompt, field, Path(path).suffix.lower())
+            expected = (expected_inputs or {}).get(field)
             if path not in cache:
-                cache[path] = stage_input(volume, path)
+                cache[path] = stage_input(volume, path, expected_sha256=expected)
             refs[field] = cache[path]
-            if field in (expected_inputs or {}) and refs[field]["sha256"] != expected_inputs[field]:
-                raise RuntimeError(f"Input changed after intent hashing: {field}")
+            if expected is not None and refs[field]["sha256"] != expected:
+                raise RuntimeError(f"Input changed after intent hashing or upstream delivery: {field}")
             value = input_name(refs[field])
         prompt[node]["inputs"][name] = value
     request = {"schema": 1, "config": normalized_config(config), "job_id": identifier,

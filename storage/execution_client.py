@@ -1,9 +1,12 @@
 """SDK client for durable jobs; no public prompt/upload request is sent."""
 from __future__ import annotations
 
+from pathlib import Path
+
 from storage.delivery_client import DeliveryClient
 from storage.execution import (
-    finalize_produced, inspect_execution, job_id, load_request, put_once, request_key, stage_request, validate_request,
+    MEDIA_INPUT_EXTENSIONS, finalize_produced, inspect_execution, job_id, load_request,
+    put_once, request_key, stage_request, validate_request,
 )
 
 
@@ -16,6 +19,13 @@ class DurableClient(DeliveryClient):
 
     def stage(self, identifier, intent, graph, settings, output_nodes=None,
               expected_inputs=None):
+        # Old v1 image-only deployments cannot reconstruct media refs. Check
+        # the CPU identity probe before publishing any new video/audio input.
+        if any(isinstance(value, str) and value.startswith("@") and
+               Path(value[1:]).suffix.lower() in MEDIA_INPUT_EXTENSIONS
+               for value in settings.values()):
+            if self.preflight().get("execution_media_inputs") != 1:
+                raise RuntimeError("Deployment does not support durable video/audio inputs; redeploy first")
         return stage_request(self.volume, self.config, identifier, intent, graph,
                              settings, output_nodes, expected_inputs=expected_inputs)
 

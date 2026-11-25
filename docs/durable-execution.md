@@ -41,7 +41,10 @@ durable 模式不再使用 /upload/image 和客户端直接 /prompt；本地先�
 - intent 继续覆盖 endpoint、graph、参数、输入文件哈希、上游任务身份、delivery 配置；durable_scope 参与哈希。上传前将源文件复制到本地临时文件并计算完整 SHA-256，发现从 intent 计算到上传期间的变化即拒绝。
 - 内容对象位于 .execution/v1/inputs/<sha256>.<ext>，同一 Volume 中同内容及扩展名复用。上传采用 force=False，已存在时必须核对完整 SHA-256 与长度；不覆盖冲突对象。
 - GPU 从 SDK 读取已持久化的输入，在原生 input 目录的 _durable/ 子目录按哈希名称原子落盘；校验通过后才允许提交。
-- 支持现有 Runner 显式 @ 引用的 png/jpg/jpeg/webp/bmp（包括跨步骤产生的图片）。普通 UI 上传、graph 内未通过 @ 传入的历史文件名、插件远程 URL、视频/音频专用上传协议仍需各自的适配，不能声称这些隐式输入都已持久化。
+- 显式 @ 本地文件及跨步骤输出引用使用同一套持久化协议。图片：png/jpg/jpeg/webp/bmp；视频：mp4/webm/mov/mkv；音频：wav/mp3/flac/ogg/m4a/aac/opus。后缀统一小写、输入非空、字节与 SHA-256 校验，不保证所有容器/编码均可被原生解码器读取。
+- 原生视频使用 LoadVideo.file，原生音频使用 LoadAudio.audio（也接受带音轨的视频）。图片保持既有能力，LoadImage.image / LoadImageMask.image 仅接受图片；未验证的自定义路径加载节点暂不支持新的视频/音频格式。新版 CPU probe 额外返回 execution_media_inputs=1，旧部署须重新部署后才能上传新媒体输入；不变更已有图片的 v1 request schema。
+- 例如 set 中 `"1.file": "@inputs/clip.mp4"`、`"2.audio": "@inputs/voice.wav"`，或者 `"1.file": "$video_step.video"`、`"2.audio": "$voice_step.audio"`；也可指定 foreach job，如 $voice_step.main.audio。引用须唯一匹配对应类型；下游上传前以已收集的上游 status.json 中 SHA-256 为期望值，内容变化或缺失证据则拒绝派发。音频输出中的 MP4 作为视频引用选择，不会误判为音频文件。多阶段 Runner 仍先在客户端收集已校验产物，再上传持久输入对象，尚未实现跨任务 Volume 内零拷贝。
+- 普通 UI 上传、graph 内未通过 @ 传入的历史文件名、插件远程 URL 和未适配的自定义节点不在承诺范围。旧 native 模式的 HTTP /upload/image 仍只支持图片；媒体输入使用 durable + CPU delivery。完整任务重启仍须能够计算原始 intent；原始本地文件不存在时，用 recover_job.py 按云端 job UUID 恢复已有尝试。
 
 ## 执行状态
 
@@ -133,3 +136,11 @@ PC2 / Modal profile zhangchenzer。所有测试使用独立 App 和独立 Output
 - 三条 Pika 视频均为512×288、56帧、2.333333秒、双声道，完整解码、SHA-256一致；第一及第三条同输入、同 seed、不同输出 prefix，MP4 哈希不同，但 FFmpeg 解码 RGB SHA-256 4a568cd90bc288367906bfe140be779a6c057ce98c7fe92037e20480742abecc 和 PCM SHA-256 190f70a17b0c1a000f0eca58335e3625a1aa2d922ae88ece86a441d437761e31 分别完全一致。此结论只适用于本次样本，不保证所有模型确定性。
 - 双独立 GPU 池完成两条 LoadImage/SaveImage 初始化任务，随后拥有者执行真正的原生 H3 INT8 res_multistep 20 步视频任务 59bcc48f-cbec-56fc-b1dc-7958f1c8865e，重复调用在另一 epoch 返回 interrupted（0.576s）。客户端转换为 observing；另一个无 call ID 的进程明确禁止 _model/preflight，start 返回 observing。两个观察者分别查询8轮，与实际拥有者同一完成 receipt，GPU method 57.075s，896×512、124帧、5.167秒双声道视频 519400 bytes，SHA-256 97a05c0f065e1b2a4777068448626c115317bd321c73f27eaba2d205331b917c，完整解码成功。全程平台10次 got prompt、10次原生完成 = 4次预热+6次业务；6次 durable completed、1次 interrupted；无额外重放。两条初始化图片任务有完成凭证，本轮未单独下载验证其像素。
 - 91/91 unittest 通过；核心修复提交 c8f051b19d20e6272b793f842f19e0110b66f175。两次独立观察进程均退出0。原始日志、脚本、4份视频、log-summary.json、cleanup-summary.json 保留于 outputs/durable-warmup-lab-1125/。已确认 App stopped、GPU容器0、实验Volume0。公共缓存保留，生产 max_containers=1、默认策略及实际部署均未修改。BF16 预热、长时间压力、实际计费收益、视频/音频输入及任意自定义输出节点未验证。
+
+### 第四轮：视频、音频持久化与跨区域多阶段工作流（2026-11-25）
+
+- 独立 App ap-aUlE0IJZZeYUgibtmc8sdp，独立 Volume V2，部署版本 7218f64006f8544993f62a87e201ef3a2a5a20b47af47db0f46676a7c5e0ba1f，RTX PRO 6000、CPU delivery、Snapshot OFF、warmup OFF。H3 INT8 套件 7/7 模型缓存命中；本轮执行原生媒体处理节点，不加载 H3 主模型进行采样。
+- 100/100 unittest 通过（新增 9 项媒体输入回归）。原生 Runner 的三阶段 Task JSON 真实执行：load（LoadVideo/SaveVideo、LoadAudio/SaveAudio）、mux（LoadVideo/GetVideoComponents/CreateVideo/SaveVideo + LoadAudio）、extract（LoadAudio/SaveAudio，直接读取上游 MP4）。禁用客户端 native HTTP 上传及 POST，使用真实 durable SDK。测试源 MP4 24525 bytes，WAV 96078 bytes，stage 完成后删除源文件；load 后移走两份已下载中间文件（测试结束恢复），明确停止原容器并归零，再派发 mux。
+- load：GCP ap-south，容器 ta-01M897VWG7GJGQ471AVS3Q5ZVR，epoch f5c20f8fe0fd43fb9f1c2c965b7d1d40，原生 0.40s；mux：GCP eu-west，容器 ta-01M89807771X33G584G7MB27XR，epoch 26fbbafa567e44f79d58f48e906d4ee1，原生 0.11s；extract：AWS us-west，容器 ta-01M898283KYK5M0TBJZ4Q32GFR，epoch e9d80f4df2ce4aba9b5c11f88b412e96，原生 0.24s。三个不同 epoch，3 次原生 POST、3 次完成；原生耗时不含调度、传输、校验。
+- 四份输出均通过 FFmpeg 完整解码及 SHA-256/长度核对。load 输出 MP4 解码 RGB、PCM 哈希与原始 MP4 完全一致；输出 FLAC 解码 PCM 与原 WAV 完全一致。mux 视频 96×64、18 帧、12FPS、1.5s，主音频由 440Hz 替换为 880Hz；extract FLAC 1.504s、32kHz、单声道，频谱同为 880Hz。mux MP4 27872 bytes，SHA-256 91f8b2de24de610fafbbd3b6d3b2e4ade27ef314a82dd7f4be65f5d1715c805c；归零后仅凭 job UUID 与 delivery config 重新下载，哈希一致且未启动 GPU。
+- 原始脚本、Task/Graph JSON、运行日志、4份产物及 log-summary.json 保留在 outputs/durable-media-lab-1125/；测试 App stopped、实验容器0、实验 Volume0，公共模型缓存与生产部署不变。本次实测仅覆盖 MP4、WAV、FLAC 和原生媒体节点；其他允许后缀、长视频、大文件压力、自定义节点、真实视频/音频条件生成及零拷贝跨任务传递未验证。

@@ -153,6 +153,141 @@ class ExecutionTests(unittest.TestCase):
         self.assertEqual(self.vol.objects[a], b"result")
         self.assertEqual(self.vol.objects[b], b"result")
 
+    def test_video_audio_inputs_restore_exact_bytes_and_deduplicate(self):
+        video=self.root/"clip.MP4"; video.write_bytes(b"video-bytes")
+        audio=self.root/"voice.WAV"; audio.write_bytes(b"audio-bytes")
+        graph={
+            "1":{"class_type":"LoadVideo","inputs":{"file":"placeholder.mp4"}},
+            "2":{"class_type":"LoadAudio","inputs":{"audio":"placeholder.wav"}},
+            "3":{"class_type":"LoadAudio","inputs":{"audio":"placeholder.mp4"}},
+            "4":{"class_type":"SaveVideo","inputs":{"video":["1",0],"filename_prefix":"video/test"}}
+        }
+        ident=e.job_id(["media"],self.intent)
+        req=e.stage_request(self.vol,self.cfg,ident,self.intent,graph,
+                            {"1.file":"@"+str(video),"2.audio":"@"+str(audio),
+                             "3.audio":"@"+str(video)},["4"])
+        self.assertEqual(req["inputs"]["1.file"],req["inputs"]["3.audio"])
+        self.assertEqual(req["inputs"]["1.file"]["extension"],".mp4")
+        self.assertEqual(req["inputs"]["2.audio"]["extension"],".wav")
+        self.assertEqual(req["graph"]["1"]["inputs"]["file"],e.input_name(req["inputs"]["1.file"]))
+        self.assertEqual(len({e.input_key(v) for v in req["inputs"].values()}),2)
+        video.unlink();audio.unlink()
+        for epoch in ("media-a","media-b"):
+            root=self.root/epoch
+            e.materialize_inputs(self.vol,e.load_request(self.vol,self.cfg,ident),root)
+            for field,expected in (("1.file",b"video-bytes"),("2.audio",b"audio-bytes"),
+                                   ("3.audio",b"video-bytes")):
+                self.assertEqual((root/e.input_name(req["inputs"][field])).read_bytes(),expected)
+
+    def test_media_format_mismatch_and_unverified_loader_are_rejected(self):
+        for cls,field,ext in (("LoadVideo","file",".wav"),("LoadAudio","audio",".png"),
+                              ("LoadImage","image",".mp4"),("CustomLoader","path",".mp4"),
+                              ("LoadVideo","file",".exe")):
+            source=self.root/("fixture"+ext);source.write_bytes(b"test")
+            graph={"1":{"class_type":cls,"inputs":{field:"placeholder"}},
+                   "2":{"class_type":"SaveImage","inputs":{"images":["1",0],"filename_prefix":"test"}}}
+            ident=e.job_id([cls,ext],self.intent)
+            before=dict(self.vol.objects)
+            with self.subTest(cls=cls,ext=ext), self.assertRaisesRegex(ValueError,"Unsupported durable input"):
+                e.stage_request(self.vol,self.cfg,ident,self.intent,graph,
+                                {"1."+field:"@"+str(source)},["2"])
+            self.assertEqual(self.vol.objects,before)
+
+    def test_empty_media_and_changed_hash_publish_nothing(self):
+        source=self.root/"audio.wav"
+        for raw,expected,error in ((b"",None,"Invalid persisted input evidence"),
+                                   (b"changed","a"*64,"Input changed")):
+            source.write_bytes(raw)
+            before=dict(self.vol.objects)
+            with self.subTest(raw=raw), self.assertRaisesRegex((ValueError,RuntimeError),error):
+                e.stage_input(self.vol,source,expected_sha256=expected)
+            self.assertEqual(self.vol.objects,before)
+
+    def test_tampered_media_reference_is_rejected_on_manifest_load(self):
+        graph={"1":{"class_type":"LoadAudio","inputs":{"audio":"test.wav"}},
+               "2":{"class_type":"SaveAudio","inputs":{"audio":["1",0],"filename_prefix":"audio/test"}}}
+        audio=self.root/"test.wav";audio.write_bytes(b"wave")
+        ident=e.job_id(["audio"],self.intent)
+        req=e.stage_request(self.vol,self.cfg,ident,self.intent,graph,
+                            {"1.audio":"@"+str(audio)},["2"])
+        req["graph"]["1"]["class_type"]="LoadVideo"
+        with self.assertRaisesRegex(ValueError,"Unsupported durable input"):
+            e.validate_request(req,self.cfg,ident)
+
+    def test_corrupt_media_does_not_reach_native_submission(self):
+        audio=self.root/"sound.flac";audio.write_bytes(b"wave-data")
+        graph={"1":{"class_type":"LoadAudio","inputs":{"audio":"placeholder.flac"}},
+               "2":{"class_type":"SaveAudio","inputs":{"audio":["1",0],"filename_prefix":"audio/test"}}}
+        ident=e.job_id(["corrupt-audio"],self.intent)
+        req=e.stage_request(self.vol,self.cfg,ident,self.intent,graph,
+                            {"1.audio":"@"+str(audio)},["2"])
+        self.vol.objects[e.input_key(req["inputs"]["1.audio"])]=b"X"*9
+        engine=Mock()
+        with self.assertRaisesRegex(RuntimeError,"SHA-256"):
+            e.execute(self.vol,req,engine,"epoch",self.root/"epoch",self.output,self.lock,
+                      timeout=0.1,poll_interval=0.001,missing_grace=0)
+        engine.submit.assert_not_called()
+        self.assertEqual(e.inspect_execution(self.vol,req)["status"],"prepared")
+
+    def test_media_requires_new_cpu_probe_before_upload(self):
+        from storage.execution_client import DurableClient
+        client=object.__new__(DurableClient);client.volume=self.vol;client.config=self.cfg
+        client.preflight=Mock(return_value={"execution_schema":1})
+        audio=self.root/"sound.wav";audio.write_bytes(b"sound")
+        graph={"1":{"class_type":"LoadAudio","inputs":{"audio":"placeholder"}},
+               "2":{"class_type":"SaveAudio","inputs":{"audio":["1",0],"filename_prefix":"test"}}}
+        ident=e.job_id(["probe"],self.intent)
+        before=dict(self.vol.objects)
+        with self.assertRaisesRegex(RuntimeError,"redeploy first"):
+            client.stage(ident,self.intent,graph,{"1.audio":"@"+str(audio)},["2"])
+        self.assertEqual(self.vol.objects,before)
+        client.preflight.return_value={"execution_schema":1,"execution_media_inputs":1}
+        req=client.stage(ident,self.intent,graph,{"1.audio":"@"+str(audio)},["2"])
+        self.assertEqual(req["inputs"]["1.audio"]["sha256"],hashlib.sha256(b"sound").hexdigest())
+
+    def test_upstream_media_reference_resolves_by_type_and_rejects_ambiguity(self):
+        video=self.root/"out.mp4";audio=self.root/"out.flac";other=self.root/"out.wav"
+        complete={"first":{"main":[video,audio]}}
+        self.assertEqual(runner._input_value("$first.video",{},complete),"@"+str(video.resolve()))
+        self.assertEqual(runner._input_value("$first.main.audio",{},complete),"@"+str(audio.resolve()))
+        complete["first"]["main"].append(other)
+        with self.assertRaisesRegex(ValueError,"expected one audio"):
+            runner._input_value("$first.audio",{},complete)
+
+    def test_upstream_media_hash_is_checked_before_staging(self):
+        from storage.execution_client import DurableClient
+        audio=self.root/"collected.flac";audio.write_bytes(b"original")
+        evidence=runner._file_evidence(audio)
+        (self.root/"status.json").write_text(json.dumps({"status":"completed","files":[str(audio.resolve())],
+            "artifacts":{audio.name:evidence}}),encoding="utf-8")
+        audio.write_bytes(b"tampered")
+        graph={"1":{"class_type":"LoadAudio","inputs":{"audio":"placeholder"}},
+               "2":{"class_type":"SaveAudio","inputs":{"audio":["1",0],"filename_prefix":"test"}}}
+        ident=e.job_id(["upstream"],self.intent)
+        job={"base":"https://example.invalid","endpoint":"test","folder":self.root/"downstream",
+             "status_file":self.root/"downstream/status.json","entry":{},
+             "settings":{"1.audio":"$first.audio"},"graph":graph,"execution":"durable",
+             "delivery":self.cfg,"intent_hash":self.intent,"durable_job_id":ident,"output_nodes":["2"]}
+        client=object.__new__(DurableClient);client.volume=self.vol;client.config=self.cfg
+        client.preflight=Mock(return_value={"execution_schema":1,"execution_media_inputs":1})
+        client.start=Mock(side_effect=AssertionError("unexpected dispatch"))
+        before=dict(self.vol.objects)
+        with patch("storage.execution_client.DurableClient",return_value=client):
+            with self.assertRaisesRegex(RuntimeError,"upstream delivery"):
+                runner._submit_job(("s","j"),job,{"first":{"main":[audio]}},self.root/"task.json",self.root,{})
+        self.assertEqual(self.vol.objects,before)
+        client.start.assert_not_called()
+        (self.root/"status.json").unlink()
+        with self.assertRaisesRegex(RuntimeError,"Missing upstream artifact evidence"):
+            runner._upstream_input_hash(audio)
+
+    def test_native_http_still_rejects_video_and_audio_upload(self):
+        for ext in (".mp4",".wav"):
+            path=self.root/("file"+ext);path.write_bytes(b"data")
+            with self.subTest(ext=ext), patch.object(runner,"request",side_effect=AssertionError("HTTP")):
+                with self.assertRaisesRegex(ValueError,"Non-image inputs"):
+                    runner.upload("https://example.invalid",path)
+
     def test_input_content_address_and_restore_after_local_loss(self):
         self.source.unlink()
         for epoch in ("first","replacement"):

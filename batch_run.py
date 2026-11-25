@@ -15,7 +15,8 @@ from contextvars import ContextVar, copy_context
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from pathlib import Path
 
-from storage.delivery import normalized_config
+from storage.delivery import HEX, normalized_config
+from storage.output_formats import AUDIO as AUDIO_EXT
 
 IMAGE_EXT = {".png", ".jpg", ".jpeg", ".webp", ".bmp"}
 VIDEO_EXT = {".mp4", ".webm", ".mov", ".mkv"}
@@ -221,6 +222,7 @@ def _input_value(value, item, completed):
     matches = [path for path in paths if
                (kind == "image" and path.suffix.lower() in IMAGE_EXT)
                or (kind == "video" and path.suffix.lower() in VIDEO_EXT)
+               or (kind == "audio" and path.suffix.lower() in AUDIO_EXT)
                or (kind == "model" and path.suffix.lower() in MODEL_EXT)
                or (kind == "file")]
     if len(matches) != 1:
@@ -286,6 +288,20 @@ def _job_intent_hash(job, jobs, task_dir, root):
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 
+def _upstream_input_hash(path):
+    """Bind a downstream durable input to the upstream collected artifact evidence."""
+    status_path = path.parent / "status.json"
+    if not status_path.is_file():
+        raise RuntimeError(f"Missing upstream artifact evidence: {path}")
+    status = json.loads(status_path.read_text(encoding="utf-8"))
+    evidence = (status.get("artifacts") or {}).get(path.name) or {}
+    if (status.get("status") != "completed" or str(path) not in status.get("files", [])
+            or type(evidence.get("bytes")) is not int or evidence["bytes"] <= 0
+            or not isinstance(evidence.get("sha256"), str) or not HEX.fullmatch(evidence["sha256"])):
+        raise RuntimeError(f"Missing upstream artifact evidence: {path}")
+    return evidence["sha256"]
+
+
 def _submit_job(key, job, completed, task_path, root, upload_caches):
     sid, jid = key
     if job.get("execution") == "durable" and job.get("resume_manifest"):
@@ -304,9 +320,13 @@ def _submit_job(key, job, completed, task_path, root, upload_caches):
             resolved[field] = "@" + str(file.resolve())
     if job.get("execution") == "durable":
         from storage.execution_client import DurableClient
+        expected_inputs = dict(job.get("local_input_hashes") or {})
+        for field, raw in job["settings"].items():
+            if isinstance(raw, str) and raw.startswith("$") and not raw.startswith("$item."):
+                expected_inputs[field] = _upstream_input_hash(Path(resolved[field][1:]))
         client = DurableClient(job["delivery"], job["base"])
         manifest = client.stage(job["durable_job_id"], job["intent_hash"], job["graph"],
-                               resolved, job.get("output_nodes"), job.get("local_input_hashes"))
+                               resolved, job.get("output_nodes"), expected_inputs)
         _save_json(job["folder"] / "workflow.json", manifest["graph"])
         _dispatch_durable(key, job, client)
         return
