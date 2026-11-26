@@ -7,7 +7,7 @@ requires-python = ">=3.11"
 dependencies = [
     "boto3>=1.43.114",
     "modal[api-proxy-support]>=1.6.4,<2",
-    "modal-benchmark==0.4.3",
+    "modal-benchmark==0.4.4",
     "python-dotenv>=1.2.4",
 ]
 
