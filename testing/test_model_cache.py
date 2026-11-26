@@ -66,7 +66,7 @@ class DownloaderTests(unittest.TestCase):
         self.ns['_verify_content'](self.source, item)
 
     def _benchmark_evidence(self, base, items):
-        """Fixture matching modal-benchmark v0.4.4 Coordinator receipts."""
+        """Fixture matching modal-benchmark v0.4.9 Coordinator receipts."""
         for item in items:
             repo = base / item["repo_id"] / item["revision"]
             source = self.ns["benchmark_path"](base, item)
@@ -391,9 +391,9 @@ class DownloaderTests(unittest.TestCase):
         downloader.download.assert_called_once_with(
             self.ns['benchmark_sources']([item]), base=base, workers=8)
 
-    def test_installed_benchmark_v042_persistent_config(self):
+    def test_installed_benchmark_v049_persistent_config(self):
         from importlib.metadata import version
-        self.assertEqual(version("modal-benchmark"), "0.4.4")
+        self.assertEqual(version("modal-benchmark"), "0.4.9")
         self.ns.update(MODEL_VOLUME_NAME="model-store", hf_secret_name="hf-secret")
         for workers in (1, 3, 8):
             with self.subTest(workers=workers):
